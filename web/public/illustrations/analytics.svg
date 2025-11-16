@@ -1,0 +1,19 @@
+<svg width="320" height="180" viewBox="0 0 320 180" fill="none" xmlns="http://www.w3.org/2000/svg">
+<rect width="320" height="180" rx="20" fill="url(#bg)"/>
+<g stroke="#7C3AED" stroke-width="2" fill="none" opacity=".9">
+  <polyline points="24,130 80,90 140,110 200,70 272,92"/>
+  <circle cx="80" cy="90" r="3" fill="#7C3AED"/>
+  <circle cx="140" cy="110" r="3" fill="#7C3AED"/>
+  <circle cx="200" cy="70" r="3" fill="#7C3AED"/>
+  <circle cx="272" cy="92" r="3" fill="#7C3AED"/>
+</g>
+<g opacity=".2">
+  <rect x="50" y="30" width="220" height="120" rx="10" fill="#A78BFA"/>
+</g>
+<defs>
+<linearGradient id="bg" x1="0" y1="0" x2="320" y2="180" gradientUnits="userSpaceOnUse">
+  <stop offset="0" stop-color="#FFFFFF"/>
+  <stop offset="1" stop-color="#F5F3FF"/>
+</linearGradient>
+</defs>
+</svg>
