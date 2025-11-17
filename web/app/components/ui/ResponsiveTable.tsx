@@ -1,8 +1,9 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useMemo } from 'react'
 import clsx from 'clsx'
 import { ChevronDown, ChevronUp } from 'lucide-react'
+import { Skeleton } from './Skeleton'
 
 type Column<T> = {
   key: string
@@ -12,6 +13,7 @@ type Column<T> = {
   mobileHidden?: boolean
   tabletHidden?: boolean
   className?: string
+  align?: 'left' | 'center' | 'right'
 }
 
 type Props<T> = {
@@ -23,6 +25,9 @@ type Props<T> = {
   keyExtractor: (item: T) => string
   className?: string
   dense?: boolean
+  sortKey?: string | null
+  sortDirection?: 'asc' | 'desc'
+  onSort?: (key: string) => void
 }
 
 export default function ResponsiveTable<T extends Record<string, any>>({
@@ -33,7 +38,10 @@ export default function ResponsiveTable<T extends Record<string, any>>({
   onRowClick,
   keyExtractor,
   className,
-  dense = false
+  dense = false,
+  sortKey,
+  sortDirection,
+  onSort
 }: Props<T>) {
   const [expandedRows, setExpandedRows] = useState<Set<string>>(new Set())
 
@@ -49,15 +57,48 @@ export default function ResponsiveTable<T extends Record<string, any>>({
     })
   }
 
-  const visibleColumns = columns.filter(col => !col.mobileHidden)
-  const mobileColumns = columns.filter(col => !col.mobileHidden && !col.tabletHidden)
+  const visibleColumns = useMemo(() => columns.filter(col => !col.mobileHidden), [columns])
+  const mobileColumns = useMemo(() => columns.filter(col => !col.mobileHidden && !col.tabletHidden), [columns])
 
   if (loading) {
     return (
-      <div className="space-y-3">
-        {Array.from({ length: 5 }).map((_, i) => (
-          <div key={i} className="h-16 bg-neutral-100 rounded-lg animate-pulse" />
-        ))}
+      <div className="bg-white rounded-xl border border-neutral-200 shadow-sm overflow-hidden">
+        <div className="hidden lg:block overflow-x-auto">
+          <table className="w-full text-sm">
+            <thead className="bg-neutral-50 border-b border-neutral-200">
+              <tr>
+                {columns.map((col) => (
+                  <th
+                    key={col.key}
+                    className={clsx(
+                      dense ? 'px-4 py-3' : 'px-6 py-4',
+                      'text-left font-semibold text-neutral-700',
+                      col.className
+                    )}
+                  >
+                    {col.label}
+                  </th>
+                ))}
+              </tr>
+            </thead>
+            <tbody>
+              {Array.from({ length: 5 }).map((_, i) => (
+                <tr key={i}>
+                  {columns.map((col) => (
+                    <td key={col.key} className={dense ? 'px-4 py-3' : 'px-6 py-4'}>
+                      <Skeleton className="h-4 w-24" />
+                    </td>
+                  ))}
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+        <div className="lg:hidden space-y-3 p-4">
+          {Array.from({ length: 5 }).map((_, i) => (
+            <Skeleton key={i} className="h-20 w-full" />
+          ))}
+        </div>
       </div>
     )
   }
@@ -75,19 +116,37 @@ export default function ResponsiveTable<T extends Record<string, any>>({
       {/* 데스크톱 테이블 뷰 */}
       <div className="hidden lg:block overflow-x-auto">
         <table className="w-full text-sm" role="table">
-          <thead className="bg-neutral-50 border-b border-neutral-200 sticky top-0 z-10">
+          <thead className="bg-neutral-50 border-b-2 border-neutral-200 sticky top-0 z-10">
             <tr>
               {columns.map((col) => (
                 <th
                   key={col.key}
                   className={clsx(
                     dense ? 'px-4 py-3' : 'px-6 py-4',
-                    'text-left font-semibold text-neutral-700',
+                    col.align === 'center' ? 'text-center' : col.align === 'right' ? 'text-right' : 'text-left',
+                    'font-semibold text-neutral-700',
+                    col.sortable && onSort ? 'cursor-pointer hover:bg-neutral-100 transition-colors' : '',
                     col.className
                   )}
                   scope="col"
+                  onClick={() => col.sortable && onSort && onSort(col.key)}
+                  role={col.sortable ? 'button' : undefined}
+                  aria-sort={
+                    col.sortable && sortKey === col.key
+                      ? sortDirection === 'asc'
+                        ? 'ascending'
+                        : 'descending'
+                      : undefined
+                  }
                 >
-                  {col.label}
+                  <div className="flex items-center gap-2">
+                    {col.label}
+                    {col.sortable && sortKey === col.key && (
+                      <span className="text-xs text-secondary-600">
+                        {sortDirection === 'asc' ? '↑' : '↓'}
+                      </span>
+                    )}
+                  </div>
                 </th>
               ))}
             </tr>
@@ -109,10 +168,11 @@ export default function ResponsiveTable<T extends Record<string, any>>({
                       key={col.key}
                       className={clsx(
                         dense ? 'px-4 py-3' : 'px-6 py-4',
+                        col.align === 'center' ? 'text-center' : col.align === 'right' ? 'text-right' : 'text-left',
                         col.className
                       )}
                     >
-                      {col.render ? col.render(item, index) : item[col.key]}
+                      {col.render ? col.render(item, index) : String(item[col.key] ?? '')}
                     </td>
                   ))}
                 </tr>

@@ -6,6 +6,7 @@ import Button from '../ui/Button'
 import Input from '../ui/Input'
 import Select from '../ui/Select'
 import Textarea from '../ui/Textarea'
+import ConfirmDialog from '../ui/ConfirmDialog'
 import { useAppToast } from '@/app/lib/ui/toast'
 import StaffAutoComplete from '../StaffAutoComplete'
 import { useCustomerAndProductLists } from '../hooks/useCustomerAndProductLists'
@@ -49,14 +50,22 @@ export default function ReservationDetailModal({ open, onClose, item, onSaved, o
     } finally { setLoading(false) }
   }
 
+  const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false)
+
   const removeItem = async () => {
     if (!form?.id) return
-    if (!confirm('정말 삭제하시겠어요? 이 작업은 되돌릴 수 없습니다.')) return
+    setDeleteConfirmOpen(true)
+  }
+
+  const handleDeleteConfirm = async () => {
+    if (!form?.id) return
     try {
       await appointmentsApi.delete(form.id)
       onDeleted(); onClose(); toast.success('삭제되었습니다.')
     } catch {
       toast.error('삭제 실패')
+    } finally {
+      setDeleteConfirmOpen(false)
     }
   }
 
@@ -138,8 +147,18 @@ export default function ReservationDetailModal({ open, onClose, item, onSaved, o
       <ModalFooter>
         <Button variant="secondary" onClick={onClose} disabled={loading} className="w-full md:w-auto">취소</Button>
         <Button variant="danger" onClick={removeItem} disabled={loading} className="w-full md:w-auto">삭제</Button>
-        <Button variant="primary" onClick={save} disabled={loading} className="w-full md:w-auto">저장</Button>
+        <Button variant="primary" onClick={save} disabled={loading} loading={loading} className="w-full md:w-auto">저장</Button>
       </ModalFooter>
+      <ConfirmDialog
+        open={deleteConfirmOpen}
+        onClose={() => setDeleteConfirmOpen(false)}
+        onConfirm={handleDeleteConfirm}
+        title="예약 삭제"
+        message="정말 삭제하시겠어요? 이 작업은 되돌릴 수 없습니다."
+        confirmLabel="삭제"
+        cancelLabel="취소"
+        variant="danger"
+      />
     </Modal>
   )
 }

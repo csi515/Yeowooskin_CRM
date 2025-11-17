@@ -3,10 +3,13 @@
 import { Pencil, Plus } from 'lucide-react'
 import { useEffect, useState, useMemo, lazy, Suspense } from 'react'
 import EmptyState from '../components/EmptyState'
-import { Skeleton } from '../components/ui/Skeleton'
+import { Skeleton, GridSkeleton } from '../components/ui/Skeleton'
 import FilterBar from '../components/filters/FilterBar'
 import CustomerHoldingsBadge from '../components/CustomerHoldingsBadge'
 import Button from '../components/ui/Button'
+import SearchInput from '../components/ui/SearchInput'
+import ResponsiveTable from '../components/ui/ResponsiveTable'
+import Pagination from '../components/ui/Pagination'
 import type { Customer } from '@/types/entities'
 import { useSearch } from '../lib/hooks/useSearch'
 import { usePagination } from '../lib/hooks/usePagination'
@@ -17,23 +20,22 @@ const CustomerDetailModal = lazy(() => import('../components/modals/CustomerDeta
 export default function CustomersPage() {
   const [rows, setRows] = useState<Customer[]>([])
   const { query, debouncedQuery, setQuery } = useSearch({ debounceMs: 300 })
-  const [mode, setMode] = useState<'table' | 'card'>('table')
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
   const [detailOpen, setDetailOpen] = useState(false)
   const [selected, setSelected] = useState<Customer | null>(null)
-  const [dense, setDense] = useState<'compact' | 'comfortable'>('comfortable')
   const { sortKey, sortDirection, toggleSort, sortFn } = useSort<Customer & Record<string, unknown>>({
     initialKey: 'name',
     initialDirection: 'asc',
   })
+  
   const pagination = usePagination({
     initialPage: 1,
-    initialPageSize: 10,
+    initialPageSize: 20,
     totalItems: rows.length,
   })
-  const { page, pageSize, setPage, setPageSize } = pagination
-  const totalPages = Math.max(1, Math.ceil(rows.length / pageSize))
+  const { page, pageSize, setPage, setPageSize, totalPages } = pagination
+  
   const [pointsByCustomer, setPointsByCustomer] = useState<Record<string, number>>({})
 
   const load = async () => {
@@ -62,13 +64,11 @@ export default function CustomersPage() {
     return sortedRows.slice(start, end)
   }, [sortedRows, page, pageSize])
 
-  // 전체 아이템 수 업데이트
+  // 페이지네이션 totalItems 업데이트
   useEffect(() => {
-    // usePagination의 setTotalItems는 내부적으로 관리되므로 직접 접근 불가
-    // 대신 totalItems를 동적으로 계산
+    pagination.setTotalItems?.(rows.length)
   }, [rows.length])
 
-  // 보유상품 합계는 각 행 렌더 시 배지 컴포넌트가 직접 불러오며, 이벤트로 동기화합니다.
   // 포인트 조회 최적화: 현재 페이지의 고객만 조회
   useEffect(() => {
     const fetchPoints = async () => {
@@ -89,24 +89,91 @@ export default function CustomersPage() {
     if (paginatedRows.length) fetchPoints()
   }, [paginatedRows])
 
+  const columns = [
+    {
+      key: 'name',
+      label: '이름',
+      render: (item: Customer) => (
+        <div className="font-semibold text-neutral-900">{item.name}</div>
+      ),
+      sortable: true,
+      mobileHidden: false,
+      tabletHidden: false,
+    },
+    {
+      key: 'phone',
+      label: '연락처',
+      render: (item: Customer) => <div className="text-neutral-600">{item.phone || '-'}</div>,
+      sortable: true,
+      mobileHidden: true,
+      tabletHidden: false,
+    },
+    {
+      key: 'email',
+      label: '이메일',
+      render: (item: Customer) => <div className="text-neutral-600">{item.email || '-'}</div>,
+      sortable: true,
+      mobileHidden: true,
+      tabletHidden: true,
+    },
+    {
+      key: 'holdings',
+      label: '보유상품',
+      render: (item: Customer) => <CustomerHoldingsBadge customerId={item.id} />,
+      mobileHidden: true,
+      tabletHidden: false,
+    },
+    {
+      key: 'points',
+      label: '포인트',
+      render: (item: Customer) => (
+        <div className="text-right font-medium text-amber-700">
+          {Number(pointsByCustomer[item.id] || 0).toLocaleString()}
+        </div>
+      ),
+      mobileHidden: true,
+      tabletHidden: true,
+      className: 'text-right',
+    },
+    {
+      key: 'actions',
+      label: '작업',
+      render: (item: Customer) => (
+        <div className="flex justify-center">
+          <Button
+            size="sm"
+            variant="secondary"
+            onClick={(e) => {
+              e.stopPropagation()
+              setSelected(item)
+              setDetailOpen(true)
+            }}
+            aria-label="상세보기"
+            className="h-9 w-9 p-0"
+          >
+            <Pencil className="h-4 w-4" />
+          </Button>
+        </div>
+      ),
+      mobileHidden: false,
+      tabletHidden: false,
+      className: 'text-center',
+    },
+  ]
+
   return (
-    <main className="space-y-2 md:space-y-3">
-      {/** 안전 가드: 빌드/핫리로드 타이밍 이슈 대비 */}
-      {(() => { void (typeof pointsByCustomer); return null })()}
+    <main className="space-y-4 md:space-y-5">
       <FilterBar>
-        <div className="flex flex-wrap items-end gap-2 md:gap-3 w-full">
-          <div className="flex-1 min-w-0">
-            <div className="mb-1.5 text-xs sm:text-[11px] font-medium text-neutral-600">검색</div>
-            <div className="relative w-full">
-              <input
-                className="h-10 sm:h-10 w-full rounded-lg border border-neutral-300 bg-white px-3 sm:px-4 text-sm text-neutral-800 outline-none shadow-sm placeholder:text-neutral-400 focus:border-secondary-500 focus:ring-2 focus:ring-secondary-200 transition-all duration-fast touch-manipulation"
-                placeholder="이름, 이메일 또는 전화번호로 검색"
-                value={query}
-                onChange={e => setQuery(e.target.value)}
-              />
-            </div>
+        <div className="flex flex-wrap items-end gap-3 md:gap-4 w-full">
+          <div className="flex-1 min-w-0 sm:min-w-[280px]">
+            <label className="block mb-2 text-sm font-semibold text-neutral-700">검색</label>
+            <SearchInput
+              value={query}
+              onChange={setQuery}
+              placeholder="이름, 이메일 또는 전화번호로 검색"
+            />
           </div>
-          <div className="flex items-end">
+          <div className="w-full sm:w-auto">
             <Button
               variant="primary"
               size="md"
@@ -115,6 +182,7 @@ export default function CustomersPage() {
                 setSelected({ id: '', owner_id: '', name: '', phone: '', email: '', address: '' } as Customer)
                 setDetailOpen(true)
               }}
+              className="w-full sm:w-auto"
             >
               새 고객
             </Button>
@@ -124,156 +192,38 @@ export default function CustomersPage() {
 
       {error && <p className="text-sm text-error-600">{error}</p>}
 
-      {mode==='table' ? (
-        <div className="max-h-[60vh] sm:max-h-[70vh] overflow-auto rounded-lg border border-neutral-200 bg-white shadow-sm">
-          <div className="overflow-x-auto">
-            <table className="min-w-full text-sm" role="table" aria-label="고객 목록">
-            <thead className="sticky top-0 z-[1010] bg-gradient-to-r from-pink-100 via-purple-100 to-blue-100">
-              <tr>
-                <th className={`${dense==='compact' ? 'p-3' : 'p-4'} text-left align-top`} scope="col">
-                  <button
-                    className="inline-flex items-center gap-1 hover:underline text-pink-700 font-semibold"
-                    onClick={() => { toggleSort('name'); setPage(1) }}
-                    aria-label={`이름으로 정렬, 현재: ${sortKey === 'name' ? (sortDirection === 'asc' ? '오름차순' : '내림차순') : '정렬 안됨'}`}
-                  >
-                    이름 {sortKey==='name' ? (sortDirection==='asc' ? '▲' : '▼') : ''}
-                  </button>
-                </th>
-                <th className={`${dense==='compact' ? 'p-3' : 'p-4'} hidden sm:table-cell text-left align-top`}>
-                  <button
-                    className="inline-flex items-center gap-1 hover:underline text-purple-700 font-semibold"
-                    onClick={() => { toggleSort('phone'); setPage(1) }}
-                  >
-                    연락처 {sortKey==='phone' ? (sortDirection==='asc' ? '▲' : '▼') : ''}
-                  </button>
-                </th>
-                <th className={`${dense==='compact' ? 'p-3' : 'p-4'} hidden md:table-cell text-left align-top`}>
-                  <button
-                    className="inline-flex items-center gap-1 hover:underline text-blue-700 font-semibold"
-                    onClick={() => { toggleSort('email'); setPage(1) }}
-                  >
-                    이메일 {sortKey==='email' ? (sortDirection==='asc' ? '▲' : '▼') : ''}
-                  </button>
-                </th>
-                <th className={`${dense==='compact' ? 'p-3' : 'p-4'} hidden sm:table-cell text-left align-top text-emerald-700 font-semibold`}>보유상품</th>
-                <th className={`${dense==='compact' ? 'p-3' : 'p-4'} hidden md:table-cell text-right align-top text-amber-700 font-semibold whitespace-nowrap`}>포인트</th>
-                <th className={`${dense==='compact' ? 'p-3' : 'p-4'} text-center align-top text-indigo-700 font-semibold whitespace-nowrap`} scope="col">
-                  상세보기
-                </th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-purple-100">
-              {loading && Array.from({ length: 6 }).map((_, i) => (
-                <tr key={`s-${i}`}>
-                  <td className={dense==='compact' ? 'p-3' : 'p-4'}><Skeleton className="h-4 w-40" /></td>
-                  <td className={`${dense==='compact' ? 'p-3' : 'p-4'} hidden sm:table-cell`}><Skeleton className="h-4 w-28" /></td>
-                  <td className={`${dense==='compact' ? 'p-3' : 'p-4'} hidden md:table-cell`}><Skeleton className="h-4 w-32" /></td>
-                  <td className={`${dense==='compact' ? 'p-3' : 'p-4'} hidden sm:table-cell`}><Skeleton className="h-8 w-24" /></td>
-                  <td className={`${dense==='compact' ? 'p-3' : 'p-4'} hidden md:table-cell`}><Skeleton className="h-4 w-16 ml-auto" /></td>
-                  <td className={dense==='compact' ? 'p-3' : 'p-4'}><Skeleton className="h-8 w-8 mx-auto" /></td>
-                </tr>
-              ))}
-              {!loading && paginatedRows.map((c, index) => (
-                <tr
-                  key={c.id}
-                  className={`outline-none min-h-[48px] transition-colors ${
-                    index % 4 === 0 
-                      ? 'bg-pink-50/50 hover:bg-pink-100' 
-                      : index % 4 === 1 
-                      ? 'bg-purple-50/50 hover:bg-purple-100'
-                      : index % 4 === 2
-                      ? 'bg-blue-50/50 hover:bg-blue-100'
-                      : 'bg-emerald-50/50 hover:bg-emerald-100'
-                  }`}
-                  tabIndex={0}
-                  onKeyDown={(e)=>{ if(e.key==='Enter'){ setSelected(c); setDetailOpen(true) }}}
-                >
-                  <td className={`${dense==='compact' ? 'p-3' : 'p-4'} text-left align-top`}>{c.name}</td>
-                  <td className={`${dense==='compact' ? 'p-3' : 'p-4'} hidden sm:table-cell text-left align-top`}>{c.phone || '-'}</td>
-                  <td className={`${dense==='compact' ? 'p-3' : 'p-4'} hidden md:table-cell text-left align-top`}>{c.email || '-'}</td>
-                  <td className={`${dense==='compact' ? 'p-3' : 'p-4'} hidden sm:table-cell text-left align-top`}>
-                    <CustomerHoldingsBadge customerId={c.id} />
-                  </td>
-                  <td className={`${dense==='compact' ? 'p-3' : 'p-4'} hidden md:table-cell text-right align-top whitespace-nowrap`}>
-                    {Number(((typeof pointsByCustomer !== 'undefined' && (pointsByCustomer as any)?.[c.id] != null) ? (pointsByCustomer as any)[c.id] : 0)).toLocaleString()}
-                  </td>
-                  <td className={`${dense==='compact' ? 'p-3' : 'p-4'} text-center align-top`}>
-                    <Button
-                      size="sm"
-                      variant="secondary"
-                      onClick={() => { setSelected(c); setDetailOpen(true) }}
-                      aria-label="상세보기"
-                      title="상세보기"
-                      className="h-9 w-9 sm:h-8 sm:w-8 p-0 touch-manipulation mx-auto"
-                    >
-                      <Pencil className="h-4 w-4" />
-                    </Button>
-                  </td>
-                </tr>
-              ))}
-              {!loading && rows.length === 0 && (
-              <tr><td colSpan={6}>
-                <EmptyState
-                  title="고객 데이터가 없습니다."
-                  actionLabel="새 고객"
-                  actionOnClick={() => { setSelected({ id: undefined as any, owner_id: '', name: '', phone: '', email: '', address: '' } as Customer); setDetailOpen(true) }}
-                />
-              </td></tr>
-              )}
-            </tbody>
-          </table>
-          </div>
-          <div className="flex flex-col sm:flex-row items-center justify-between border-t border-neutral-200 px-3 sm:px-4 py-3 gap-3 bg-neutral-50">
-            <div className="text-xs sm:text-sm text-neutral-600">
-              총 {rows.length}명 · {page}/{Math.max(1, Math.ceil(rows.length / pageSize))} 페이지
-            </div>
-            <div className="flex items-center gap-2 w-full sm:w-auto">
-              <select
-                value={pageSize}
-                onChange={e => { setPageSize(Number(e.target.value)); setPage(1) }}
-                className="h-10 sm:h-9 flex-1 sm:flex-none rounded-lg border border-neutral-300 px-3 text-sm bg-white focus:border-secondary-500 focus:ring-2 focus:ring-secondary-200 transition-all duration-fast touch-manipulation"
-              >
-                {[10,20,50].map(s => <option key={s} value={s}>{s}/페이지</option>)}
-              </select>
-              <button
-                onClick={() => setPage(Math.max(1, page - 1))}
-                className="h-10 sm:h-9 flex-1 sm:flex-none rounded-lg border border-neutral-300 px-4 text-sm bg-white hover:bg-neutral-50 hover:border-neutral-400 disabled:opacity-40 disabled:cursor-not-allowed focus-visible:ring-2 focus-visible:ring-secondary-400 focus-visible:ring-offset-1 transition-all duration-fast touch-manipulation"
-                disabled={page===1}
-              >
-                이전
-              </button>
-              <button
-                onClick={() => setPage(Math.min(totalPages, page + 1))}
-                className="h-10 sm:h-9 flex-1 sm:flex-none rounded-lg border border-neutral-300 px-4 text-sm bg-white hover:bg-neutral-50 hover:border-neutral-400 disabled:opacity-40 disabled:cursor-not-allowed focus-visible:ring-2 focus-visible:ring-secondary-400 focus-visible:ring-offset-1 transition-all duration-fast touch-manipulation"
-                disabled={page>=totalPages}
-              >
-                다음
-              </button>
-            </div>
-          </div>
-        </div>
-      ) : (
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-          {paginatedRows.map(c => (
-              <div key={c.id} className="bg-white rounded-lg border border-neutral-200 p-4 sm:p-5 shadow-sm hover:shadow-md transition-shadow duration-fast">
-              <div className="text-base sm:text-lg font-semibold text-neutral-900">{c.name}</div>
-              <div className="mt-2 text-sm text-neutral-600">{c.phone || '-'}</div>
-              <div className="text-sm text-neutral-600">{c.email || '-'}</div>
-              <div className="mt-4 text-right">
-                  <button
-                    onClick={() => { setSelected(c); setDetailOpen(true) }}
-                    className="h-10 w-10 sm:h-9 sm:w-9 inline-flex items-center justify-center rounded-lg border border-neutral-300 hover:bg-neutral-100 hover:border-neutral-400 active:bg-neutral-200 focus-visible:ring-2 focus-visible:ring-secondary-400 focus-visible:ring-offset-1 transition-all duration-fast touch-manipulation"
-                    aria-label="상세보기"
-                    title="상세보기"
-                  >
-                    <Pencil className="h-4 w-4 text-neutral-700" />
-                  </button>
-              </div>
-            </div>
-          ))}
-          {paginatedRows.length === 0 && !loading && <div className="text-sm text-neutral-500">데이터가 없습니다.</div>}
-        </div>
+      {/* 반응형 테이블 */}
+      <ResponsiveTable
+        data={paginatedRows}
+        columns={columns}
+        loading={loading}
+        emptyMessage="고객 데이터가 없습니다."
+        onRowClick={(item) => {
+          setSelected(item)
+          setDetailOpen(true)
+        }}
+        keyExtractor={(item) => item.id}
+        dense={false}
+        sortKey={sortKey as string}
+        sortDirection={sortDirection}
+        onSort={(key) => {
+          toggleSort(key as keyof Customer)
+          setPage(1)
+        }}
+      />
+
+      {/* 페이지네이션 */}
+      {rows.length > 0 && (
+        <Pagination
+          currentPage={page}
+          totalPages={totalPages}
+          pageSize={pageSize}
+          totalItems={rows.length}
+          onPageChange={setPage}
+          onPageSizeChange={(size) => { setPageSize(size); setPage(1) }}
+        />
       )}
+
       {detailOpen && (
         <Suspense fallback={<div>로딩 중...</div>}>
           <CustomerDetailModal

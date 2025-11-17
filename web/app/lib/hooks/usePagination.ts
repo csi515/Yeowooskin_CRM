@@ -1,123 +1,71 @@
-'use client'
+import { useState, useCallback, useEffect } from 'react'
 
-/**
- * 페이지네이션 훅
- */
-
-import { useState, useMemo } from 'react'
-
-export interface UsePaginationOptions {
+type UsePaginationOptions = {
   initialPage?: number
   initialPageSize?: number
   totalItems?: number
 }
 
-export interface UsePaginationReturn {
+type UsePaginationReturn = {
   page: number
   pageSize: number
   totalPages: number
-  totalItems: number
   setPage: (page: number) => void
   setPageSize: (size: number) => void
-  nextPage: () => void
-  prevPage: () => void
+  setTotalItems: (total: number) => void
   goToFirstPage: () => void
   goToLastPage: () => void
-  hasNextPage: boolean
-  hasPrevPage: boolean
-  offset: number
+  goToNextPage: () => void
+  goToPreviousPage: () => void
+  canGoNext: boolean
+  canGoPrevious: boolean
 }
 
-/**
- * 페이지네이션 상태 관리 훅
- *
- * @example
- * const { page, pageSize, totalPages, setPage } = usePagination({
- *   initialPage: 1,
- *   initialPageSize: 10,
- *   totalItems: 100,
- * })
- */
-export function usePagination(
-  options: UsePaginationOptions = {}
-): UsePaginationReturn {
-  const {
-    initialPage = 1,
-    initialPageSize = 10,
-    totalItems: initialTotalItems = 0,
-  } = options
+export function usePagination({
+  initialPage = 1,
+  initialPageSize = 10,
+  totalItems = 0
+}: UsePaginationOptions = {}): UsePaginationReturn {
+  const [page, setPage] = useState(initialPage)
+  const [pageSize, setPageSize] = useState(initialPageSize)
+  const [totalItemsState, setTotalItems] = useState(totalItems)
 
-  const [page, setPageState] = useState(initialPage)
-  const [pageSize, setPageSizeState] = useState(initialPageSize)
-  const [totalItems, setTotalItems] = useState(initialTotalItems)
+  const totalPages = Math.max(1, Math.ceil(totalItemsState / pageSize))
 
-  const totalPages = useMemo(() => {
-    return Math.max(1, Math.ceil(totalItems / pageSize))
-  }, [totalItems, pageSize])
-
-  const offset = useMemo(() => {
-    return (page - 1) * pageSize
-  }, [page, pageSize])
-
-  const hasNextPage = useMemo(() => {
-    return page < totalPages
+  // 페이지 범위 검증
+  useEffect(() => {
+    if (page > totalPages && totalPages > 0) {
+      setPage(totalPages)
+    }
   }, [page, totalPages])
 
-  const hasPrevPage = useMemo(() => {
-    return page > 1
-  }, [page])
+  const goToFirstPage = useCallback(() => setPage(1), [])
+  const goToLastPage = useCallback(() => setPage(totalPages), [totalPages])
+  const goToNextPage = useCallback(() => {
+    setPage((prev) => Math.min(totalPages, prev + 1))
+  }, [totalPages])
+  const goToPreviousPage = useCallback(() => {
+    setPage((prev) => Math.max(1, prev - 1))
+  }, [])
 
-  const setPage = (newPage: number) => {
-    if (newPage >= 1 && newPage <= totalPages) {
-      setPageState(newPage)
-    }
-  }
-
-  const setPageSize = (newPageSize: number) => {
-    if (newPageSize > 0) {
-      setPageSizeState(newPageSize)
-      // 페이지 크기 변경 시 현재 페이지가 유효한 범위 내에 있는지 확인
-      const newTotalPages = Math.max(1, Math.ceil(totalItems / newPageSize))
-      if (page > newTotalPages) {
-        setPageState(newTotalPages)
-      }
-    }
-  }
-
-  const nextPage = () => {
-    if (hasNextPage) {
-      setPageState((prev) => prev + 1)
-    }
-  }
-
-  const prevPage = () => {
-    if (hasPrevPage) {
-      setPageState((prev) => prev - 1)
-    }
-  }
-
-  const goToFirstPage = () => {
-    setPageState(1)
-  }
-
-  const goToLastPage = () => {
-    setPageState(totalPages)
-  }
+  const canGoNext = page < totalPages
+  const canGoPrevious = page > 1
 
   return {
     page,
     pageSize,
     totalPages,
-    totalItems,
     setPage,
-    setPageSize,
-    nextPage,
-    prevPage,
+    setPageSize: useCallback((size: number) => {
+      setPageSize(size)
+      setPage(1) // 페이지 크기 변경 시 첫 페이지로
+    }, []),
+    setTotalItems,
     goToFirstPage,
     goToLastPage,
-    hasNextPage,
-    hasPrevPage,
-    offset,
+    goToNextPage,
+    goToPreviousPage,
+    canGoNext,
+    canGoPrevious
   }
 }
-

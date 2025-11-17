@@ -2,13 +2,15 @@
 
 import { useEffect, useState, useMemo } from 'react'
 import FilterBar from '@/app/components/filters/FilterBar'
-import { Plus, Pencil } from 'lucide-react'
+import { Plus, Pencil, UserCheck } from 'lucide-react'
 import { Skeleton } from '@/app/components/ui/Skeleton'
 import EmptyState from '@/app/components/EmptyState'
 import StaffDetailModal from '@/app/components/modals/StaffDetailModal'
 import Button from '@/app/components/ui/Button'
 import { useSearch } from '@/app/lib/hooks/useSearch'
 import { useSort } from '@/app/lib/hooks/useSort'
+import SearchInput from '@/app/components/ui/SearchInput'
+import { GridSkeleton } from '@/app/components/ui/Skeleton'
 
 type Staff = { id: string; name: string; phone?: string; email?: string; role?: string; notes?: string; active?: boolean; created_at?: string }
 
@@ -19,7 +21,6 @@ export default function StaffPage() {
   const [error, setError] = useState('')
   const [detailOpen, setDetailOpen] = useState(false)
   const [selected, setSelected] = useState<Staff | null>(null)
-  const [dense, setDense] = useState<'compact' | 'comfortable'>('comfortable')
   const { sortFn } = useSort<Staff & Record<string, unknown>>({
     initialKey: 'name',
     initialDirection: 'asc',
@@ -45,25 +46,27 @@ export default function StaffPage() {
   }, [rows, sortFn])
 
   return (
-    <main className="space-y-2 md:space-y-3">
+    <main className="space-y-4 md:space-y-5">
       <FilterBar>
-        <div className="flex flex-wrap items-end gap-2 md:gap-3 w-full">
-          <div className="flex-1 min-w-0">
-            <div className="text-[11px] font-medium text-neutral-500 mb-1">검색</div>
-            <div className="relative w-full max-w-md">
-              <input
-                className="w-full h-10 rounded-[16px] border border-neutral-300 pl-3 pr-3 text-sm placeholder:text-neutral-400 focus:border-blue-500 focus:ring-2 focus:ring-blue-300 outline-none"
-                placeholder="이름, 이메일, 전화번호, 직책으로 검색"
-                value={query}
-                onChange={e => setQuery(e.target.value)}
-              />
-            </div>
+        <div className="flex flex-wrap items-end gap-3 md:gap-4 w-full">
+          <div className="flex-1 min-w-0 sm:min-w-[280px]">
+            <label className="block mb-2 text-sm font-semibold text-neutral-700">검색</label>
+            <SearchInput
+              value={query}
+              onChange={setQuery}
+              placeholder="이름, 이메일, 전화번호, 직책으로 검색"
+            />
           </div>
-          <div className="flex items-end">
+          <div className="w-full sm:w-auto">
             <Button
               variant="primary"
+              size="md"
               leftIcon={<Plus className="h-4 w-4" />}
-              onClick={() => { setSelected({ id: '', name: '', phone: '', email: '', role: '', notes: '', active: true } as Staff); setDetailOpen(true) }}
+              onClick={() => {
+                setSelected({ id: '', name: '', phone: '', email: '', role: '', notes: '', active: true } as Staff)
+                setDetailOpen(true)
+              }}
+              className="w-full sm:w-auto"
             >
               새 직원
             </Button>
@@ -71,21 +74,11 @@ export default function StaffPage() {
         </div>
       </FilterBar>
 
-      <section className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-        {loading && Array.from({ length: 8 }).map((_, i) => {
-          const colorSchemes = ['from-pink-50 to-rose-100', 'from-blue-50 to-cyan-100', 'from-emerald-50 to-teal-100', 'from-amber-50 to-yellow-100']
-          const scheme = colorSchemes[i % colorSchemes.length]
-          return (
-          <div key={`s-${i}`} className={`bg-gradient-to-br ${scheme} rounded-[16px] border-2 border-pink-200 shadow-md p-4`}>
-            <div className="flex items-center gap-3">
-              <div className={`h-10 w-10 rounded-full bg-gradient-to-br ${scheme}`} />
-              <div className="flex-1">
-                <Skeleton className="h-4 w-28" />
-                <div className={`mt-1 h-3 w-16 bg-gradient-to-r ${scheme} rounded`} />
-              </div>
-            </div>
-          </div>
-        )})}
+      {error && <p className="text-sm text-error-600">{error}</p>}
+
+      {/* 그리드 뷰 - 반응형 */}
+      <section className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 md:gap-5">
+        {loading && <GridSkeleton items={8} cols={4} />}
         {!loading && sortedRows.map((s, index) => {
           const colorSchemes = [
             { bg: 'from-pink-50 to-rose-100', border: 'border-pink-200', avatar: 'from-pink-200 to-rose-300', role: 'bg-pink-100 text-pink-700 border-pink-300' },
@@ -96,31 +89,58 @@ export default function StaffPage() {
           ]
           const scheme = colorSchemes[index % colorSchemes.length]
           return (
-          <div key={s.id} className={`bg-gradient-to-br ${scheme.bg} rounded-[16px] border-2 ${scheme.border} shadow-md p-4 hover:shadow-xl transition-all duration-300`}>
-            <div className="flex items-start gap-3">
-              <div className={`h-10 w-10 rounded-full bg-gradient-to-br ${scheme.avatar} shadow-sm`} />
-              <div className="flex-1 min-w-0">
-                <div className="flex items-center gap-2">
-                  <div className="font-semibold truncate text-neutral-800">{s.name}</div>
-                  <span className={`text-xs px-2 py-0.5 rounded-full border font-medium ${s.role ? scheme.role : 'bg-gray-100 text-gray-600 border-gray-200'}`}>{s.role || '직원'}</span>
+            <div
+              key={s.id}
+              className={`bg-gradient-to-br ${scheme.bg} rounded-xl border-2 ${scheme.border} shadow-md p-4 md:p-5 hover:shadow-xl transition-all duration-300 cursor-pointer active:scale-[0.98]`}
+              onClick={() => { setSelected(s); setDetailOpen(true) }}
+            >
+              <div className="flex items-start gap-3">
+                <div className={`h-12 w-12 rounded-full bg-gradient-to-br ${scheme.avatar} shadow-sm flex items-center justify-center text-white font-semibold text-lg flex-shrink-0`}>
+                  {s.name.charAt(0).toUpperCase()}
                 </div>
-                <div className="mt-1 text-sm text-neutral-600 truncate">{s.phone || '-'}</div>
-                <div className="text-sm text-neutral-600 truncate">{s.email || '-'}</div>
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-2 mb-1 flex-wrap">
+                    <div className="font-semibold text-neutral-900 truncate">{s.name}</div>
+                    <span className={`text-xs px-2 py-0.5 rounded-full border font-semibold flex-shrink-0 ${
+                      s.role ? scheme.role : 'bg-neutral-100 text-neutral-600 border-neutral-200'
+                    }`}>
+                      {s.role || '직원'}
+                    </span>
+                  </div>
+                  {s.phone && (
+                    <div className="text-sm text-neutral-600 truncate mb-0.5">{s.phone}</div>
+                  )}
+                  {s.email && (
+                    <div className="text-sm text-neutral-600 truncate">{s.email}</div>
+                  )}
+                </div>
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation()
+                    setSelected(s)
+                    setDetailOpen(true)
+                  }}
+                  className="h-9 w-9 flex-shrink-0 inline-flex items-center justify-center rounded-lg border-2 border-neutral-300 hover:bg-action-blue-600 hover:text-white hover:border-action-blue-600 transition-all touch-manipulation"
+                  aria-label="상세보기"
+                >
+                  <Pencil className="h-4 w-4" />
+                </button>
               </div>
-              <button
-                onClick={() => { setSelected(s); setDetailOpen(true) }}
-                className="h-8 w-8 inline-flex items-center justify-center rounded-md border-2 border-pink-200 hover:bg-pink-100 text-pink-600 transition-colors"
-                aria-label="상세보기"
-                title="상세보기"
-              >
-                <Pencil className="h-4 w-4" />
-              </button>
             </div>
-          </div>
-        )})}
+          )
+        })}
         {!loading && sortedRows.length === 0 && (
           <div className="col-span-full">
-            <EmptyState title="직원 데이터가 없습니다." actionLabel="새 직원" actionOnClick={() => { setSelected({ id: undefined as any, name: '', phone: '', email: '', role: '', notes: '', active: true } as any); setDetailOpen(true) }} />
+            <EmptyState
+              type="no-customers"
+              title="직원 데이터가 없습니다."
+              description="새로운 직원을 추가해보세요."
+              actionLabel="새 직원"
+              actionOnClick={() => {
+                setSelected({ id: undefined as any, name: '', phone: '', email: '', role: '', notes: '', active: true } as any)
+                setDetailOpen(true)
+              }}
+            />
           </div>
         )}
       </section>
@@ -135,5 +155,3 @@ export default function StaffPage() {
     </main>
   )
 }
-
-

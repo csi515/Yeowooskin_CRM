@@ -1,79 +1,43 @@
 'use client'
 
-import { useEffect, useRef, useState, ReactNode } from 'react'
-import clsx from 'clsx'
-import Spinner from './Spinner'
+import { ReactNode } from 'react'
+import { useInfiniteScroll } from '@/app/lib/hooks/useInfiniteScroll'
+import LoadingSpinner from './LoadingSpinner'
 
 type Props = {
   children: ReactNode
-  hasMore: boolean
-  loading: boolean
   onLoadMore: () => void | Promise<void>
+  hasMore: boolean
+  loading?: boolean
   threshold?: number
-  loader?: ReactNode
-  endMessage?: ReactNode
   className?: string
 }
 
 export default function InfiniteScroll({
   children,
-  hasMore,
-  loading,
   onLoadMore,
-  threshold = 100,
-  loader,
-  endMessage,
-  className,
+  hasMore,
+  loading = false,
+  threshold = 200,
+  className
 }: Props) {
-  const [isLoading, setIsLoading] = useState(false)
-  const observerTarget = useRef<HTMLDivElement>(null)
-
-  useEffect(() => {
-    const observer = new IntersectionObserver(
-      (entries) => {
-        if (entries[0].isIntersecting && hasMore && !loading && !isLoading) {
-          setIsLoading(true)
-          Promise.resolve(onLoadMore()).finally(() => {
-            setIsLoading(false)
-          })
-        }
-      },
-      {
-        threshold: 0.1,
-        rootMargin: `${threshold}px`,
-      }
-    )
-
-    const currentTarget = observerTarget.current
-    if (currentTarget) {
-      observer.observe(currentTarget)
-    }
-
-    return () => {
-      if (currentTarget) {
-        observer.unobserve(currentTarget)
-      }
-    }
-  }, [hasMore, loading, isLoading, onLoadMore, threshold])
-
-  const defaultLoader = (
-    <div className="flex items-center justify-center py-4">
-      <Spinner size="md" />
-    </div>
-  )
+  const { sentinelRef } = useInfiniteScroll({
+    hasMore,
+    loading,
+    onLoadMore,
+    threshold
+  })
 
   return (
-    <div className={clsx('w-full', className)}>
+    <div className={className}>
       {children}
-      <div ref={observerTarget}>
-        {loading || isLoading ? (
-          <div>{loader || defaultLoader}</div>
-        ) : !hasMore && endMessage ? (
-          <div className="text-center py-4 text-neutral-500 text-sm">
-            {endMessage}
-          </div>
-        ) : null}
-      </div>
+      {hasMore && (
+        <div ref={sentinelRef} className="h-16 flex items-center justify-center py-4">
+          {loading && (
+            <LoadingSpinner size="sm" text="더 불러오는 중..." />
+          )}
+        </div>
+      )}
     </div>
   )
 }

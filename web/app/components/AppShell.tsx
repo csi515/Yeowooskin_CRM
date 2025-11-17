@@ -3,6 +3,7 @@
 import { usePathname } from 'next/navigation'
 import Sidebar from './Sidebar'
 import TopBar from './TopBar'
+import BackToTop from './ui/BackToTop'
 import { useState, useEffect } from 'react'
 
 export default function AppShell({ children }: { children: React.ReactNode }) {
@@ -70,6 +71,7 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
             {children}
           </div>
         </main>
+        <BackToTop />
       </div>
 
       {/* 모바일 오버레이 메뉴 */}
