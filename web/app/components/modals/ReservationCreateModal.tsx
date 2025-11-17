@@ -3,6 +3,8 @@
 import { useEffect, useState } from 'react'
 import Modal, { ModalBody, ModalFooter, ModalHeader } from '../ui/Modal'
 import Button from '../ui/Button'
+import Input from '../ui/Input'
+import Select from '../ui/Select'
 import { useAppToast } from '@/app/lib/ui/toast'
 import StaffAutoComplete from '../StaffAutoComplete'
 import Textarea from '../ui/Textarea'
@@ -108,162 +110,140 @@ export default function ReservationCreateModal({ open, onClose, draft, onSaved }
         description="날짜와 시간, 고객, 서비스를 선택해 새로운 예약을 등록합니다."
       />
       <ModalBody>
-        <div className="grid gap-4 md:grid-cols-[280px,1fr]">
-          <div className="space-y-3">
-            {error && <p className="text-sm text-rose-600">{error}</p>}
-          </div>
-          <div className="space-y-3">
-            <div className="space-y-3">
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="mb-1 block text-sm text-neutral-700">
-                    날짜 <span className="text-rose-600">*</span>
-                  </label>
-                  <input
-                    className="h-10 w-full rounded-lg border border-neutral-300 px-3 outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-300"
-                    type="date"
-                    value={form.date}
-                    onChange={(e) =>
-                      setForm((f) => ({ ...f, date: e.target.value }))
+        <div className="space-y-5">
+          {error && <p className="text-sm text-error-600">{error}</p>}
+          <div className="grid grid-cols-2 gap-5">
+            <Input
+              label="날짜"
+              type="date"
+              required
+              value={form.date}
+              onChange={(e) =>
+                setForm((f) => ({ ...f, date: e.target.value }))
+              }
+            />
+            <Input
+              label="시작 시간"
+              type="time"
+              required
+              value={form.start}
+              onChange={(e) =>
+                setForm((f) => ({ ...f, start: e.target.value }))
+              }
+            />
+            <div className="col-span-2">
+              <label className="block mb-2 text-sm font-semibold text-neutral-700">
+                고객
+              </label>
+              <div className="relative">
+                <input
+                  className="h-11 w-full rounded-lg border border-neutral-400 bg-white px-3 text-base text-neutral-900 outline-none shadow-sm transition-all duration-300 placeholder:text-neutral-500 hover:border-neutral-500 focus:border-secondary-500 focus:ring-2 focus:ring-secondary-200"
+                  placeholder="이름/이메일/전화번호로 검색하여 선택"
+                  value={customerQuery}
+                  onChange={(e) => {
+                    setCustomerQuery(e.target.value)
+                    setShowSuggest(true)
+                  }}
+                  onFocus={() => setShowSuggest(true)}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter' && filteredCustomers.length > 0) {
+                      const c = filteredCustomers[0]
+                      setForm((f) => ({ ...f, customer_id: c.id }))
+                      setCustomerQuery(c.name || '')
+                      setShowSuggest(false)
+                      e.preventDefault()
                     }
-                  />
-                </div>
-                <div>
-                  <label className="mb-1 block text-sm text-neutral-700">
-                    시작 시간 <span className="text-rose-600">*</span>
-                  </label>
-                  <input
-                    className="h-10 w-full rounded-lg border border-neutral-300 px-3 outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-300"
-                    type="time"
-                    value={form.start}
-                    onChange={(e) =>
-                      setForm((f) => ({ ...f, start: e.target.value }))
-                    }
-                  />
-                </div>
-                <div className="col-span-2">
-                  <label className="mb-1 block text-sm text-neutral-700">
-                    고객
-                  </label>
-                  <div className="relative">
-                    <input
-                      className="h-10 w-full rounded-lg border border-neutral-300 px-3 outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-300 placeholder:text-neutral-400"
-                      placeholder="이름/이메일/전화번호로 검색하여 선택"
-                      value={customerQuery}
-                      onChange={(e) => {
-                        setCustomerQuery(e.target.value)
-                        setShowSuggest(true)
-                      }}
-                      onFocus={() => setShowSuggest(true)}
-                      onKeyDown={(e) => {
-                        if (e.key === 'Enter' && filteredCustomers.length > 0) {
-                          const c = filteredCustomers[0]
-                          setForm((f) => ({ ...f, customer_id: c.id }))
-                          setCustomerQuery(c.name || '')
-                          setShowSuggest(false)
-                          e.preventDefault()
-                        }
-                        if (e.key === 'Escape') setShowSuggest(false)
-                      }}
-                    />
-                    {showSuggest &&
-                      customerQuery.trim() &&
-                      filteredCustomers.length > 0 && (
-                        <ul
-                          className="absolute z-50 mt-1 max-h-56 w-full overflow-auto rounded-none border-2 border-neutral-500 bg-white"
-                          role="listbox"
+                    if (e.key === 'Escape') setShowSuggest(false)
+                  }}
+                />
+                {showSuggest &&
+                  customerQuery.trim() &&
+                  filteredCustomers.length > 0 && (
+                    <ul
+                      className="absolute z-50 mt-1 max-h-56 w-full overflow-auto rounded-lg border border-neutral-300 bg-white shadow-lg"
+                      role="listbox"
+                    >
+                      {filteredCustomers.map((c: any) => (
+                        <li
+                          key={c.id}
+                          role="option"
+                          className="cursor-pointer px-4 py-3 text-sm hover:bg-neutral-50 transition-colors"
+                          onMouseDown={() => {
+                            setForm((f) => ({ ...f, customer_id: c.id }))
+                            setCustomerQuery(c.name || '')
+                            setShowSuggest(false)
+                          }}
                         >
-                          {filteredCustomers.map((c: any) => (
-                            <li
-                              key={c.id}
-                              role="option"
-                              className="cursor-pointer px-3 py-2 text-sm hover:bg-neutral-50"
-                              onMouseDown={() => {
-                                setForm((f) => ({ ...f, customer_id: c.id }))
-                                setCustomerQuery(c.name || '')
-                                setShowSuggest(false)
-                              }}
-                            >
-                              <div className="font-medium">{c.name}</div>
-                              <div className="text-xs text-neutral-500">
-                                {c.email || c.phone || '-'}
-                              </div>
-                            </li>
-                          ))}
-                        </ul>
-                      )}
-                  </div>
-                </div>
-                <div>
-                  <label className="mb-1 block text-sm font-medium text-gray-700">
-                    상태
-                  </label>
-                  <select
-                    className="h-10 w-full rounded-none border-2 border-neutral-500 bg-white px-3 text-sm text-neutral-900 outline-none hover:border-neutral-600 focus:border-[#1D4ED8] focus:ring-[4px] focus:ring-[#1D4ED8]/20"
-                    value={form.status}
-                    onChange={(e) =>
-                      setForm((f) => ({ ...f, status: e.target.value }))
-                    }
-                  >
-                    <option value="scheduled">예약확정</option>
-                    <option value="pending">대기</option>
-                    <option value="cancelled">취소</option>
-                    <option value="complete">완료</option>
-                  </select>
-                </div>
-                <div className="col-span-2">
-                  <label className="mb-1 block text-sm font-medium text-gray-700">
-                    담당 직원(선택)
-                  </label>
-                  <StaffAutoComplete
-                    value={form.staff_id || ''}
-                    onChange={(v) =>
-                      setForm((f) => ({ ...f, staff_id: v || undefined }))
-                    }
-                  />
-                </div>
-                <div>
-                  <label className="mb-1 block text-sm font-medium text-gray-700">
-                    서비스/상품
-                  </label>
-                  <select
-                    className="h-10 w-full rounded-none border-2 border-neutral-500 bg-white px-3 text-sm text-neutral-900 outline-none hover:border-neutral-600 focus:border-[#1D4ED8] focus:ring-[4px] focus:ring-[#1D4ED8]/20"
-                    value={form.service_id || ''}
-                    onChange={(e) =>
-                      setForm((f) => ({
-                        ...f,
-                        service_id: e.target.value || undefined,
-                      }))
-                    }
-                  >
-                    <option value="">선택 안 함</option>
-                    {products.map((p) => (
-                      <option key={p.id} value={p.id}>
-                        {p.name}
-                      </option>
-                    ))}
-                  </select>
-                  {form.service_id && (
-                    <div className="mt-1 text-xs text-neutral-500">
-                      보유중:{' '}
-                      {Number(
-                        holdingsByProduct[String(form.service_id)] || 0,
-                      )}
-                      개
-                    </div>
+                          <div className="font-semibold text-neutral-900">{c.name}</div>
+                          <div className="text-xs text-neutral-500 mt-0.5">
+                            {c.email || c.phone || '-'}
+                          </div>
+                        </li>
+                      ))}
+                    </ul>
                   )}
-                </div>
-                <div className="col-span-2">
-                  <Textarea
-                    label="메모(선택)"
-                    placeholder="고객 요청사항, 준비물 등을 입력하세요"
-                    value={form.notes}
-                    onChange={(e) =>
-                      setForm((f) => ({ ...f, notes: e.target.value }))
-                    }
-                  />
-                </div>
               </div>
+            </div>
+            <Select
+              label="상태"
+              value={form.status}
+              onChange={(e) =>
+                setForm((f) => ({ ...f, status: e.target.value }))
+              }
+            >
+              <option value="scheduled">예약확정</option>
+              <option value="pending">대기</option>
+              <option value="cancelled">취소</option>
+              <option value="complete">완료</option>
+            </Select>
+            <div className="col-span-2">
+              <label className="block mb-2 text-sm font-semibold text-neutral-700">
+                담당 직원(선택)
+              </label>
+              <StaffAutoComplete
+                value={form.staff_id || ''}
+                onChange={(v) =>
+                  setForm((f) => ({ ...f, staff_id: v || undefined }))
+                }
+              />
+            </div>
+            <div className="col-span-2">
+              <Select
+                label="서비스/상품"
+                value={form.service_id || ''}
+                onChange={(e) =>
+                  setForm((f) => ({
+                    ...f,
+                    service_id: e.target.value || undefined,
+                  }))
+                }
+              >
+                <option value="">선택 안 함</option>
+                {products.map((p) => (
+                  <option key={p.id} value={p.id}>
+                    {p.name}
+                  </option>
+                ))}
+              </Select>
+              {form.service_id && (
+                <div className="mt-1 text-xs text-neutral-500">
+                  보유중:{' '}
+                  {Number(
+                    holdingsByProduct[String(form.service_id)] || 0,
+                  )}
+                  개
+                </div>
+              )}
+            </div>
+            <div className="col-span-2">
+              <Textarea
+                label="메모(선택)"
+                placeholder="고객 요청사항, 준비물 등을 입력하세요"
+                value={form.notes}
+                onChange={(e) =>
+                  setForm((f) => ({ ...f, notes: e.target.value }))
+                }
+              />
             </div>
           </div>
         </div>

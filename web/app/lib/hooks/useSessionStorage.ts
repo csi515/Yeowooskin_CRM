@@ -2,20 +2,19 @@ import { useState, useEffect, useCallback } from 'react'
 
 type SetValue<T> = T | ((val: T) => T)
 
-export function useLocalStorage<T>(
+export function useSessionStorage<T>(
   key: string,
   initialValue: T
 ): [T, (value: SetValue<T>) => void, () => void] {
-  // SSR 안전성
   const [storedValue, setStoredValue] = useState<T>(() => {
     if (typeof window === 'undefined') {
       return initialValue
     }
     try {
-      const item = window.localStorage.getItem(key)
+      const item = window.sessionStorage.getItem(key)
       return item ? JSON.parse(item) : initialValue
     } catch (error) {
-      console.error(`Error reading localStorage key "${key}":`, error)
+      console.error(`Error reading sessionStorage key "${key}":`, error)
       return initialValue
     }
   })
@@ -27,10 +26,10 @@ export function useLocalStorage<T>(
         setStoredValue(valueToStore)
         
         if (typeof window !== 'undefined') {
-          window.localStorage.setItem(key, JSON.stringify(valueToStore))
+          window.sessionStorage.setItem(key, JSON.stringify(valueToStore))
         }
       } catch (error) {
-        console.error(`Error setting localStorage key "${key}":`, error)
+        console.error(`Error setting sessionStorage key "${key}":`, error)
       }
     },
     [key, storedValue]
@@ -40,30 +39,12 @@ export function useLocalStorage<T>(
     try {
       setStoredValue(initialValue)
       if (typeof window !== 'undefined') {
-        window.localStorage.removeItem(key)
+        window.sessionStorage.removeItem(key)
       }
     } catch (error) {
-      console.error(`Error removing localStorage key "${key}":`, error)
+      console.error(`Error removing sessionStorage key "${key}":`, error)
     }
   }, [key, initialValue])
-
-  // 다른 탭에서의 변경 감지
-  useEffect(() => {
-    if (typeof window === 'undefined') return
-
-    const handleStorageChange = (e: StorageEvent) => {
-      if (e.key === key && e.newValue) {
-        try {
-          setStoredValue(JSON.parse(e.newValue))
-        } catch (error) {
-          console.error(`Error parsing localStorage value for key "${key}":`, error)
-        }
-      }
-    }
-
-    window.addEventListener('storage', handleStorageChange)
-    return () => window.removeEventListener('storage', handleStorageChange)
-  }, [key])
 
   return [storedValue, setValue, removeValue]
 }

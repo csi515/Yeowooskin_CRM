@@ -5,11 +5,12 @@ import { useEffect, useState } from 'react'
 
 export default function TopBar({ onMenu }: { onMenu?: () => void }) {
   const [userName, setUserName] = useState<string | null>(null)
+  const [loading, setLoading] = useState(true)
 
   useEffect(() => {
     const loadUserProfile = async () => {
       try {
-        // API 엔드포인트를 통해 사용자 프로필 가져오기
+        setLoading(true)
         const response = await fetch('/api/user/me')
         if (response.ok) {
           const data = await response.json()
@@ -17,40 +18,50 @@ export default function TopBar({ onMenu }: { onMenu?: () => void }) {
           if (profile?.name) {
             setUserName(profile.name)
           } else if (profile?.email) {
-            // 이름이 없으면 이메일의 @ 앞부분 사용
             setUserName(profile.email.split('@')[0])
           }
         }
       } catch (error) {
-        // 에러는 무시 (로그인하지 않은 경우 등)
         console.error('Failed to load user profile:', error)
+      } finally {
+        setLoading(false)
       }
     }
     loadUserProfile()
   }, [])
 
   return (
-    <header className="sticky top-0 z-[1021] bg-white border-b border-neutral-200 shadow-md">
-      <div className="container h-10 flex items-center justify-between px-4 gap-2 sm:gap-3">
+    <header className="sticky top-0 z-[1021] bg-white/95 backdrop-blur-md border-b border-neutral-200 shadow-sm">
+      <div className="container h-14 md:h-16 flex items-center justify-between px-4 sm:px-5 md:px-6 gap-3">
+        {/* 모바일 메뉴 버튼 */}
         <button 
-          aria-label="메뉴" 
+          aria-label="메뉴 열기" 
           onClick={onMenu} 
-          className="md:hidden p-2.5 rounded-lg border border-transparent hover:bg-neutral-50 hover:border-neutral-200 active:bg-neutral-100 focus-visible:ring-2 focus-visible:ring-pink-300 focus-visible:ring-offset-1 transition-all duration-300 touch-manipulation"
+          className="md:hidden p-2.5 rounded-lg border border-transparent hover:bg-neutral-50 hover:border-neutral-200 active:bg-neutral-100 focus-visible:ring-2 focus-visible:ring-secondary-400 focus-visible:ring-offset-1 transition-all duration-200 touch-manipulation"
         >
-          <Bars3Icon className="h-5 w-5 text-neutral-700" />
+          <Bars3Icon className="h-6 w-6 text-neutral-700" />
         </button>
+
+        {/* 스페이서 */}
         <div className="flex-1" />
+
+        {/* 사용자 정보 */}
         <div className="flex items-center gap-2 sm:gap-3">
-          {userName && (
-            <span className="text-xs sm:text-sm font-medium text-neutral-700 whitespace-nowrap">
-              {userName}님 환영합니다.
+          {loading ? (
+            <div className="h-4 w-24 bg-neutral-200 rounded animate-pulse" />
+          ) : userName ? (
+            <span className="hidden sm:inline text-xs sm:text-sm font-medium text-neutral-700 whitespace-nowrap">
+              {userName}님 환영합니다
             </span>
-          )}
-          <div className="h-8 w-8 sm:h-9 sm:w-9 rounded-full bg-gradient-to-br from-[#FDF2F8] to-[#FCE7F3] border border-neutral-200 shadow-sm flex-shrink-0" aria-label="사용자 아바타" />
+          ) : null}
+          <div 
+            className="h-9 w-9 sm:h-10 sm:w-10 rounded-full bg-gradient-to-br from-[#FDF2F8] to-[#FCE7F3] border-2 border-neutral-200 shadow-sm flex-shrink-0 flex items-center justify-center text-xs font-semibold text-secondary-600"
+            aria-label="사용자 아바타"
+          >
+            {userName ? userName.charAt(0).toUpperCase() : 'U'}
+          </div>
         </div>
       </div>
     </header>
   )
 }
-
-

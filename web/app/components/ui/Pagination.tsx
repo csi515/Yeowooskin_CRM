@@ -1,131 +1,120 @@
 'use client'
 
-import clsx from 'clsx'
+import { ChevronLeft, ChevronRight } from 'lucide-react'
 import Button from './Button'
-import { ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight } from 'lucide-react'
+import clsx from 'clsx'
 
 type Props = {
   currentPage: number
   totalPages: number
+  pageSize: number
+  totalItems: number
   onPageChange: (page: number) => void
-  showFirstLast?: boolean
-  maxVisible?: number
+  onPageSizeChange: (size: number) => void
+  pageSizeOptions?: number[]
   className?: string
 }
 
 export default function Pagination({
   currentPage,
   totalPages,
+  pageSize,
+  totalItems,
   onPageChange,
-  showFirstLast = true,
-  maxVisible = 5,
-  className,
+  onPageSizeChange,
+  pageSizeOptions = [10, 20, 50, 100],
+  className
 }: Props) {
-  if (totalPages <= 1) return null
-
-  const getPageNumbers = (): (number | string)[] => {
-    const pages: (number | string)[] = []
-    const halfVisible = Math.floor(maxVisible / 2)
-
-    let startPage = Math.max(1, currentPage - halfVisible)
-    let endPage = Math.min(totalPages, startPage + maxVisible - 1)
-
-    if (endPage - startPage < maxVisible - 1) {
-      startPage = Math.max(1, endPage - maxVisible + 1)
-    }
-
-    if (startPage > 1) {
-      pages.push(1)
-      if (startPage > 2) {
-        pages.push('...')
-      }
-    }
-
-    for (let i = startPage; i <= endPage; i++) {
-      pages.push(i)
-    }
-
-    if (endPage < totalPages) {
-      if (endPage < totalPages - 1) {
-        pages.push('...')
-      }
-      pages.push(totalPages)
-    }
-
-    return pages
-  }
-
-  const pages = getPageNumbers()
+  const startItem = totalItems === 0 ? 0 : (currentPage - 1) * pageSize + 1
+  const endItem = Math.min(currentPage * pageSize, totalItems)
 
   return (
-    <div className={clsx('flex items-center justify-center gap-1', className)}>
-      {showFirstLast && (
-        <Button
-          variant="secondary"
-          size="sm"
-          onClick={() => onPageChange(1)}
-          disabled={currentPage === 1}
-          leftIcon={<ChevronsLeft className="h-4 w-4" />}
-          aria-label="첫 페이지"
-        />
-      )}
-      <Button
-        variant="secondary"
-        size="sm"
-        onClick={() => onPageChange(currentPage - 1)}
-        disabled={currentPage === 1}
-        leftIcon={<ChevronLeft className="h-4 w-4" />}
-        aria-label="이전 페이지"
-      />
+    <div className={clsx(
+      'flex flex-col sm:flex-row items-center justify-between gap-3 px-4 py-3 bg-neutral-50 border-t border-neutral-200',
+      className
+    )}>
+      {/* 정보 표시 */}
+      <div className="text-xs sm:text-sm text-neutral-600 order-2 sm:order-1">
+        총 {totalItems.toLocaleString()}개 · {startItem.toLocaleString()}-{endItem.toLocaleString()}개 표시
+      </div>
 
-      {pages.map((page, index) => {
-        if (page === '...') {
-          return (
-            <span key={`ellipsis-${index}`} className="px-2 text-neutral-400">
-              ...
-            </span>
-          )
-        }
+      {/* 페이지네이션 컨트롤 */}
+      <div className="flex items-center gap-2 order-1 sm:order-2 w-full sm:w-auto">
+        {/* 페이지 크기 선택 */}
+        <select
+          value={pageSize}
+          onChange={(e) => {
+            onPageSizeChange(Number(e.target.value))
+            onPageChange(1)
+          }}
+          className="h-10 sm:h-9 rounded-lg border border-neutral-300 px-3 text-sm bg-white focus:border-secondary-500 focus:ring-2 focus:ring-secondary-200 transition-all touch-manipulation"
+          aria-label="페이지당 항목 수"
+        >
+          {pageSizeOptions.map(size => (
+            <option key={size} value={size}>
+              {size}개/페이지
+            </option>
+          ))}
+        </select>
 
-        const pageNum = page as number
-        const isActive = pageNum === currentPage
-
-        return (
-          <Button
-            key={pageNum}
-            variant={isActive ? 'primary' : 'secondary'}
-            size="sm"
-            onClick={() => onPageChange(pageNum)}
-            className={clsx(
-              'min-w-[2.25rem]',
-              isActive && 'font-semibold'
-            )}
-            aria-label={`${pageNum} 페이지`}
-            aria-current={isActive ? 'page' : undefined}
+        {/* 이전/다음 버튼 */}
+        <div className="flex items-center gap-1">
+          <button
+            onClick={() => onPageChange(Math.max(1, currentPage - 1))}
+            disabled={currentPage === 1}
+            className="h-10 w-10 sm:h-9 sm:w-9 inline-flex items-center justify-center rounded-lg border border-neutral-300 bg-white hover:bg-neutral-50 hover:border-neutral-400 disabled:opacity-40 disabled:cursor-not-allowed focus-visible:ring-2 focus-visible:ring-secondary-400 transition-all touch-manipulation"
+            aria-label="이전 페이지"
           >
-            {pageNum}
-          </Button>
-        )
-      })}
+            <ChevronLeft className="h-5 w-5" />
+          </button>
+          
+          {/* 페이지 번호 */}
+          <div className="hidden sm:flex items-center gap-1">
+            {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
+              let pageNum: number
+              if (totalPages <= 5) {
+                pageNum = i + 1
+              } else if (currentPage <= 3) {
+                pageNum = i + 1
+              } else if (currentPage >= totalPages - 2) {
+                pageNum = totalPages - 4 + i
+              } else {
+                pageNum = currentPage - 2 + i
+              }
 
-      <Button
-        variant="secondary"
-        size="sm"
-        onClick={() => onPageChange(currentPage + 1)}
-        disabled={currentPage === totalPages}
-        rightIcon={<ChevronRight className="h-4 w-4" />}
-        aria-label="다음 페이지"
-      />
-      {showFirstLast && (
-        <Button
-          variant="secondary"
-          size="sm"
-          onClick={() => onPageChange(totalPages)}
-          disabled={currentPage === totalPages}
-          rightIcon={<ChevronsRight className="h-4 w-4" />}
-          aria-label="마지막 페이지"
-        />
-      )}
+              return (
+                <button
+                  key={pageNum}
+                  onClick={() => onPageChange(pageNum)}
+                  className={clsx(
+                    'h-9 w-9 rounded-lg border text-sm font-medium transition-all touch-manipulation',
+                    currentPage === pageNum
+                      ? 'bg-secondary-600 text-white border-secondary-600'
+                      : 'bg-white border-neutral-300 text-neutral-700 hover:bg-neutral-50 hover:border-neutral-400'
+                  )}
+                  aria-label={`${pageNum}페이지`}
+                  aria-current={currentPage === pageNum ? 'page' : undefined}
+                >
+                  {pageNum}
+                </button>
+              )
+            })}
+          </div>
+
+          <span className="sm:hidden text-sm text-neutral-600 font-medium px-2">
+            {currentPage} / {totalPages}
+          </span>
+
+          <button
+            onClick={() => onPageChange(Math.min(totalPages, currentPage + 1))}
+            disabled={currentPage >= totalPages}
+            className="h-10 w-10 sm:h-9 sm:w-9 inline-flex items-center justify-center rounded-lg border border-neutral-300 bg-white hover:bg-neutral-50 hover:border-neutral-400 disabled:opacity-40 disabled:cursor-not-allowed focus-visible:ring-2 focus-visible:ring-secondary-400 transition-all touch-manipulation"
+            aria-label="다음 페이지"
+          >
+            <ChevronRight className="h-5 w-5" />
+          </button>
+        </div>
+      </div>
     </div>
   )
 }

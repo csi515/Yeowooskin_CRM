@@ -1,33 +1,25 @@
-'use client'
-
-import { useEffect, useRef, type RefObject } from 'react'
+import { useEffect, RefObject } from 'react'
 
 export function useClickOutside<T extends HTMLElement = HTMLElement>(
-  handler: () => void,
-  enabled: boolean = true
-): RefObject<T> {
-  const ref = useRef<T>(null)
-
+  ref: RefObject<T>,
+  handler: (event: MouseEvent | TouchEvent) => void
+) {
   useEffect(() => {
-    if (!enabled) return
-
-    const handleClick = (event: MouseEvent | TouchEvent) => {
-      if (!ref.current) return
-      
-      const target = event.target as Node
-      if (!ref.current.contains(target)) {
-        handler()
+    const listener = (event: MouseEvent | TouchEvent) => {
+      const el = ref?.current
+      if (!el || el.contains((event?.target as Node) || null)) {
+        return
       }
+
+      handler(event)
     }
 
-    document.addEventListener('mousedown', handleClick)
-    document.addEventListener('touchstart', handleClick)
+    document.addEventListener('mousedown', listener)
+    document.addEventListener('touchstart', listener)
 
     return () => {
-      document.removeEventListener('mousedown', handleClick)
-      document.removeEventListener('touchstart', handleClick)
+      document.removeEventListener('mousedown', listener)
+      document.removeEventListener('touchstart', listener)
     }
-  }, [handler, enabled])
-
-  return ref
+  }, [ref, handler])
 }

@@ -50,14 +50,14 @@ const Input = React.forwardRef<HTMLInputElement, Props>(
     const getBorderColor = () => {
       if (error) return 'border-error-600 focus:border-error-700 focus:ring-error-200'
       if (validating) return 'border-warning-500 focus:border-warning-600 focus:ring-warning-200'
-      if (isFocused) return 'border-[#F472B6] focus:border-[#F472B6] focus:ring-[#F472B6]/20'
-      return 'border-neutral-300 hover:border-neutral-400'
+      if (isFocused) return 'border-secondary-500 focus:border-secondary-500 focus:ring-secondary-200'
+      return 'border-neutral-400 hover:border-neutral-500'
     }
 
     return (
       <label className="block">
         {label && (
-          <div className="mb-2 flex items-center gap-1 text-sm font-medium text-neutral-700">
+          <div className="mb-2 flex items-center gap-1 text-sm font-semibold text-neutral-700">
             {label}
             {required && <span className="text-error-600">*</span>}
           </div>
@@ -87,7 +87,7 @@ const Input = React.forwardRef<HTMLInputElement, Props>(
               rest.onChange?.(e)
             }}
             className={clsx(
-              'w-full h-10 rounded-lg border border-neutral-300 bg-white px-3 text-sm text-neutral-900 outline-none shadow-sm transition-all duration-300 focus:ring-[2px]',
+              'w-full h-11 rounded-lg border bg-white px-3 text-base text-neutral-900 outline-none shadow-sm transition-all duration-300 focus:ring-2',
               leftIcon ? 'pl-10 pr-3' : 'px-3',
               rightIcon ? 'pr-10' : '',
               'placeholder:text-neutral-500 placeholder:transition-opacity placeholder:duration-300',

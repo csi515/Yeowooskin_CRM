@@ -1,52 +1,47 @@
 'use client'
 
 import clsx from 'clsx'
-import type { ReactNode, MouseEvent } from 'react'
+import { memo } from 'react'
 
 type Props = {
-  children: ReactNode
+  children: React.ReactNode
   className?: string
-  onClick?: (e: MouseEvent<HTMLDivElement>) => void
-  clickable?: boolean
   hover?: boolean
-  divider?: boolean
-  compact?: boolean
+  onClick?: () => void
+  padding?: 'none' | 'sm' | 'md' | 'lg'
 }
 
-export default function Card({ 
+function Card({ 
   children, 
-  className = '',
+  className, 
+  hover = false,
   onClick,
-  clickable = false,
-  hover = true,
-  divider = false,
-  compact = false,
+  padding = 'md'
 }: Props) {
-  const isClickable = clickable || !!onClick
+  const paddingClasses = {
+    none: '',
+    sm: 'p-3 md:p-4',
+    md: 'p-4 md:p-5 lg:p-6',
+    lg: 'p-6 md:p-8'
+  }
+
+  const Component = onClick ? 'button' : 'div'
 
   return (
-    <div
+    <Component
       onClick={onClick}
       className={clsx(
-        'bg-gradient-to-br from-white to-purple-50/30 rounded-xl border-2 border-purple-100 shadow-md transition-all duration-300',
-        compact ? 'p-5' : 'p-6',
-        hover && 'hover:shadow-xl hover:border-purple-200 hover:from-purple-50/50',
-        isClickable && 'cursor-pointer active:scale-[0.99] focus-visible:ring-[2px] focus-visible:ring-pink-300 focus-visible:ring-offset-2',
-        divider && 'divide-y divide-purple-100',
-        className,
+        'bg-white rounded-xl border border-neutral-200 shadow-md',
+        paddingClasses[padding],
+        hover && 'hover:shadow-lg transition-shadow duration-300',
+        onClick && 'cursor-pointer active:scale-[0.98] transition-all',
+        className
       )}
-      role={isClickable ? 'button' : undefined}
-      tabIndex={isClickable ? 0 : undefined}
-      onKeyDown={(e) => {
-        if (isClickable && (e.key === 'Enter' || e.key === ' ')) {
-          e.preventDefault()
-          onClick?.(e as unknown as MouseEvent<HTMLDivElement>)
-        }
-      }}
+      role={onClick ? 'button' : undefined}
     >
       {children}
-    </div>
+    </Component>
   )
 }
 
-
+export default memo(Card)

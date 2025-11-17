@@ -6,13 +6,13 @@ export default function Select({ label, className, children, ...rest }: Props) {
   return (
     <label className="block">
       {label && (
-        <div className="mb-1 text-sm font-medium text-gray-700">
+        <div className="mb-2 text-sm font-semibold text-neutral-700">
           {label}
         </div>
       )}
       <select
         {...rest}
-        className={`w-full h-10 rounded-md border border-gray-300 bg-white px-3 text-sm text-gray-700 outline-none shadow-sm hover:border-gray-400 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 ${className || ''}`}
+        className={`w-full h-11 rounded-lg border border-neutral-400 bg-white px-3 text-base text-neutral-900 outline-none shadow-sm transition-all duration-300 hover:border-neutral-500 focus:border-secondary-500 focus:ring-2 focus:ring-secondary-200 ${className || ''}`}
       >
         {children}
       </select>

@@ -6,6 +6,7 @@ import Button from '../ui/Button'
 import Input from '../ui/Input'
 import Select from '../ui/Select'
 import Textarea from '../ui/Textarea'
+import ConfirmDialog from '../ui/ConfirmDialog'
 import { useAppToast } from '@/app/lib/ui/toast'
 import StaffAutoComplete from '../StaffAutoComplete'
 import { useCustomerAndProductLists } from '../hooks/useCustomerAndProductLists'
@@ -49,14 +50,22 @@ export default function ReservationDetailModal({ open, onClose, item, onSaved, o
     } finally { setLoading(false) }
   }
 
+  const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false)
+
   const removeItem = async () => {
     if (!form?.id) return
-    if (!confirm('정말 삭제하시겠어요? 이 작업은 되돌릴 수 없습니다.')) return
+    setDeleteConfirmOpen(true)
+  }
+
+  const handleDeleteConfirm = async () => {
+    if (!form?.id) return
     try {
       await appointmentsApi.delete(form.id)
       onDeleted(); onClose(); toast.success('삭제되었습니다.')
     } catch {
       toast.error('삭제 실패')
+    } finally {
+      setDeleteConfirmOpen(false)
     }
   }
 
@@ -66,13 +75,9 @@ export default function ReservationDetailModal({ open, onClose, item, onSaved, o
     <Modal open={open} onClose={onClose} size="lg">
       <ModalHeader title="예약 상세" description="예약 정보를 확인하고 수정합니다. 날짜와 시작 시간, 상태를 변경할 수 있습니다." />
       <ModalBody>
-        <div className="grid gap-4 md:grid-cols-[280px,1fr]">
-          <div className="space-y-3">
-            {error && <p className="text-sm text-rose-600">{error}</p>}
-          </div>
-          <div className="space-y-3">
-            <div className="space-y-3">
-              <div className="grid grid-cols-2 gap-3">
+        <div className="space-y-5">
+          {error && <p className="text-sm text-error-600">{error}</p>}
+          <div className="grid grid-cols-2 gap-5">
                 <Input label="날짜" type="date" value={form.date} onChange={e => setForm(f => f && ({ ...f, date: e.target.value }))} />
                 <Input label="시작" type="time" value={form.start} onChange={e => setForm(f => f && ({ ...f, start: e.target.value }))} />
                 <Select label="상태" value={form.status} onChange={e => setForm(f => f && ({ ...f, status: e.target.value }))}>
@@ -81,23 +86,34 @@ export default function ReservationDetailModal({ open, onClose, item, onSaved, o
                   <option value="cancelled">취소</option>
                   <option value="complete">완료</option>
                 </Select>
-                <label className="block">
-                  <div className="mb-1 text-sm text-neutral-700">고객(선택)</div>
-                  <select className="w-full h-10 rounded-lg border border-neutral-300 px-3 outline-none focus:border-brand-500 focus:ring-2 focus:ring-brand-300" value={form.customer_id || ''} onChange={e => setForm(f => f && ({ ...f, customer_id: e.target.value || undefined }))}>
+                <div className="col-span-2">
+                  <label className="block mb-2 text-sm font-semibold text-neutral-700">
+                    고객(선택)
+                  </label>
+                  <Select
+                    value={form.customer_id || ''}
+                    onChange={(e) => setForm((f) => f && ({ ...f, customer_id: e.target.value || undefined }))}
+                  >
                     <option value="">선택 안 함</option>
-                    {customers.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
-                  </select>
-                </label>
-                <label className="col-span-2 block">
-                  <div className="mb-1 text-sm text-neutral-700">담당 직원(선택)</div>
-                  <StaffAutoComplete value={form.staff_id || ''} onChange={(v) => setForm(f => f && ({ ...f, staff_id: v || undefined }))} />
-                </label>
-                <label className="block">
-                  <div className="mb-1 text-sm font-medium text-gray-700">
-                    서비스/상품(선택)
-                  </div>
-                  <select
-                    className="h-10 w-full rounded-none border-2 border-neutral-500 bg-white px-3 text-sm text-neutral-900 outline-none hover:border-neutral-600 focus:border-[#1D4ED8] focus:ring-[4px] focus:ring-[#1D4ED8]/20"
+                    {customers.map((c) => (
+                      <option key={c.id} value={c.id}>
+                        {c.name}
+                      </option>
+                    ))}
+                  </Select>
+                </div>
+                <div className="col-span-2">
+                  <label className="block mb-2 text-sm font-semibold text-neutral-700">
+                    담당 직원(선택)
+                  </label>
+                  <StaffAutoComplete
+                    value={form.staff_id || ''}
+                    onChange={(v) => setForm((f) => f && ({ ...f, staff_id: v || undefined }))}
+                  />
+                </div>
+                <div className="col-span-2">
+                  <Select
+                    label="서비스/상품(선택)"
                     value={form.service_id || ''}
                     onChange={(e) =>
                       setForm(
@@ -111,8 +127,8 @@ export default function ReservationDetailModal({ open, onClose, item, onSaved, o
                         {p.name}
                       </option>
                     ))}
-                  </select>
-                </label>
+                  </Select>
+                </div>
                 <div className="col-span-2">
                   <Textarea
                     label="메모(선택)"
@@ -131,8 +147,18 @@ export default function ReservationDetailModal({ open, onClose, item, onSaved, o
       <ModalFooter>
         <Button variant="secondary" onClick={onClose} disabled={loading} className="w-full md:w-auto">취소</Button>
         <Button variant="danger" onClick={removeItem} disabled={loading} className="w-full md:w-auto">삭제</Button>
-        <Button variant="primary" onClick={save} disabled={loading} className="w-full md:w-auto">저장</Button>
+        <Button variant="primary" onClick={save} disabled={loading} loading={loading} className="w-full md:w-auto">저장</Button>
       </ModalFooter>
+      <ConfirmDialog
+        open={deleteConfirmOpen}
+        onClose={() => setDeleteConfirmOpen(false)}
+        onConfirm={handleDeleteConfirm}
+        title="예약 삭제"
+        message="정말 삭제하시겠어요? 이 작업은 되돌릴 수 없습니다."
+        confirmLabel="삭제"
+        cancelLabel="취소"
+        variant="danger"
+      />
     </Modal>
   )
 }

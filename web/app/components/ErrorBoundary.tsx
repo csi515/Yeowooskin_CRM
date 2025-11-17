@@ -2,19 +2,23 @@
 
 import React, { Component, ErrorInfo, ReactNode } from 'react'
 import Button from './ui/Button'
+import ErrorDisplay from './ui/ErrorDisplay'
 
 interface Props {
   children: ReactNode
   fallback?: ReactNode
+  onError?: (error: Error, errorInfo: ErrorInfo) => void
 }
 
 interface State {
   hasError: boolean
   error: Error | null
+  errorInfo: ErrorInfo | null
 }
 
 /**
  * 전역 에러 바운더리 컴포넌트
+ * React 컴포넌트 트리에서 발생한 에러를 캐치하고 처리합니다.
  */
 export class ErrorBoundary extends Component<Props, State> {
   constructor(props: Props) {
@@ -22,10 +26,11 @@ export class ErrorBoundary extends Component<Props, State> {
     this.state = {
       hasError: false,
       error: null,
+      errorInfo: null,
     }
   }
 
-  static getDerivedStateFromError(error: Error): State {
+  static getDerivedStateFromError(error: Error): Partial<State> {
     return {
       hasError: true,
       error,
@@ -33,25 +38,30 @@ export class ErrorBoundary extends Component<Props, State> {
   }
 
   async componentDidCatch(error: Error, errorInfo: ErrorInfo) {
-    // 로깅 유틸리티 사용 (동적 import로 변경하여 Vercel 빌드 최적화)
+    this.setState({ errorInfo })
+    
+    // 에러 로깅
     if (typeof window !== 'undefined') {
       try {
         const { logger } = await import('../lib/utils/logger')
         logger.error('ErrorBoundary caught an error', error, 'ErrorBoundary')
         logger.error('Error info', errorInfo, 'ErrorBoundary')
       } catch (importError) {
-        // logger import 실패 시 기본 console.error 사용
         console.error('ErrorBoundary caught an error:', error, errorInfo)
       }
     } else {
       console.error('ErrorBoundary caught an error:', error, errorInfo)
     }
+
+    // 사용자 정의 에러 핸들러 호출
+    this.props.onError?.(error, errorInfo)
   }
 
   handleReset = () => {
     this.setState({
       hasError: false,
       error: null,
+      errorInfo: null,
     })
   }
 
@@ -62,23 +72,28 @@ export class ErrorBoundary extends Component<Props, State> {
       }
 
       return (
-        <div className="flex min-h-screen flex-col items-center justify-center p-4">
-          <div className="max-w-md w-full space-y-4 text-center">
-            <h1 className="text-2xl font-bold text-neutral-900">오류가 발생했습니다</h1>
-            <p className="text-neutral-600">
-              예상치 못한 오류가 발생했습니다. 페이지를 새로고침하거나 다시 시도해주세요.
-            </p>
+        <div className="flex min-h-screen flex-col items-center justify-center p-4 md:p-6">
+          <div className="max-w-md w-full">
+            <ErrorDisplay
+              title="오류가 발생했습니다"
+              message="예상치 못한 오류가 발생했습니다. 페이지를 새로고침하거나 다시 시도해주세요."
+              onRetry={this.handleReset}
+            />
+            
             {process.env.NODE_ENV === 'development' && this.state.error && (
-              <div className="mt-4 p-4 bg-red-50 rounded-md text-left">
-                <p className="text-sm font-mono text-red-800">{this.state.error.message}</p>
+              <div className="mt-4 p-4 bg-error-50 rounded-xl border border-error-200 text-left">
+                <p className="text-sm font-mono text-error-800 font-semibold mb-2">
+                  {this.state.error.message}
+                </p>
                 {this.state.error.stack && (
-                  <pre className="mt-2 text-xs text-red-700 overflow-auto">
+                  <pre className="mt-2 text-xs text-error-700 overflow-auto max-h-64">
                     {this.state.error.stack}
                   </pre>
                 )}
               </div>
             )}
-            <div className="flex gap-2 justify-center">
+            
+            <div className="mt-6 flex flex-col sm:flex-row gap-3 justify-center">
               <Button onClick={this.handleReset} variant="primary">
                 다시 시도
               </Button>
@@ -99,4 +114,3 @@ export class ErrorBoundary extends Component<Props, State> {
     return this.props.children
   }
 }
-

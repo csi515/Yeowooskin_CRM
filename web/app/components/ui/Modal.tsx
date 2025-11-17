@@ -142,9 +142,10 @@ export function Modal({
       />
       <div
         ref={contentRef}
-        className={`relative bg-white rounded-xl border border-neutral-200 shadow-2xl w-full max-w-[95vw] md:max-w-[min(90vw,960px)] ${sizes[size]} max-h-[calc(100vh-1rem)] md:max-h-[min(85vh,640px)] flex flex-col m-2 md:m-3 overflow-hidden ${exiting ? 'animate-content-out' : 'animate-content-in'}`}
+        className={`relative bg-white rounded-none md:rounded-xl border border-neutral-200 shadow-xl w-full h-full md:h-auto max-w-full md:max-w-[min(90vw,960px)] ${sizes[size]} max-h-full md:max-h-[min(85vh,640px)] flex flex-col m-0 md:m-3 overflow-hidden ${exiting ? 'animate-content-out' : 'animate-content-in'}`}
         role="dialog"
         aria-modal="true"
+        aria-labelledby="modal-title"
         tabIndex={-1}
         onKeyDown={handleKeyDown}
       >
@@ -164,7 +165,7 @@ export function Modal({
 
 export function ModalHeader({ title, description, icon }: { title: string; description?: string; icon?: React.ReactNode }) {
   return (
-    <div className="px-3 md:px-4 py-2 md:py-3 border-b border-neutral-200 bg-white sticky top-0 z-10">
+    <div className="px-6 py-5 border-b-2 border-neutral-200 bg-white sticky top-0 z-10">
       <div className="flex items-start gap-2">
         {icon && (
           <div className="mt-0.5 flex h-8 w-8 items-center justify-center rounded-lg border border-neutral-200 bg-[#FDF2F8] text-[#F472B6]" aria-hidden="true">
@@ -172,8 +173,8 @@ export function ModalHeader({ title, description, icon }: { title: string; descr
           </div>
         )}
         <div className="flex-1 min-w-0">
-          <h3 id="modal-title" className="text-base md:text-lg font-semibold text-neutral-900 truncate">{title}</h3>
-          {description && <p className="text-xs text-neutral-500 mt-0.5 leading-relaxed break-words">{description}</p>}
+          <h3 id="modal-title" className="text-2xl font-semibold text-neutral-900 truncate">{title}</h3>
+          {description && <p className="text-base text-neutral-500 mt-1 leading-relaxed break-words">{description}</p>}
         </div>
       </div>
     </div>
@@ -181,12 +182,12 @@ export function ModalHeader({ title, description, icon }: { title: string; descr
 }
 
 export function ModalBody({ children }: { children: React.ReactNode }) {
-  return <div className="px-3 md:px-4 py-3 md:py-4 overflow-y-auto space-y-3 md:space-y-4">{children}</div>
+  return <div className="px-6 py-5 overflow-y-auto space-y-5">{children}</div>
 }
 
 export function ModalFooter({ children }: { children: React.ReactNode }) {
   return (
-    <div className="px-3 md:px-4 py-2 md:py-3 border-t border-neutral-200 flex flex-col md:flex-row justify-end gap-2 sticky bottom-0 bg-white">
+    <div className="px-6 py-5 border-t border-neutral-200 shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.1)] flex flex-col md:flex-row justify-end gap-4 sticky bottom-0 bg-white">
       {children}
     </div>
   )

@@ -1,17 +1,21 @@
 'use client'
 
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useState, useMemo } from 'react'
 import ExpenseDetailModal from '../components/modals/ExpenseDetailModal'
 import TransactionDetailModal from '../components/modals/TransactionDetailModal'
-import { Pencil, Plus } from 'lucide-react'
+import { Plus, Pencil } from 'lucide-react'
 import EmptyState from '../components/EmptyState'
 import { Skeleton } from '../components/ui/Skeleton'
 import { useAppToast } from '../lib/ui/toast'
 import FilterBar from '../components/filters/FilterBar'
 import Button from '../components/ui/Button'
+import Input from '../components/ui/Input'
+import Textarea from '../components/ui/Textarea'
+import Modal, { ModalBody, ModalFooter, ModalHeader } from '../components/ui/Modal'
 import { usePagination } from '../lib/hooks/usePagination'
-import { useForm } from '../lib/hooks/useForm'
+import Pagination from '../components/ui/Pagination'
 import type { Expense, Transaction } from '@/types/entities'
+import MetricCard from '../components/MetricCard'
 
 type ExpenseForm = {
   expense_date: string
@@ -34,18 +38,27 @@ export default function FinancePage() {
   const [transactions, setTransactions] = useState<Transaction[]>([])
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
-  const [density, setDensity] = useState<'compact' | 'comfortable'>('comfortable')
-  // combined는 특별한 형태이므로 useSort를 직접 사용하지 않고 상태만 관리
   const [sortKey, setSortKey] = useState<'date' | 'amount'>('date')
   const [sortDir, setSortDir] = useState<'asc' | 'desc'>('desc')
-  const pagination = usePagination({
-    initialPage: 1,
-    initialPageSize: 10,
-    totalItems: 0, // mergedItems.length로 업데이트됨
-  })
-  const { page, pageSize, setPage, setPageSize } = pagination
   const [includeIncome, setIncludeIncome] = useState(true)
   const [includeExpense, setIncludeExpense] = useState(true)
+  const [newOpen, setNewOpen] = useState(false)
+  const [newType, setNewType] = useState<'income' | 'expense'>('income')
+  const [newDate, setNewDate] = useState<string>(new Date().toISOString().slice(0,10))
+  const [newAmount, setNewAmount] = useState<string>('')
+  const [newMemo, setNewMemo] = useState<string>('')
+  const [expenseDetail, setExpenseDetail] = useState<Expense | null>(null)
+  const [expenseOpen, setExpenseOpen] = useState(false)
+  const [txDetail, setTxDetail] = useState<Transaction | null>(null)
+  const [txOpen, setTxOpen] = useState(false)
+  const toast = useAppToast()
+
+  const pagination = usePagination({
+    initialPage: 1,
+    initialPageSize: 20,
+    totalItems: 0,
+  })
+  const { page, pageSize, setPage, setPageSize } = pagination
 
   const load = async () => {
     try {
@@ -54,7 +67,7 @@ export default function FinancePage() {
       const { transactionsApi } = await import('@/app/lib/api/transactions')
       const [ex, tr] = await Promise.all([
         expensesApi.list({ from, to }),
-        transactionsApi.list({ limit: 500 }),
+        transactionsApi.list({ limit: 1000 }),
       ])
       setExpenses(Array.isArray(ex) ? ex : [])
       setTransactions(Array.isArray(tr) ? tr : [])
@@ -74,44 +87,6 @@ export default function FinancePage() {
     .reduce((s, t) => s + Number(t.amount || 0), 0), [transactions, from, to])
   const sumExpense = useMemo(() => expenses.reduce((s, e) => s + Number(e.amount || 0), 0), [expenses])
   const profit = sumIncome - sumExpense
-
-  const [newOpen, setNewOpen] = useState(false)
-  const [newType, setNewType] = useState<'income' | 'expense'>('income')
-  const [newDate, setNewDate] = useState<string>(new Date().toISOString().slice(0,10))
-  const [newAmount, setNewAmount] = useState<string>('')
-  const [newCategory, setNewCategory] = useState<string>('')
-  const [newMemo, setNewMemo] = useState<string>('')
-  const [expenseDetail, setExpenseDetail] = useState<Expense | null>(null)
-  const [expenseOpen, setExpenseOpen] = useState(false)
-  const [txDetail, setTxDetail] = useState<Transaction | null>(null)
-  const [txOpen, setTxOpen] = useState(false)
-  const toast = useAppToast()
-
-  const expenseForm = useForm<ExpenseForm>({
-    initialValues: {
-      expense_date: new Date().toISOString().slice(0,10),
-      amount: 0,
-      category: '',
-      memo: '',
-    },
-    validationRules: {
-      expense_date: { required: true },
-      amount: { required: true, min: 0 },
-      category: { required: true, minLength: 1 },
-    },
-    onSubmit: async (values) => {
-      try {
-        const { expensesApi } = await import('@/app/lib/api/expenses')
-        await expensesApi.create(values)
-        expenseForm.reset()
-        await load()
-        toast.success('지출이 추가되었습니다.')
-      } catch (e: unknown) {
-        const errorMessage = e instanceof Error ? e.message : '지출 저장 실패'
-        toast.error('지출 저장 실패', errorMessage)
-      }
-    },
-  })
 
   const combined = useMemo(() => {
     const inRange = (iso: string) => {
@@ -150,308 +125,438 @@ export default function FinancePage() {
     return rows
   }, [transactions, expenses, includeIncome, includeExpense, from, to, sortKey, sortDir])
 
+  const totalPages = Math.max(1, Math.ceil(combined.length / pageSize))
   const pagedCombined = useMemo(() => {
     const start = (page - 1) * pageSize
     return combined.slice(start, start + pageSize)
   }, [combined, page, pageSize])
 
-  const TypeFilter = () => (
-    <div className="px-3">
-      <div className="text-[11px] font-medium text-neutral-600 mb-1">유형</div>
-      <div className="inline-flex rounded-lg border border-neutral-300 bg-white p-1 whitespace-nowrap gap-1 shadow-sm">
-        <button
-          onClick={() => { setIncludeIncome(v => { const nv = !v; setPage(1); return nv }); }}
-          className={`px-4 py-2 text-sm rounded-lg min-w-[100px] transition-all duration-300 ${
-            includeIncome 
-              ? 'bg-gradient-to-r from-[#F472B6] to-[#EC4899] text-white shadow-lg border-2 border-[#EC4899] font-semibold scale-[1.02]' 
-              : 'bg-white text-neutral-500 hover:bg-[#FDF2F8] hover:text-[#F472B6] border-2 border-transparent font-medium'
-          }`}
-          aria-pressed={includeIncome}
-        >
-          수입
-        </button>
-        <button
-          onClick={() => { setIncludeExpense(v => { const nv = !v; setPage(1); return nv }); }}
-          className={`px-4 py-2 text-sm rounded-lg min-w-[100px] transition-all duration-300 ${
-            includeExpense 
-              ? 'bg-gradient-to-r from-[#F472B6] to-[#EC4899] text-white shadow-lg border-2 border-[#EC4899] font-semibold scale-[1.02]' 
-              : 'bg-white text-neutral-500 hover:bg-[#FDF2F8] hover:text-[#F472B6] border-2 border-transparent font-medium'
-          }`}
-          aria-pressed={includeExpense}
-        >
-          지출
-        </button>
-      </div>
-    </div>
-  )
-
-  const removeExpense = async (id: string) => {
-    if (!confirm('삭제하시겠습니까?')) return
-    try {
-      const { expensesApi } = await import('@/app/lib/api/expenses')
-      await expensesApi.delete(id)
-      await load()
-      toast.success('삭제되었습니다.')
-    } catch {
-      toast.error('삭제 실패')
-    }
-  }
+  // 페이지네이션 totalItems 업데이트
+  useEffect(() => {
+    pagination.setTotalItems?.(combined.length)
+  }, [combined.length])
 
   return (
-    <main className="space-y-2 md:space-y-3">
-
-      <section className="grid grid-cols-1 sm:grid-cols-3 gap-6">
-        <div className="bg-gradient-to-br from-emerald-50 to-teal-100 rounded-xl border-2 border-emerald-200 p-6 shadow-md hover:shadow-xl transition-all duration-300">
-          <div className="text-sm font-semibold text-emerald-700 mb-2">월간 수입</div>
-          <div className="text-3xl font-bold text-emerald-700">₩{Number(sumIncome).toLocaleString()}</div>
-        </div>
-        <div className="bg-gradient-to-br from-rose-50 to-pink-100 rounded-xl border-2 border-rose-200 p-6 shadow-md hover:shadow-xl transition-all duration-300">
-          <div className="text-sm font-semibold text-rose-700 mb-2">월간 지출</div>
-          <div className="text-3xl font-bold text-rose-700">₩{Number(sumExpense).toLocaleString()}</div>
-        </div>
-        <div className={`rounded-xl border-2 p-6 shadow-md hover:shadow-xl transition-all duration-300 ${
-          profit >= 0 
-            ? 'bg-gradient-to-br from-emerald-50 to-teal-100 border-emerald-200' 
-            : 'bg-gradient-to-br from-rose-50 to-pink-100 border-rose-200'
-        }`}>
-          <div className={`text-sm font-semibold mb-2 ${profit >= 0 ? 'text-emerald-700' : 'text-rose-700'}`}>월간 순이익</div>
-          <div className={`text-3xl font-bold ${profit >= 0 ? 'text-emerald-700' : 'text-rose-700'}`}>₩{Number(profit).toLocaleString()}</div>
-        </div>
+    <main className="space-y-4 md:space-y-5 lg:space-y-6">
+      {/* 핵심 지표 카드 - 반응형 */}
+      <section className="grid grid-cols-1 sm:grid-cols-3 gap-4 md:gap-5 lg:gap-6">
+        <MetricCard
+          label="월간 수입"
+          value={`₩${Number(sumIncome).toLocaleString()}`}
+          className="h-full"
+          colorIndex={1}
+        />
+        <MetricCard
+          label="월간 지출"
+          value={`₩${Number(sumExpense).toLocaleString()}`}
+          className="h-full"
+          colorIndex={0}
+        />
+        <MetricCard
+          label="월간 순이익"
+          value={`₩${Number(profit).toLocaleString()}`}
+          delta={{
+            value: profit >= 0 ? '흑자' : '적자',
+            tone: profit >= 0 ? 'up' : 'down'
+          }}
+          className="h-full"
+          colorIndex={profit >= 0 ? 2 : 0}
+        />
       </section>
 
       <FilterBar>
-        <div className="px-3 first:pl-0">
-          <div className="text-[11px] font-medium text-neutral-600 mb-1">기간</div>
-          <div className="flex items-center gap-2">
-            <input type="date" value={from} onChange={e => setRange(r => ({ ...r, from: e.target.value }))} className="h-10 rounded-lg border border-neutral-300 px-3 focus:border-[#F472B6] focus:ring-[2px] focus:ring-[#F472B6]/20 outline-none bg-white text-neutral-900 transition-all duration-300"/>
-            <span className="text-neutral-600 font-medium">~</span>
-            <input type="date" value={to} onChange={e => setRange(r => ({ ...r, to: e.target.value }))} className="h-10 rounded-lg border border-neutral-300 px-3 focus:border-[#F472B6] focus:ring-[2px] focus:ring-[#F472B6]/20 outline-none bg-white text-neutral-900 transition-all duration-300"/>
+        <div className="flex flex-wrap items-end gap-3 md:gap-4 w-full">
+          {/* 기간 선택 */}
+          <div className="flex-1 min-w-0 sm:min-w-[280px]">
+            <label className="block mb-2 text-sm font-semibold text-neutral-700">기간</label>
+            <div className="flex items-center gap-2">
+              <Input
+                type="date"
+                value={from}
+                onChange={(e) => setRange(r => ({ ...r, from: e.target.value }))}
+                className="flex-1"
+              />
+              <span className="text-neutral-600 font-medium">~</span>
+              <Input
+                type="date"
+                value={to}
+                onChange={(e) => setRange(r => ({ ...r, to: e.target.value }))}
+                className="flex-1"
+              />
+            </div>
+          </div>
+
+          {/* 유형 필터 */}
+          <div className="w-full sm:w-auto">
+            <label className="block mb-2 text-sm font-semibold text-neutral-700">유형</label>
+            <div className="inline-flex rounded-lg border border-neutral-300 bg-white p-1 shadow-sm">
+              <button
+                onClick={() => { setIncludeIncome(v => { const nv = !v; setPage(1); return nv }) }}
+                className={`px-4 py-2 text-sm rounded-md min-w-[80px] font-semibold transition-all duration-200 ${
+                  includeIncome 
+                    ? 'bg-action-blue-600 text-white shadow-md' 
+                    : 'bg-white text-neutral-600 hover:bg-neutral-50'
+                }`}
+                aria-pressed={includeIncome}
+              >
+                수입
+              </button>
+              <button
+                onClick={() => { setIncludeExpense(v => { const nv = !v; setPage(1); return nv }) }}
+                className={`px-4 py-2 text-sm rounded-md min-w-[80px] font-semibold transition-all duration-200 ${
+                  includeExpense 
+                    ? 'bg-action-blue-600 text-white shadow-md' 
+                    : 'bg-white text-neutral-600 hover:bg-neutral-50'
+                }`}
+                aria-pressed={includeExpense}
+              >
+                지출
+              </button>
+            </div>
+          </div>
+
+          {/* 추가 버튼 */}
+          <div className="w-full sm:w-auto">
+            <Button
+              variant="primary"
+              size="md"
+              leftIcon={<Plus className="h-4 w-4" />}
+              onClick={() => {
+                setNewType('income')
+                setNewDate(new Date().toISOString().slice(0,10))
+                setNewAmount('')
+                setNewMemo('')
+                setNewOpen(true)
+              }}
+              className="w-full sm:w-auto"
+            >
+              새 내역
+            </Button>
           </div>
         </div>
-        <TypeFilter />
-        {/* 보기(컴팩트/넓게) 토글 제거 */}
-        {/* 새로고침 버튼 제거 */}
       </FilterBar>
 
-      {/* 가운데 영역: 수입/지출 통합 테이블 + 상세보기 버튼 */}
-        <section className="bg-white rounded-xl border border-neutral-200 overflow-x-auto shadow-md">
-        <div className="p-3 md:p-4 border-b border-neutral-200 text-sm font-medium text-neutral-900 flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-2 sm:gap-3">
-          <span>수입/지출 내역</span>
-          <Button
-            variant="primary"
-            size="sm"
-            leftIcon={<Plus className="h-4 w-4" />}
-            onClick={() => { setNewType('income'); setNewDate(new Date().toISOString().slice(0,10)); setNewAmount(''); setNewCategory(''); setNewMemo(''); setNewOpen(true) }}
-            className="w-full sm:w-auto"
-          >
-            새 수입/지출
-          </Button>
+      {/* 수입/지출 테이블 - 반응형 */}
+      <section className="bg-white rounded-xl border border-neutral-200 shadow-md overflow-hidden">
+        {/* 테이블 헤더 */}
+        <div className="p-4 md:p-5 border-b border-neutral-200 bg-neutral-50">
+          <h2 className="text-lg md:text-xl font-semibold text-neutral-900">수입/지출 내역</h2>
         </div>
-          <table className="min-w-full text-sm">
-            <thead className="bg-gradient-to-r from-pink-100 via-purple-100 to-blue-100 border-b-2 border-purple-200 sticky top-0 z-[1010]">
+
+        {/* 모바일: 카드 뷰, 데스크톱: 테이블 뷰 */}
+        <div className="overflow-x-auto">
+          {/* 데스크톱 테이블 */}
+          <table className="hidden lg:table w-full text-sm">
+            <thead className="bg-neutral-50 border-b-2 border-neutral-200 sticky top-0 z-10">
               <tr>
-                <th className={density==='compact' ? 'text-left p-3 font-semibold text-pink-700' : 'text-left p-4 font-semibold text-pink-700'}>
-                  <button className="inline-flex items-center gap-1 hover:text-pink-900 transition-colors duration-300 font-semibold" onClick={() => { setSortKey('date'); setSortDir(d => (sortKey==='date' && d==='asc') ? 'desc' : 'asc'); setPage(1) }}>
+                <th className="px-4 md:px-6 py-3 md:py-4 text-left">
+                  <button
+                    className="inline-flex items-center gap-1 font-semibold text-neutral-700 hover:text-neutral-900 transition-colors"
+                    onClick={() => { setSortKey('date'); setSortDir(d => (sortKey==='date' && d==='asc') ? 'desc' : 'asc'); setPage(1) }}
+                  >
                     일자 {sortKey==='date' ? (sortDir==='asc' ? '▲' : '▼') : ''}
                   </button>
                 </th>
-              <th className={density==='compact' ? 'text-left p-3 font-semibold text-purple-700' : 'text-left p-4 font-semibold text-purple-700'}>유형</th>
-                <th className={density==='compact' ? 'text-right p-3 font-semibold text-blue-700' : 'text-right p-4 font-semibold text-blue-700'}>
-                  <button className="inline-flex items-center gap-1 hover:text-blue-900 transition-colors duration-300 font-semibold" onClick={() => { setSortKey('amount'); setSortDir(d => (sortKey==='amount' && d==='asc') ? 'desc' : 'asc'); setPage(1) }}>
+                <th className="px-4 md:px-6 py-3 md:py-4 text-left font-semibold text-neutral-700">유형</th>
+                <th className="px-4 md:px-6 py-3 md:py-4 text-right">
+                  <button
+                    className="inline-flex items-center gap-1 font-semibold text-neutral-700 hover:text-neutral-900 transition-colors"
+                    onClick={() => { setSortKey('amount'); setSortDir(d => (sortKey==='amount' && d==='asc') ? 'desc' : 'asc'); setPage(1) }}
+                  >
                     금액 {sortKey==='amount' ? (sortDir==='asc' ? '▲' : '▼') : ''}
                   </button>
                 </th>
-              <th className={density==='compact' ? 'text-left p-3 font-semibold text-emerald-700' : 'text-left p-4 font-semibold text-emerald-700'}>메모/카테고리</th>
-                <th className={density==='compact' ? 'text-right p-3 font-semibold text-amber-700' : 'text-right p-4 font-semibold text-amber-700'}></th>
+                <th className="px-4 md:px-6 py-3 md:py-4 text-left font-semibold text-neutral-700">메모/카테고리</th>
+                <th className="px-4 md:px-6 py-3 md:py-4 text-center font-semibold text-neutral-700">작업</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-neutral-200">
-              {loading && Array.from({ length: 6 }).map((_, i) => (
-              <tr key={`ex-s-${i}`}>
-                  <td className={density==='compact' ? 'p-3' : 'p-4'}><Skeleton className="h-4 w-28" /></td>
-                <td className={density==='compact' ? 'p-3' : 'p-4'}><Skeleton className="h-4 w-16" /></td>
-                  <td className={density==='compact' ? 'p-3 text-right' : 'p-4 text-right'}><Skeleton className="h-4 w-20 ml-auto" /></td>
-                <td className={density==='compact' ? 'p-3' : 'p-4'}><Skeleton className="h-4 w-24" /></td>
-                  <td className={density==='compact' ? 'p-3' : 'p-4'}><Skeleton className="h-8 w-24 ml-auto" /></td>
+            <tbody className="divide-y divide-neutral-100">
+              {loading && Array.from({ length: 5 }).map((_, i) => (
+                <tr key={`s-${i}`}>
+                  <td className="px-4 md:px-6 py-3 md:py-4"><Skeleton className="h-4 w-24" /></td>
+                  <td className="px-4 md:px-6 py-3 md:py-4"><Skeleton className="h-6 w-16" /></td>
+                  <td className="px-4 md:px-6 py-3 md:py-4"><Skeleton className="h-4 w-20 ml-auto" /></td>
+                  <td className="px-4 md:px-6 py-3 md:py-4"><Skeleton className="h-4 w-32" /></td>
+                  <td className="px-4 md:px-6 py-3 md:py-4"><Skeleton className="h-8 w-8 mx-auto" /></td>
                 </tr>
               ))}
-            {!loading && pagedCombined.map(row => (
-              <tr key={`${row.type}-${row.id}`} className="hover:bg-neutral-50 transition-colors duration-300 min-h-[48px] border-b border-neutral-200">
-                <td className={density==='compact' ? 'p-3 text-neutral-900' : 'p-4 text-neutral-900'}>{row.date}</td>
-                <td className={density==='compact' ? 'p-3' : 'p-4'}>
-                  <span className={`inline-flex items-center px-2 py-1 rounded-lg text-xs font-medium ${
-                    row.type === 'income' 
-                      ? 'bg-emerald-50 text-emerald-700 border border-emerald-200' 
-                      : 'bg-rose-50 text-rose-700 border border-rose-200'
+              {!loading && pagedCombined.map(row => (
+                <tr
+                  key={`${row.type}-${row.id}`}
+                  className="hover:bg-neutral-50 transition-colors cursor-pointer"
+                  onClick={() => {
+                    if (row.type === 'income') { setTxDetail(row.raw); setTxOpen(true) }
+                    else { setExpenseDetail(row.raw); setExpenseOpen(true) }
+                  }}
+                >
+                  <td className="px-4 md:px-6 py-3 md:py-4 text-neutral-900 font-medium">{row.date}</td>
+                  <td className="px-4 md:px-6 py-3 md:py-4">
+                    <span className={`inline-flex items-center px-2 py-1 rounded-md text-xs font-semibold ${
+                      row.type === 'income' 
+                        ? 'bg-emerald-50 text-emerald-700 border border-emerald-200' 
+                        : 'bg-error-50 text-error-700 border border-error-200'
+                    }`}>
+                      {row.type === 'income' ? '수입' : '지출'}
+                    </span>
+                  </td>
+                  <td className={`px-4 md:px-6 py-3 md:py-4 text-right font-semibold ${
+                    row.type === 'income' ? 'text-emerald-600' : 'text-error-600'
                   }`}>
-                    {row.type === 'income' ? '수입' : '지출'}
-                  </span>
-                </td>
-                <td className={`${density==='compact' ? 'p-3 text-right font-medium' : 'p-4 text-right font-medium'} ${
-                  row.type === 'income' ? 'text-emerald-600' : 'text-rose-600'
-                }`}>₩{Number(row.amount || 0).toLocaleString()}</td>
-                <td className={density==='compact' ? 'p-3 text-neutral-600' : 'p-4 text-neutral-600'}>{row.note || '-'}</td>
-                  <td className={density==='compact' ? 'p-3' : 'p-4'}>
+                    {row.type === 'income' ? '+' : '-'}₩{Number(row.amount || 0).toLocaleString()}
+                  </td>
+                  <td className="px-4 md:px-6 py-3 md:py-4 text-neutral-600">{row.note || '-'}</td>
+                  <td className="px-4 md:px-6 py-3 md:py-4">
                     <button
-                    onClick={() => {
-                      if (row.type === 'income') { setTxDetail(row.raw); setTxOpen(true) }
-                      else { setExpenseDetail(row.raw); setExpenseOpen(true) }
-                    }}
-                      className="h-8 w-8 inline-flex items-center justify-center rounded-lg border border-neutral-300 hover:bg-[#F472B6] hover:text-white hover:border-[#F472B6] transition-all duration-300"
+                      onClick={(e) => {
+                        e.stopPropagation()
+                        if (row.type === 'income') { setTxDetail(row.raw); setTxOpen(true) }
+                        else { setExpenseDetail(row.raw); setExpenseOpen(true) }
+                      }}
+                      className="h-8 w-8 inline-flex items-center justify-center rounded-lg border border-neutral-300 hover:bg-action-blue-600 hover:text-white hover:border-action-blue-600 transition-all"
                       aria-label="상세보기"
-                      title="상세보기"
                     >
                       <Pencil className="h-4 w-4" />
                     </button>
                   </td>
                 </tr>
               ))}
-            {!loading && combined.length === 0 && (
-              <tr><td colSpan={5}><EmptyState title="표시할 데이터가 없습니다." /></td></tr>
+              {!loading && combined.length === 0 && (
+                <tr>
+                  <td colSpan={5} className="p-8">
+                    <EmptyState
+                      title="표시할 데이터가 없습니다."
+                      description="새로운 수입 또는 지출 내역을 추가해보세요."
+                      actionLabel="새 내역 추가"
+                      actionOnClick={() => {
+                        setNewType('income')
+                        setNewDate(new Date().toISOString().slice(0,10))
+                        setNewAmount('')
+                        setNewMemo('')
+                        setNewOpen(true)
+                      }}
+                    />
+                  </td>
+                </tr>
               )}
             </tbody>
           </table>
-          <div className="flex flex-col md:flex-row items-stretch md:items-center justify-between gap-3 p-3 md:p-4 border-t border-neutral-200 bg-neutral-50">
-          <div className="text-xs sm:text-sm font-medium text-neutral-700">총 {combined.length}개 · {page}/{Math.max(1, Math.ceil(combined.length / pageSize))} 페이지</div>
-            <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 sm:gap-3">
-              <select value={pageSize} onChange={e => { setPageSize(Number(e.target.value)); setPage(1) }} className="h-10 w-full sm:w-auto rounded-lg border border-neutral-300 px-3 text-sm font-medium bg-white text-neutral-900 focus:border-[#F472B6] focus:ring-[2px] focus:ring-[#F472B6]/20 outline-none transition-all duration-300">
-                {[10,20,50].map(s => <option key={s} value={s}>{s}/페이지</option>)}
-              </select>
-              <div className="flex gap-2">
-                <button onClick={() => setPage(Math.max(1, page - 1))} className="h-10 flex-1 sm:flex-none px-4 rounded-lg border border-neutral-300 bg-white text-neutral-900 font-medium hover:bg-[#F472B6] hover:text-white hover:border-[#F472B6] disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:bg-white disabled:hover:text-neutral-900 transition-all duration-300" disabled={page===1}>이전</button>
-                <button onClick={() => setPage(Math.min(Math.ceil(combined.length/pageSize)||1, page + 1))} className="h-10 flex-1 sm:flex-none px-4 rounded-lg border border-neutral-300 bg-white text-neutral-900 font-medium hover:bg-[#F472B6] hover:text-white hover:border-[#F472B6] disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:bg-white disabled:hover:text-neutral-900 transition-all duration-300" disabled={page>=Math.ceil(combined.length/pageSize)}>다음</button>
+
+          {/* 모바일/태블릿 카드 뷰 */}
+          <div className="lg:hidden divide-y divide-neutral-200">
+            {loading && Array.from({ length: 5 }).map((_, i) => (
+              <div key={`s-${i}`} className="p-4">
+                <Skeleton className="h-6 w-32 mb-2" />
+                <Skeleton className="h-4 w-24" />
               </div>
-            </div>
+            ))}
+            {!loading && pagedCombined.map(row => (
+              <div
+                key={`${row.type}-${row.id}`}
+                className="p-4 hover:bg-neutral-50 transition-colors cursor-pointer"
+                onClick={() => {
+                  if (row.type === 'income') { setTxDetail(row.raw); setTxOpen(true) }
+                  else { setExpenseDetail(row.raw); setExpenseOpen(true) }
+                }}
+              >
+                <div className="flex items-start justify-between gap-3">
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2 mb-2">
+                      <span className={`inline-flex items-center px-2 py-1 rounded-md text-xs font-semibold ${
+                        row.type === 'income' 
+                          ? 'bg-emerald-50 text-emerald-700 border border-emerald-200' 
+                          : 'bg-error-50 text-error-700 border border-error-200'
+                      }`}>
+                        {row.type === 'income' ? '수입' : '지출'}
+                      </span>
+                      <span className="text-sm font-medium text-neutral-900">{row.date}</span>
+                    </div>
+                    <div className={`text-lg font-bold ${
+                      row.type === 'income' ? 'text-emerald-600' : 'text-error-600'
+                    }`}>
+                      {row.type === 'income' ? '+' : '-'}₩{Number(row.amount || 0).toLocaleString()}
+                    </div>
+                    {row.note && (
+                      <div className="text-sm text-neutral-600 mt-1">{row.note}</div>
+                    )}
+                  </div>
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation()
+                      if (row.type === 'income') { setTxDetail(row.raw); setTxOpen(true) }
+                      else { setExpenseDetail(row.raw); setExpenseOpen(true) }
+                    }}
+                    className="h-10 w-10 flex-shrink-0 inline-flex items-center justify-center rounded-lg border border-neutral-300 hover:bg-action-blue-600 hover:text-white hover:border-action-blue-600 transition-all"
+                    aria-label="상세보기"
+                  >
+                    <Pencil className="h-5 w-5" />
+                  </button>
+                </div>
+              </div>
+            ))}
+            {!loading && combined.length === 0 && (
+              <div className="p-8">
+                <EmptyState
+                  title="표시할 데이터가 없습니다."
+                  description="새로운 수입 또는 지출 내역을 추가해보세요."
+                  actionLabel="새 내역 추가"
+                  actionOnClick={() => {
+                    setNewType('income')
+                    setNewDate(new Date().toISOString().slice(0,10))
+                    setNewAmount('')
+                    setNewMemo('')
+                    setNewOpen(true)
+                  }}
+                />
+              </div>
+            )}
           </div>
-        </section>
+        </div>
 
-      {newOpen && (
-        <div className="fixed inset-0 z-[1050] flex items-center justify-center p-4">
-          <div 
-            className="absolute inset-0 bg-overlay-60 backdrop-blur-sm animate-overlay-in" 
-            onClick={() => setNewOpen(false)}
-            style={{ 
-              backdropFilter: 'blur(4px)',
-              WebkitBackdropFilter: 'blur(4px)'
-            }}
+        {/* 페이지네이션 */}
+        {combined.length > 0 && (
+          <Pagination
+            currentPage={page}
+            totalPages={totalPages}
+            pageSize={pageSize}
+            totalItems={combined.length}
+            onPageChange={setPage}
+            onPageSizeChange={(size) => { setPageSize(size); setPage(1) }}
           />
-          <div className="relative w-full max-w-md bg-white rounded-xl border border-neutral-200 shadow-2xl p-6 space-y-4">
-            <div className="flex items-center justify-between">
-              <h2 className="text-lg font-medium">새 수입/지출</h2>
-            </div>
-            
-            {/* 수입/지출 선택 구분 칸 */}
-            <div className="bg-neutral-50 rounded-lg border border-neutral-200 p-3">
-              <label className="block text-sm font-medium text-neutral-900 mb-2">유형</label>
-              <div className="inline-flex rounded-lg border border-neutral-300 bg-white p-1 whitespace-nowrap gap-1 shadow-sm">
-                <button 
-                  onClick={() => setNewType('income')} 
-                  className={`px-4 py-2 text-sm rounded-lg min-w-[100px] transition-all duration-300 ${
-                    newType === 'income' 
-                      ? 'bg-gradient-to-r from-[#F472B6] to-[#EC4899] text-white shadow-lg border-2 border-[#EC4899] font-semibold scale-[1.02]' 
-                      : 'bg-white text-neutral-500 hover:bg-[#FDF2F8] hover:text-[#F472B6] border-2 border-transparent font-medium'
-                  }`}
-                  aria-pressed={newType === 'income'}
-                >
-                  수입
-                </button>
-                <button 
-                  onClick={() => setNewType('expense')} 
-                  className={`px-4 py-2 text-sm rounded-lg min-w-[100px] transition-all duration-300 ${
-                    newType === 'expense' 
-                      ? 'bg-gradient-to-r from-[#F472B6] to-[#EC4899] text-white shadow-lg border-2 border-[#EC4899] font-semibold scale-[1.02]' 
-                      : 'bg-white text-neutral-500 hover:bg-[#FDF2F8] hover:text-[#F472B6] border-2 border-transparent font-medium'
-                  }`}
-                  aria-pressed={newType === 'expense'}
-                >
-                  지출
-                </button>
-              </div>
-            </div>
+        )}
+      </section>
 
-            <div className="space-y-3">
+      {/* 새 내역 추가 모달 */}
+      {newOpen && (
+        <Modal open={newOpen} onClose={() => { setNewOpen(false); setNewAmount(''); setNewMemo('') }} size="md">
+          <ModalHeader
+            title="새 수입/지출"
+            description="내역을 추가합니다."
+          />
+          <ModalBody>
+            <div className="space-y-5">
+              {/* 유형 선택 */}
               <div>
-                <label className="block text-sm text-neutral-700 mb-1">일자</label>
-                <input type="date" className="h-10 w-full rounded-lg border border-neutral-300 px-3 outline-none focus:border-[#F472B6] focus:ring-[2px] focus:ring-[#F472B6]/20 bg-white text-neutral-900 transition-all duration-300" value={newDate} onChange={e => setNewDate(e.target.value)} />
+                <label className="block mb-2 text-sm font-semibold text-neutral-700">유형</label>
+                <div className="inline-flex rounded-lg border border-neutral-300 bg-white p-1 shadow-sm">
+                  <button 
+                    onClick={() => setNewType('income')} 
+                    className={`px-4 py-2 text-sm rounded-md min-w-[80px] font-semibold transition-all duration-200 ${
+                      newType === 'income' 
+                        ? 'bg-action-blue-600 text-white shadow-md' 
+                        : 'bg-white text-neutral-600 hover:bg-neutral-50'
+                    }`}
+                    aria-pressed={newType === 'income'}
+                  >
+                    수입
+                  </button>
+                  <button 
+                    onClick={() => setNewType('expense')} 
+                    className={`px-4 py-2 text-sm rounded-md min-w-[80px] font-semibold transition-all duration-200 ${
+                      newType === 'expense' 
+                        ? 'bg-action-blue-600 text-white shadow-md' 
+                        : 'bg-white text-neutral-600 hover:bg-neutral-50'
+                    }`}
+                    aria-pressed={newType === 'expense'}
+                  >
+                    지출
+                  </button>
+                </div>
               </div>
-              <div>
-                <label className="block text-sm text-neutral-700 mb-1">금액</label>
-                <input 
-                  type="text" 
-                  className="h-10 w-full rounded-lg border border-neutral-300 px-3 outline-none focus:border-[#F472B6] focus:ring-[2px] focus:ring-[#F472B6]/20 bg-white text-neutral-900 transition-all duration-300" 
-                  value={newAmount} 
-                  onChange={e => {
-                    // 숫자만 추출
+
+              <div className="grid grid-cols-2 gap-5">
+                <Input
+                  label="일자"
+                  type="date"
+                  required
+                  value={newDate}
+                  onChange={(e) => setNewDate(e.target.value)}
+                />
+                <Input
+                  label="금액"
+                  type="text"
+                  required
+                  value={newAmount}
+                  onChange={(e) => {
                     const numericValue = e.target.value.replace(/[^0-9]/g, '')
-                    // 콤마 포맷팅
                     if (numericValue === '') {
                       setNewAmount('')
                     } else {
-                      const formatted = Number(numericValue).toLocaleString('ko-KR')
-                      setNewAmount(formatted)
+                      setNewAmount(Number(numericValue).toLocaleString('ko-KR'))
                     }
                   }}
-                  placeholder="금액을 입력하세요 (원)" 
+                  placeholder="금액 입력"
                 />
               </div>
-              <div>
-                <label className="block text-sm text-neutral-700 mb-1">메모(선택)</label>
-                <input className="h-10 w-full rounded-lg border border-neutral-300 px-3 outline-none focus:border-[#F472B6] focus:ring-[2px] focus:ring-[#F472B6]/20 bg-white text-neutral-900 placeholder:text-neutral-500 transition-all duration-300" value={newMemo} onChange={e => setNewMemo(e.target.value)} placeholder="설명 입력" />
-              </div>
+              <Textarea
+                label="메모(선택)"
+                placeholder="설명을 입력하세요"
+                value={newMemo}
+                onChange={(e) => setNewMemo(e.target.value)}
+              />
             </div>
-            <div className="flex items-center justify-end gap-3 border-t border-neutral-200 pt-4">
-              <Button variant="secondary" onClick={() => { setNewOpen(false); setNewAmount(''); setNewMemo('') }}>취소</Button>
-              <Button
-                variant="primary"
-                onClick={async () => {
-                  try {
-                    // 콤마 제거 후 숫자로 변환
-                    const amountValue = newAmount.replace(/[^0-9]/g, '')
-                    if (!amountValue || Number(amountValue) === 0) {
-                      toast.error('금액을 입력해주세요')
-                      return
-                    }
-                    const amountNumber = Number(amountValue)
-                    if (newType === 'income') {
-                      const { transactionsApi } = await import('@/app/lib/api/transactions')
-                      const createPayload: any = { transaction_date: newDate, amount: amountNumber }
-                      // notes가 있을 때만 포함
-                      if (newMemo && newMemo.trim() !== '') {
-                        createPayload.notes = newMemo.trim()
-                      }
-                      await transactionsApi.create(createPayload)
-                    } else {
-                      const { expensesApi } = await import('@/app/lib/api/expenses')
-                      const expensePayload: any = { expense_date: newDate, amount: amountNumber }
-                      // memo는 값이 있을 때만 포함
-                      if (newMemo && newMemo.trim() !== '') {
-                        expensePayload.memo = newMemo.trim()
-                      }
-                      await expensesApi.create(expensePayload)
-                    }
-                    setNewOpen(false)
-                    setNewAmount('')
-                    await load()
-                    toast.success('저장되었습니다.')
-                  } catch (e:any) {
-                    toast.error('저장 실패', e?.message)
+          </ModalBody>
+          <ModalFooter>
+            <Button
+              variant="secondary"
+              onClick={() => { setNewOpen(false); setNewAmount(''); setNewMemo('') }}
+            >
+              취소
+            </Button>
+            <Button
+              variant="primary"
+              onClick={async () => {
+                try {
+                  const amountValue = newAmount.replace(/[^0-9]/g, '')
+                  if (!amountValue || Number(amountValue) === 0) {
+                    toast.error('금액을 입력해주세요')
+                    return
                   }
-                }}
-              >추가</Button>
-            </div>
-          </div>
-      </div>
+                  const amountNumber = Number(amountValue)
+                  if (newType === 'income') {
+                    const { transactionsApi } = await import('@/app/lib/api/transactions')
+                    const createPayload: any = { transaction_date: newDate, amount: amountNumber }
+                    if (newMemo && newMemo.trim() !== '') {
+                      createPayload.notes = newMemo.trim()
+                    }
+                    await transactionsApi.create(createPayload)
+                  } else {
+                    const { expensesApi } = await import('@/app/lib/api/expenses')
+                    const expensePayload: any = { expense_date: newDate, amount: amountNumber }
+                    if (newMemo && newMemo.trim() !== '') {
+                      expensePayload.memo = newMemo.trim()
+                    }
+                    await expensesApi.create(expensePayload)
+                  }
+                  setNewOpen(false)
+                  setNewAmount('')
+                  await load()
+                  toast.success('저장되었습니다.')
+                } catch (e: any) {
+                  toast.error('저장 실패', e?.message)
+                }
+              }}
+            >
+              추가
+            </Button>
+          </ModalFooter>
+        </Modal>
       )}
 
-      {/* FAB: 우측 하단 고정 (모바일/데스크톱 공통) */}
+      {/* Mobile FAB */}
       <button
         aria-label="내역 추가"
-        title="내역 추가"
-        onClick={() => { setNewType('income'); setNewDate(new Date().toISOString().slice(0,10)); setNewAmount(''); setNewCategory(''); setNewMemo(''); setNewOpen(true) }}
-        className="fixed right-4 bottom-4 h-12 w-12 rounded-full bg-blue-600 text-white shadow-lg hover:bg-blue-700 active:scale-[0.98] inline-flex items-center justify-center z-[1000]"
+        onClick={() => {
+          setNewType('income')
+          setNewDate(new Date().toISOString().slice(0,10))
+          setNewAmount('')
+          setNewMemo('')
+          setNewOpen(true)
+        }}
+        className="md:hidden fixed right-4 bottom-4 h-14 w-14 rounded-full bg-action-blue-600 text-white shadow-lg hover:bg-action-blue-700 active:scale-[0.98] inline-flex items-center justify-center z-[1000] transition-all"
       >
-        +
+        <Plus className="h-6 w-6" />
       </button>
+
       <ExpenseDetailModal
         open={expenseOpen}
         item={expenseDetail}
@@ -466,9 +571,7 @@ export default function FinancePage() {
         onSaved={load}
         onDeleted={load}
       />
-      {error && <p className="text-sm text-rose-600">{error}</p>}
+      {error && <p className="text-sm text-error-600">{error}</p>}
     </main>
   )
 }
-
-

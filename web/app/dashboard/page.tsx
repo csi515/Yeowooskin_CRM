@@ -181,109 +181,115 @@ export default async function DashboardPage() {
   } = await getKpis({ start, end })
 
   return (
-    <main className="space-y-2 md:space-y-3">
-      <div className="space-y-2 md:space-y-3">
+    <main className="space-y-4 md:space-y-5 lg:space-y-6">
+      {/* 핵심 지표 카드 - 반응형 그리드 */}
+      <section className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-5 lg:gap-6">
+        <MetricCard
+          label="오늘 예약"
+          value={todayAppointments}
+          hint="오늘 기준"
+          className="h-full"
+          colorIndex={0}
+        />
+        <MetricCard
+          label="오늘 매출"
+          value={`₩${Number(todayRevenue).toLocaleString()}`}
+          className="h-full"
+          colorIndex={1}
+        />
+        <MetricCard
+          label="오늘 신규 고객"
+          value={todayNewCustomers}
+          className="h-full sm:col-span-2 lg:col-span-1"
+          colorIndex={2}
+        />
+      </section>
 
-        {/* 핵심 지표 카드 */}
-        <section className="grid grid-cols-1 gap-6 sm:grid-cols-3">
-          <MetricCard
-            label="오늘 예약"
-            value={todayAppointments}
-            hint="오늘 기준"
-            className="h-full"
-            colorIndex={0}
-          />
-          <MetricCard
-            label="오늘 매출"
-            value={`₩${Number(todayRevenue).toLocaleString()}`}
-            className="h-full"
-            colorIndex={1}
-          />
-          <MetricCard
-            label="오늘 신규 고객"
-            value={todayNewCustomers}
-            className="h-full"
-            colorIndex={2}
-          />
-        </section>
-
-        {/* 그래프 & 판매중인 상품 */}
-        <section className="grid grid-cols-1 gap-6 lg:grid-cols-3">
-          <Card className="p-5 lg:col-span-2">
-            <div className="text-sm font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent mb-3">
-              이번 달 수입/지출
-            </div>
+      {/* 그래프 & 판매중인 상품 - 반응형 레이아웃 */}
+      <section className="grid grid-cols-1 lg:grid-cols-3 gap-4 md:gap-5 lg:gap-6">
+        <Card className="p-4 md:p-5 lg:p-6 lg:col-span-2">
+          <div className="text-base md:text-lg font-semibold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent mb-4">
+            이번 달 수입/지출
+          </div>
+          <div className="h-64 md:h-80">
             <Monthly data={monthlySeries} />
-          </Card>
-          <Card className="p-4">
-            <div className="text-xs font-bold bg-gradient-to-r from-emerald-600 to-teal-600 bg-clip-text text-transparent mb-2">
-              판매중인 상품
-            </div>
-            <div className="space-y-1.5 max-h-[200px] overflow-y-auto">
-              {activeProducts.length > 0 ? (
-                activeProducts.slice(0, 5).map((p: any, index: number) => (
-                  <div
-                    key={p.id}
-                    className={`text-xs py-1.5 px-2 rounded-md flex items-center justify-between ${
-                      index % 2 === 0 ? 'bg-emerald-50/50' : 'bg-teal-50/50'
-                    }`}
-                  >
-                    <span className="font-medium text-neutral-800 truncate flex-1 min-w-0">{p.name}</span>
-                    <span className="text-emerald-700 font-semibold ml-2 whitespace-nowrap">
-                      ₩{Number(p.price || 0).toLocaleString()}
-                    </span>
-                  </div>
-                ))
-              ) : (
-                <div className="text-xs text-neutral-500 py-2">
-                  <a className="underline hover:text-emerald-600" href="/products">
-                    상품 추가
-                  </a>
+          </div>
+        </Card>
+        <Card className="p-4 md:p-5">
+          <div className="text-sm md:text-base font-semibold bg-gradient-to-r from-emerald-600 to-teal-600 bg-clip-text text-transparent mb-3">
+            판매중인 상품
+          </div>
+          <div className="space-y-2 max-h-[300px] md:max-h-[400px] overflow-y-auto">
+            {activeProducts.length > 0 ? (
+              activeProducts.slice(0, 5).map((p: any, index: number) => (
+                <div
+                  key={p.id}
+                  className={`text-sm py-2 px-3 rounded-lg flex items-center justify-between transition-colors ${
+                    index % 2 === 0 ? 'bg-emerald-50/50 hover:bg-emerald-50' : 'bg-teal-50/50 hover:bg-teal-50'
+                  }`}
+                >
+                  <span className="font-medium text-neutral-800 truncate flex-1 min-w-0">{p.name}</span>
+                  <span className="text-emerald-700 font-semibold ml-3 whitespace-nowrap">
+                    ₩{Number(p.price || 0).toLocaleString()}
+                  </span>
                 </div>
-              )}
-            </div>
-          </Card>
-        </section>
+              ))
+            ) : (
+              <div className="text-sm text-neutral-500 py-4 text-center">
+                <a className="underline hover:text-emerald-600 transition-colors" href="/products">
+                  상품 추가
+                </a>
+              </div>
+            )}
+          </div>
+        </Card>
+      </section>
 
-        {/* 최근 예약 / 최근 거래 */}
-        <section className="grid grid-cols-1 gap-6 lg:grid-cols-2">
-          <Card>
-            <div className="p-4 border-b border-purple-100">
-              <h2 className="text-sm font-bold bg-gradient-to-r from-pink-600 to-rose-600 bg-clip-text text-transparent">최근 예약</h2>
-            </div>
-            <ul className="divide-y divide-neutral-100">
-              {recentAppointments.map((a: any) => (
+      {/* 최근 예약 / 최근 거래 - 반응형 그리드 */}
+      <section className="grid grid-cols-1 lg:grid-cols-2 gap-4 md:gap-5 lg:gap-6">
+        <Card className="overflow-hidden">
+          <div className="p-4 md:p-5 border-b border-neutral-200 bg-neutral-50">
+            <h2 className="text-base md:text-lg font-semibold bg-gradient-to-r from-pink-600 to-rose-600 bg-clip-text text-transparent">
+              최근 예약
+            </h2>
+          </div>
+          <ul className="divide-y divide-neutral-100">
+            {recentAppointments.length > 0 ? (
+              recentAppointments.map((a: any) => (
                 <li
                   key={a.id}
-                  className="p-4 text-sm flex items-center justify-between"
+                  className="p-4 md:p-5 text-sm md:text-base flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 hover:bg-neutral-50 transition-colors"
                 >
-                  <span className="text-neutral-900">
+                  <span className="text-neutral-900 font-medium">
                     {a.customer_name} · {a.product_name}
                   </span>
-                  <span className="text-neutral-500">
+                  <span className="text-neutral-500 text-xs sm:text-sm">
                     {String(a.appointment_date)
                       .slice(0, 16)
                       .replace('T', ' ')}
                   </span>
                 </li>
-              ))}
-              {recentAppointments.length === 0 && (
-                <li className="p-6">
-                  <div className="text-sm text-neutral-500">
-                    <a className="underline" href="/appointments">
-                      데이터가 없습니다 · 첫 예약 추가
-                    </a>
-                  </div>
-                </li>
-              )}
-            </ul>
-          </Card>
-          <Card>
-            <div className="p-4 border-b border-purple-100">
-              <h2 className="text-sm font-bold bg-gradient-to-r from-blue-600 to-indigo-600 bg-clip-text text-transparent">최근 거래</h2>
-            </div>
-            <ul className="divide-y divide-neutral-100">
-              {recentTransactions.map((t: any) => {
+              ))
+            ) : (
+              <li className="p-6 md:p-8">
+                <div className="text-sm md:text-base text-neutral-500 text-center">
+                  <a className="underline hover:text-pink-600 transition-colors" href="/appointments">
+                    데이터가 없습니다 · 첫 예약 추가
+                  </a>
+                </div>
+              </li>
+            )}
+          </ul>
+        </Card>
+        <Card className="overflow-hidden">
+          <div className="p-4 md:p-5 border-b border-neutral-200 bg-neutral-50">
+            <h2 className="text-base md:text-lg font-semibold bg-gradient-to-r from-blue-600 to-indigo-600 bg-clip-text text-transparent">
+              최근 거래
+            </h2>
+          </div>
+          <ul className="divide-y divide-neutral-100">
+            {recentTransactions.length > 0 ? (
+              recentTransactions.map((t: any) => {
                 const dateLabel = String(t.date || '')
                   .replace('T', ' ')
                   .slice(0, 16)
@@ -291,11 +297,11 @@ export default async function DashboardPage() {
                 return (
                   <li
                     key={`${t.type}-${t.id}`}
-                    className="p-4 text-sm flex items-center justify-between gap-4"
+                    className="p-4 md:p-5 text-sm md:text-base flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 hover:bg-neutral-50 transition-colors"
                   >
                     <div className="min-w-0 flex-1">
-                      <div className="flex items-center gap-2">
-                        <span className={`inline-flex items-center px-2 py-0.5 rounded text-xs font-medium ${
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <span className={`inline-flex items-center px-2 py-1 rounded-md text-xs font-semibold ${
                           isExpense 
                             ? 'bg-rose-50 text-rose-700 border border-rose-200' 
                             : 'bg-emerald-50 text-emerald-700 border border-emerald-200'
@@ -306,33 +312,30 @@ export default async function DashboardPage() {
                           {t.memo || '-'}
                         </div>
                       </div>
-                      <div className="text-xs text-neutral-500 mt-1">
+                      <div className="text-xs text-neutral-500 mt-1.5">
                         {dateLabel}
                       </div>
                     </div>
-                    <div className={`font-semibold whitespace-nowrap ${
+                    <div className={`font-semibold whitespace-nowrap text-base ${
                       isExpense ? 'text-rose-600' : 'text-emerald-600'
                     }`}>
                       {isExpense ? '-' : '+'}₩{Number(t.amount || 0).toLocaleString()}
                     </div>
                   </li>
                 )
-              })}
-              {recentTransactions.length === 0 && (
-                <li className="p-6">
-                  <div className="text-sm text-neutral-500">
-                    <a className="underline" href="/finance">
-                      데이터가 없습니다 · 첫 거래 추가
-                    </a>
-                  </div>
-                </li>
-              )}
-            </ul>
-          </Card>
-        </section>
-      </div>
+              })
+            ) : (
+              <li className="p-6 md:p-8">
+                <div className="text-sm md:text-base text-neutral-500 text-center">
+                  <a className="underline hover:text-blue-600 transition-colors" href="/finance">
+                    데이터가 없습니다 · 첫 거래 추가
+                  </a>
+                </div>
+              </li>
+            )}
+          </ul>
+        </Card>
+      </section>
     </main>
   )
 }
-
-

@@ -31,10 +31,20 @@ const config: Config = {
           300: '#93C5FD',
           400: '#60A5FA',
           500: '#3B82F6',
-          600: '#2563EB',
-          700: '#1D4ED8',
+          600: '#4263EB', // action-blue-600
+          700: '#364FC7', // action-blue-700 (호버)
           800: '#1E40AF',
           900: '#1E3A8A',
+        },
+        // Cancel Gray - 취소 버튼용
+        'cancel-gray': {
+          600: '#6C757D', // 취소 버튼 배경
+          700: '#5A6268', // 취소 버튼 호버
+        },
+        // Action Blue - 저장 버튼용 (secondary와 동일하지만 명확성을 위해 별칭 추가)
+        'action-blue': {
+          600: '#4263EB', // 저장 버튼 배경
+          700: '#364FC7', // 저장 버튼 호버
         },
         // Neutral - 텍스트, 배경, 테두리
         neutral: {
