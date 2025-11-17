@@ -15,17 +15,17 @@ const Textarea = React.forwardRef<HTMLTextAreaElement, Props>(
     return (
       <label className="block">
         {label && (
-          <div className="mb-0.5 text-xs font-medium text-gray-700">
+          <div className="mb-2 text-sm font-semibold text-neutral-700">
             {label}
-            {required && <span className="ml-0.5 text-rose-600">*</span>}
+            {required && <span className="ml-1 text-error-600">*</span>}
           </div>
         )}
         <textarea
           ref={ref}
           {...rest}
           className={clsx(
-            'min-h-20 w-full rounded-lg border border-gray-300 bg-white px-2.5 py-1.5 text-sm text-gray-700 outline-none shadow-sm transition-all duration-200 placeholder:text-gray-400 focus:border-blue-500 focus:ring-2 focus:ring-blue-200',
-            error && 'border-rose-400 focus:border-rose-500 focus:ring-rose-200',
+            'min-h-[88px] w-full rounded-lg border border-neutral-400 bg-white px-3 py-2.5 text-base text-neutral-900 outline-none shadow-sm transition-all duration-300 placeholder:text-neutral-500 focus:border-secondary-500 focus:ring-2 focus:ring-secondary-200',
+            error && 'border-error-600 focus:border-error-700 focus:ring-error-200',
             className,
           )}
           aria-invalid={!!error}
