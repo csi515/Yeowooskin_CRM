@@ -1,13 +1,12 @@
 'use client'
 
-import { useEffect, useState, useCallback } from 'react'
-import { useRouter } from 'next/navigation'
+import { useEffect, useState } from 'react'
 import PageHeader from '@/app/components/common/PageHeader'
 import Card from '@/app/components/ui/Card'
 import Button from '@/app/components/ui/Button'
-import { Activity, Database, Users, Building, AlertCircle, CheckCircle, Clock } from 'lucide-react'
-import { useAppToast } from '@/app/lib/ui/toast'
-import { useCurrentUser } from '@/app/lib/hooks/useCurrentUser'
+import { Activity, Database, Users, Building, AlertCircle, CheckCircle } from 'lucide-react'
+import { useHQGuard } from '@/app/lib/hooks/useHQGuard'
+import { useFetchData } from '@/app/lib/hooks/useFetchData'
 
 type SystemStatus = {
   database: {
