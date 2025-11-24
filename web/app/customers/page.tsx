@@ -183,7 +183,6 @@ export default function CustomersPage() {
               <CustomerFilters activeFilter={activeFilter} onFilterChange={setActiveFilter} />
             </div>
           </div>
-          </div>
           <div className="flex items-end">
             <Button
               variant="primary"
