@@ -9,7 +9,7 @@ import SwipeableCustomerCard from '../components/customers/SwipeableCustomerCard
 import Button from '../components/ui/Button'
 import FloatingActionButton from '../components/common/FloatingActionButton'
 import type { Customer } from '@/types/entities'
-import type { CustomerFilterType } from '../components/customers/CustomerFilters'
+import CustomerFilters, { type CustomerFilterType } from '../components/customers/CustomerFilters'
 import { useSearch } from '../lib/hooks/useSearch'
 import { usePagination } from '../lib/hooks/usePagination'
 import { useSort } from '../lib/hooks/useSort'
