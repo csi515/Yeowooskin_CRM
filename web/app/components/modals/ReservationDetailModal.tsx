@@ -10,6 +10,7 @@ import { useAppToast } from '@/app/lib/ui/toast'
 import StaffAutoComplete from '../StaffAutoComplete'
 import { useCustomerAndProductLists } from '../hooks/useCustomerAndProductLists'
 import { appointmentsApi } from '@/app/lib/api/appointments'
+import { hapticFeedback } from '@/app/lib/utils/haptic'
 import type { AppointmentUpdateInput } from '@/types/entities'
 
 type Item = { id: string; date: string; start: string; end?: string; status: string; notes?: string; customer_id?: string; staff_id?: string; service_id?: string }
@@ -42,10 +43,12 @@ export default function ReservationDetailModal({ open, onClose, item, onSaved, o
         payload.appointment_date = new Date(y || 2024, (m || 1) - 1, d || 1, hh || 0, mm || 0, 0).toISOString()
       }
       await appointmentsApi.update(form.id, payload)
+      hapticFeedback('success')
       onSaved(); onClose(); toast.success('예약이 저장되었습니다.')
     } catch (e: unknown) {
       const errorMessage = e instanceof Error ? e.message : '에러가 발생했습니다.'
       setError(errorMessage)
+      hapticFeedback('error')
       toast.error('예약 저장 실패', errorMessage)
     } finally { setLoading(false) }
   }
@@ -53,10 +56,13 @@ export default function ReservationDetailModal({ open, onClose, item, onSaved, o
   const removeItem = async () => {
     if (!form?.id) return
     if (!confirm('정말 삭제하시겠어요? 이 작업은 되돌릴 수 없습니다.')) return
+    hapticFeedback('warning')
     try {
       await appointmentsApi.delete(form.id)
+      hapticFeedback('success')
       onDeleted(); onClose(); toast.success('삭제되었습니다.')
     } catch {
+      hapticFeedback('error')
       toast.error('삭제 실패')
     }
   }

@@ -7,6 +7,7 @@ import { ValidationError } from '@/app/lib/api/errors'
 
 // Vercel 배포를 위한 동적 렌더링 설정
 export const dynamic = 'force-dynamic'
+export const runtime = 'nodejs'
 
 export const GET = withAuth(async (req: NextRequest, { userId, params }) => {
   const id = params?.['id']

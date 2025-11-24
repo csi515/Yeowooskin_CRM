@@ -40,6 +40,18 @@ export class CustomersRepository extends BaseRepository<Customer> {
         payload.features = trimmed ? trimmed : null
       }
     }
+
+    // 건강 정보 필드 추가
+    if (input.health_allergies !== undefined) payload.health_allergies = input.health_allergies || null
+    if (input.health_medications !== undefined) payload.health_medications = input.health_medications || null
+    if (input.health_skin_conditions !== undefined) payload.health_skin_conditions = input.health_skin_conditions || null
+    if (input.health_pregnant !== undefined) payload.health_pregnant = input.health_pregnant || null
+    if (input.health_breastfeeding !== undefined) payload.health_breastfeeding = input.health_breastfeeding || null
+    if (input.health_notes !== undefined) payload.health_notes = input.health_notes || null
+    if (input.skin_type !== undefined) payload.skin_type = input.skin_type || null
+    if (input.skin_concerns !== undefined) payload.skin_concerns = input.skin_concerns || null
+    if (input.birthdate !== undefined) payload.birthdate = input.birthdate || null
+    if (input.recommended_visit_interval_days !== undefined) payload.recommended_visit_interval_days = input.recommended_visit_interval_days || null
     
     return this.create(payload)
   }
@@ -71,6 +83,18 @@ export class CustomersRepository extends BaseRepository<Customer> {
         payload.features = trimmed ? trimmed : null
       }
     }
+
+    // 건강 정보 필드 업데이트
+    if (input.health_allergies !== undefined) payload.health_allergies = input.health_allergies || null
+    if (input.health_medications !== undefined) payload.health_medications = input.health_medications || null
+    if (input.health_skin_conditions !== undefined) payload.health_skin_conditions = input.health_skin_conditions || null
+    if (input.health_pregnant !== undefined) payload.health_pregnant = input.health_pregnant || null
+    if (input.health_breastfeeding !== undefined) payload.health_breastfeeding = input.health_breastfeeding || null
+    if (input.health_notes !== undefined) payload.health_notes = input.health_notes || null
+    if (input.skin_type !== undefined) payload.skin_type = input.skin_type || null
+    if (input.skin_concerns !== undefined) payload.skin_concerns = input.skin_concerns || null
+    if (input.birthdate !== undefined) payload.birthdate = input.birthdate || null
+    if (input.recommended_visit_interval_days !== undefined) payload.recommended_visit_interval_days = input.recommended_visit_interval_days || null
 
     return this.update(id, payload)
   }

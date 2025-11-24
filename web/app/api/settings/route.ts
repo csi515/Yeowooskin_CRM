@@ -3,6 +3,7 @@ import { createSupabaseServerClient } from '@/lib/supabase/server'
 import { DEFAULT_SETTINGS, type AppSettings, type SettingsUpdateInput } from '@/types/settings'
 
 export const dynamic = 'force-dynamic'
+export const runtime = 'nodejs'
 
 /**
  * GET /api/settings

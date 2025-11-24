@@ -35,8 +35,11 @@ export function usePullToRefresh({
 
     const handleTouchStart = (e: TouchEvent) => {
       if (isRefreshingRef.current) return
-      
+
+      if (e.touches.length === 0) return
       const touch = e.touches[0]
+      if (!touch) return
+
       touchStartY = touch.clientY
       scrollTop = container.scrollTop
       
@@ -50,7 +53,10 @@ export function usePullToRefresh({
     const handleTouchMove = (e: TouchEvent) => {
       if (isRefreshingRef.current || scrollTop > 0) return
 
+      if (e.touches.length === 0) return
       const touch = e.touches[0]
+      if (!touch) return
+
       currentYRef.current = touch.clientY
       const deltaY = currentYRef.current - startYRef.current
 

@@ -2,20 +2,25 @@
 
 import { useEffect, useMemo, useState, useCallback } from 'react'
 import Modal, { ModalBody, ModalFooter, ModalHeader } from '../ui/Modal'
+import { BottomSheet } from '../ui/BottomSheet'
 import Button from '../ui/Button'
 import Tabs, { TabsContent, TabsList, TabsTrigger } from '../ui/Tabs'
 import { useAppToast } from '@/app/lib/ui/toast'
+import { useMobile } from '@/app/lib/hooks/useMobile'
+import { hapticFeedback } from '@/app/lib/utils/haptic'
 import CustomerSummaryBar from './customer-detail/CustomerSummaryBar'
 import CustomerOverviewTab from './customer-detail/CustomerOverviewTab'
 import CustomerPointsTab from './customer-detail/CustomerPointsTab'
 import CustomerHoldingsTab from './customer-detail/CustomerHoldingsTab'
+import CustomerTreatmentHistoryTab from './customer-detail/CustomerTreatmentHistoryTab'
+import CustomerProgramsTab from './customer-detail/CustomerProgramsTab'
 import { customersApi } from '@/app/lib/api/customers'
 import { productsApi } from '@/app/lib/api/products'
 import { customerProductsApi } from '@/app/lib/api/customer-products'
 import { pointsApi } from '@/app/lib/api/points'
 
 import type { CustomerProduct } from '@/app/lib/repositories/customer-products.repository'
-import type { Customer } from '@/types/entities'
+import type { Customer, CustomerCreateInput, CustomerUpdateInput } from '@/types/entities'
 
 type Holding = CustomerProduct
 
@@ -47,7 +52,7 @@ export default function CustomerDetailModal({
   const [pointsDelta, setPointsDelta] = useState<number>(0)
   const [pointsReason, setPointsReason] = useState<string>('')
   const [initialPoints, setInitialPoints] = useState<number>(0)
-  const [activeTab, setActiveTab] = useState<'overview' | 'points' | 'holdings'>('overview')
+  const [activeTab, setActiveTab] = useState<'overview' | 'points' | 'holdings' | 'treatments' | 'programs'>('overview')
   // history/report filters
   const [ledger, setLedger] = useState<{ created_at: string; delta: number; reason?: string }[]>([])
   const [loadingHistory, setLoadingHistory] = useState(false)
@@ -66,6 +71,7 @@ export default function CustomerDetailModal({
   // holdings pagination
   const [holdPage, setHoldPage] = useState(1)
   const [holdPageSize, setHoldPageSize] = useState(5)
+  const isMobile = useMobile()
 
   useEffect(() => {
     setForm(item)
@@ -207,11 +213,21 @@ export default function CustomerDetailModal({
     try {
       setLoading(true); setError(''); setFieldErrors({})
       if (!form) throw new Error('잘못된 입력입니다.')
-      const body: { name: string; phone?: string | null; email?: string | null; address?: string | null; features?: string } = { 
+      const body: CustomerUpdateInput = { 
         name: (form.name || '').trim(), 
         phone: form.phone || null, 
         email: form.email || null, 
-        address: form.address || null 
+        address: form.address || null,
+        health_allergies: form.health_allergies || null,
+        health_medications: form.health_medications || null,
+        health_skin_conditions: form.health_skin_conditions || null,
+        health_pregnant: form.health_pregnant || null,
+        health_breastfeeding: form.health_breastfeeding || null,
+        health_notes: form.health_notes || null,
+        skin_type: form.skin_type || null,
+        skin_concerns: form.skin_concerns || null,
+        birthdate: form.birthdate || null,
+        recommended_visit_interval_days: form.recommended_visit_interval_days || null,
       }
       // features는 값이 있을 때만 포함
       if (features && features.trim() !== '') {
@@ -225,7 +241,7 @@ export default function CustomerDetailModal({
       if (form.id) {
         await customersApi.update(form.id, body)
       } else {
-        created = await customersApi.create(body)
+        created = await customersApi.create(body as CustomerCreateInput)
       }
       // 신규 고객 초기 포인트 반영
       if (!form.id && initialPoints && created?.id) {
@@ -233,6 +249,7 @@ export default function CustomerDetailModal({
           await pointsApi.addLedgerEntry(created.id, { delta: Number(initialPoints), reason: 'initial' })
         } catch {}
       }
+      hapticFeedback('success')
       onSaved(); onClose(); toast.success('고객이 저장되었습니다.')
     } catch (e: unknown) {
       const errorMessage = e instanceof Error ? e.message : '에러가 발생했습니다.'
@@ -243,8 +260,10 @@ export default function CustomerDetailModal({
   const removeItem = async () => {
     if (!form?.id) return
     if (!confirm('삭제하시겠습니까?')) return
+    hapticFeedback('warning')
     try {
       await customersApi.delete(form.id)
+      hapticFeedback('success')
       onDeleted(); onClose(); toast.success('삭제되었습니다.')
     } catch {
       toast.error('삭제 실패')
@@ -384,6 +403,206 @@ export default function CustomerDetailModal({
   }
 
   if (!open || !form) return null
+
+  const content = (
+    <div className="space-y-6">
+      {error && <p className="text-sm text-rose-600">{error}</p>}
+
+      {/* 상단 요약 바 */}
+      <CustomerSummaryBar
+        name={form.name}
+        phone={form.phone ?? null}
+        email={form.email ?? null}
+        pointsBalance={pointsBalance}
+        holdingsCount={holdings.length}
+      />
+
+      {/* 탭 */}
+      <Tabs value={activeTab} onValueChange={v => setActiveTab(v as 'overview' | 'points' | 'holdings' | 'treatments' | 'programs')} className="mt-6">
+        <TabsList className="mb-6 border-b-2 border-neutral-400">
+          <TabsTrigger value="overview">
+            기본 정보
+          </TabsTrigger>
+          <TabsTrigger value="points">
+            포인트
+          </TabsTrigger>
+          <TabsTrigger value="holdings">
+            보유 상품
+          </TabsTrigger>
+          <TabsTrigger value="treatments">
+            시술 히스토리
+          </TabsTrigger>
+          <TabsTrigger value="programs">
+            시술 프로그램
+          </TabsTrigger>
+        </TabsList>
+
+        {/* 기본 정보 탭 */}
+        <TabsContent value="overview">
+          <CustomerOverviewTab
+            form={form ? {
+              id: form.id,
+              name: form.name,
+              phone: form.phone ?? null,
+              email: form.email ?? null,
+              address: form.address ?? null,
+              health_allergies: form.health_allergies ?? null,
+              health_medications: form.health_medications ?? null,
+              health_skin_conditions: form.health_skin_conditions ?? null,
+              health_pregnant: form.health_pregnant ?? null,
+              health_breastfeeding: form.health_breastfeeding ?? null,
+              health_notes: form.health_notes ?? null,
+              skin_type: form.skin_type ?? null,
+              skin_concerns: form.skin_concerns ?? null,
+            } : null}
+            features={features}
+            initialPoints={initialPoints}
+            fieldErrors={fieldErrors}
+            onChangeForm={(updater) => {
+              setForm(f => {
+                if (!f) return null
+                const result = updater({
+                  id: f.id,
+                  name: f.name,
+                  phone: f.phone ?? null,
+                  email: f.email ?? null,
+                  address: f.address ?? null,
+                  health_allergies: f.health_allergies ?? null,
+                  health_medications: f.health_medications ?? null,
+                  health_skin_conditions: f.health_skin_conditions ?? null,
+                  health_pregnant: f.health_pregnant ?? null,
+                  health_breastfeeding: f.health_breastfeeding ?? null,
+                  health_notes: f.health_notes ?? null,
+                  skin_type: f.skin_type ?? null,
+                  skin_concerns: f.skin_concerns ?? null,
+                })
+                if (!result) return null
+                return {
+                  ...f,
+                  ...result,
+                } as Customer
+              })
+            }}
+            onChangeFeatures={setFeatures}
+            onChangeInitialPoints={setInitialPoints}
+          />
+        </TabsContent>
+
+        {/* 포인트 탭 */}
+        <TabsContent value="points">
+          {form.id && (
+            <CustomerPointsTab
+              customerId={form.id}
+              pointsBalance={pointsBalance}
+              pointsDelta={pointsDelta}
+              pointsReason={pointsReason}
+              ledger={ledger}
+              loadingHistory={loadingHistory}
+              histPage={histPage}
+              hasNext={hasNext}
+              onChangeDelta={setPointsDelta}
+              onChangeReason={setPointsReason}
+              onAddPoints={handleAddPoints}
+              onDeductPoints={handleDeductPoints}
+              onChangePage={setHistPage}
+              onExportExcel={handleExportExcel}
+            />
+          )}
+        </TabsContent>
+
+        {/* 보유 상품 탭 */}
+        <TabsContent value="holdings">
+          {form.id && (
+            <CustomerHoldingsTab
+              customerId={form.id}
+              holdings={holdings.filter(h => h.products).map(h => ({
+                id: h.id,
+                product_id: h.product_id,
+                quantity: h.quantity || 0,
+                ...(h.notes && { notes: h.notes }),
+                products: h.products!,
+              }))}
+              products={products.map(p => ({
+                id: String(p.id),
+                name: p.name,
+              }))}
+              holdingDelta={holdingDelta}
+              holdingReason={holdingReason}
+              newProductId={newProductId}
+              newQty={newQty}
+              newReason={newReason}
+              allLedger={allLedger}
+              allLedgerLoading={allLedgerLoading}
+              allLedgerPage={allLedgerPage}
+              allLedgerPageSize={allLedgerPageSize}
+              allLedgerTotal={allLedgerTotal}
+              holdPage={holdPage}
+              holdPageSize={holdPageSize}
+              onAddProduct={handleAddProduct}
+              onChangeNewProduct={setNewProductId}
+              onChangeNewQty={setNewQty}
+              onChangeNewReason={setNewReason}
+              onChangeHoldingDelta={(holdingId, value) => setHoldingDelta(s => ({ ...s, [holdingId]: value }))}
+              onChangeHoldingReason={(holdingId, value) => setHoldingReason(s => ({ ...s, [holdingId]: value }))}
+              onIncrease={async (holding) => {
+                const h = holdings.find(x => x.id === holding.id)
+                if (h) await handleIncreaseHolding(h)
+              }}
+              onDecrease={async (holding) => {
+                const h = holdings.find(x => x.id === holding.id)
+                if (h) await handleDecreaseHolding(h)
+              }}
+              onDelete={handleDeleteHolding}
+              onChangeHoldPage={setHoldPage}
+              onChangeHoldPageSize={setHoldPageSize}
+              onChangeAllLedgerPage={setAllLedgerPage}
+              onChangeAllLedgerPageSize={setAllLedgerPageSize}
+            />
+          )}
+        </TabsContent>
+
+        {/* 시술 히스토리 탭 */}
+        <TabsContent value="treatments">
+          {form.id && (
+            <CustomerTreatmentHistoryTab customerId={form.id} />
+          )}
+        </TabsContent>
+
+        {/* 시술 프로그램 탭 */}
+        <TabsContent value="programs">
+          {form.id && (
+            <CustomerProgramsTab customerId={form.id} />
+          )}
+        </TabsContent>
+      </Tabs>
+
+      {/* 하단 버튼 (모바일용) */}
+      <div className="md:hidden flex gap-2 pt-4 pb-2 border-t border-neutral-200 sticky bottom-0 bg-white">
+        <Button variant="secondary" onClick={onClose} disabled={loading} className="flex-1">취소</Button>
+        {form.id && (
+          <Button variant="danger" onClick={removeItem} disabled={loading} className="flex-1">삭제</Button>
+        )}
+        <Button variant="primary" onClick={save} disabled={loading} loading={loading} className="flex-1">저장</Button>
+      </div>
+    </div>
+  )
+
+  // 모바일에서는 BottomSheet, 데스크톱에서는 Modal
+  if (isMobile) {
+    return (
+      <BottomSheet
+        open={open}
+        onClose={onClose}
+        title={form?.id ? '고객 정보 수정' : '새 고객 추가'}
+        description="고객의 기본 정보, 포인트, 보유 상품을 한눈에 관리합니다."
+        maxHeight={90}
+        swipeToClose
+      >
+        {content}
+      </BottomSheet>
+    )
+  }
+
   return (
     <Modal open={open} onClose={onClose} size="lg">
       <ModalHeader
@@ -391,142 +610,7 @@ export default function CustomerDetailModal({
         description="고객의 기본 정보, 포인트, 보유 상품을 한눈에 관리합니다."
       />
       <ModalBody>
-        <div className="space-y-6">
-          {error && <p className="text-sm text-rose-600">{error}</p>}
-
-          {/* 상단 요약 바 */}
-          <CustomerSummaryBar
-            name={form.name}
-            phone={form.phone ?? null}
-            email={form.email ?? null}
-            pointsBalance={pointsBalance}
-            holdingsCount={holdings.length}
-          />
-
-          {/* 탭 */}
-          <Tabs value={activeTab} onValueChange={v => setActiveTab(v as 'overview' | 'points' | 'holdings')} className="mt-6">
-            <TabsList className="mb-6 border-b-2 border-neutral-400">
-              <TabsTrigger value="overview">
-                기본 정보
-              </TabsTrigger>
-              <TabsTrigger value="points">
-                포인트
-              </TabsTrigger>
-              <TabsTrigger value="holdings">
-                보유 상품
-              </TabsTrigger>
-            </TabsList>
-
-            {/* 기본 정보 탭 */}
-            <TabsContent value="overview">
-              <CustomerOverviewTab
-                form={form ? {
-                  id: form.id,
-                  name: form.name,
-                  phone: form.phone ?? null,
-                  email: form.email ?? null,
-                  address: form.address ?? null,
-                } : null}
-                features={features}
-                initialPoints={initialPoints}
-                fieldErrors={fieldErrors}
-                onChangeForm={(updater) => {
-                  setForm(f => {
-                    const result = updater(f ? {
-                      id: f.id,
-                      name: f.name,
-                      phone: f.phone ?? null,
-                      email: f.email ?? null,
-                      address: f.address ?? null,
-                    } : null)
-                    if (!result) return null
-                    return {
-                      ...f!,
-                      phone: result.phone ?? null,
-                      email: result.email ?? null,
-                      address: result.address ?? null,
-                    } as Customer
-                  })
-                }}
-                onChangeFeatures={setFeatures}
-                onChangeInitialPoints={setInitialPoints}
-              />
-            </TabsContent>
-
-            {/* 포인트 탭 */}
-            <TabsContent value="points">
-              {form.id && (
-                <CustomerPointsTab
-                  customerId={form.id}
-                  pointsBalance={pointsBalance}
-                  pointsDelta={pointsDelta}
-                  pointsReason={pointsReason}
-                  ledger={ledger}
-                  loadingHistory={loadingHistory}
-                  histPage={histPage}
-                  hasNext={hasNext}
-                  onChangeDelta={setPointsDelta}
-                  onChangeReason={setPointsReason}
-                  onAddPoints={handleAddPoints}
-                  onDeductPoints={handleDeductPoints}
-                  onChangePage={setHistPage}
-                  onExportExcel={handleExportExcel}
-                />
-              )}
-            </TabsContent>
-
-            {/* 보유 상품 탭 */}
-            <TabsContent value="holdings">
-              {form.id && (
-                <CustomerHoldingsTab
-                  customerId={form.id}
-                  holdings={holdings.filter(h => h.products).map(h => ({
-                    id: h.id,
-                    product_id: h.product_id,
-                    quantity: h.quantity || 0,
-                    ...(h.notes && { notes: h.notes }),
-                    products: h.products!,
-                  }))}
-                  products={products.map(p => ({
-                    id: String(p.id),
-                    name: p.name,
-                  }))}
-                  holdingDelta={holdingDelta}
-                  holdingReason={holdingReason}
-                  newProductId={newProductId}
-                  newQty={newQty}
-                  newReason={newReason}
-                  allLedger={allLedger}
-                  allLedgerLoading={allLedgerLoading}
-                  allLedgerPage={allLedgerPage}
-                  allLedgerPageSize={allLedgerPageSize}
-                  allLedgerTotal={allLedgerTotal}
-                  holdPage={holdPage}
-                  holdPageSize={holdPageSize}
-                  onAddProduct={handleAddProduct}
-                  onChangeNewProduct={setNewProductId}
-                  onChangeNewQty={setNewQty}
-                  onChangeNewReason={setNewReason}
-                  onChangeHoldingDelta={(holdingId, value) => setHoldingDelta(s => ({ ...s, [holdingId]: value }))}
-                  onChangeHoldingReason={(holdingId, value) => setHoldingReason(s => ({ ...s, [holdingId]: value }))}
-                  onIncrease={async (holding) => {
-                    const h = holdings.find(x => x.id === holding.id)
-                    if (h) await handleIncreaseHolding(h)
-                  }}
-                  onDecrease={async (holding) => {
-                    const h = holdings.find(x => x.id === holding.id)
-                    if (h) await handleDecreaseHolding(h)
-                  }}
-                  onDelete={handleDeleteHolding}
-                  onChangeHoldPage={setHoldPage}
-                  onChangeHoldPageSize={setHoldPageSize}
-                  onChangeAllLedgerPage={setAllLedgerPage}
-                  onChangeAllLedgerPageSize={setAllLedgerPageSize}
-                />
-              )}
-            </TabsContent>
-          </Tabs>
-        </div>
+        {content}
       </ModalBody>
       <ModalFooter>
         <Button variant="secondary" onClick={onClose} disabled={loading} className="w-full md:w-auto">취소</Button>

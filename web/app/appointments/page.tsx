@@ -1,6 +1,6 @@
 'use client'
 
-import React, { useState, useRef, lazy, Suspense } from 'react'
+import React, { useState, useRef, useEffect, lazy, Suspense } from 'react'
 import ReservationCreateModal from '../components/modals/ReservationCreateModal'
 import ReservationDetailModal from '../components/modals/ReservationDetailModal'
 import MobileTimelineView, { type MobileTimelineViewRef } from '../components/appointments/MobileTimelineView'
@@ -8,7 +8,14 @@ import type { AppointmentEvent } from '../components/appointments/types'
 import { Plus, ChevronLeft, ChevronRight, Calendar } from 'lucide-react'
 import Button from '../components/ui/Button'
 import { Skeleton } from '../components/ui/Skeleton'
+import FloatingActionButton from '../components/common/FloatingActionButton'
 
+
+// FullCalendar 타입 정의
+import type { CalendarApi } from '@fullcalendar/core'
+
+type FullCalendarApi = CalendarApi
+type FullCalendarComponentRef = React.ComponentRef<typeof import('@fullcalendar/react').default>
 
 // FullCalendar를 동적 import로 로드하여 번들 크기 감소
 const FullCalendarWrapper = lazy(async () => {
@@ -23,11 +30,10 @@ const FullCalendarWrapper = lazy(async () => {
     import('@fullcalendar/timegrid'),
     import('@fullcalendar/interaction')
   ])
-  
+
   // forwardRef로 감싸서 ref 전달 지원
   type FullCalendarComponent = typeof FullCalendar
   type FullCalendarComponentProps = React.ComponentProps<FullCalendarComponent>
-  type FullCalendarComponentRef = React.ComponentRef<FullCalendarComponent>
 
   const WrappedComponent = React.forwardRef<FullCalendarComponentRef, FullCalendarComponentProps>(
     function FullCalendarWrapperComponent(props, ref) {
@@ -91,6 +97,7 @@ type EventClickArg = {
     type: string
   }
 }
+
 
 type EventMountArg = {
   event: {
@@ -380,6 +387,25 @@ export default function AppointmentsPage() {
   const timelineRef = useRef<MobileTimelineViewRef>(null)
   const [mobileViewMode, setMobileViewMode] = useState<'timeline' | 'calendar'>('calendar')
 
+  // 새 예약 모달 열기 이벤트 리스너
+  useEffect(() => {
+    const handleOpenNew = () => {
+      setDraft({
+        date: new Date().toISOString().slice(0, 10),
+        start: '10:00',
+        end: '11:00',
+        status: 'scheduled',
+        notes: '',
+      })
+      setCreateOpen(true)
+    }
+
+    window.addEventListener('open-new-appointment-modal', handleOpenNew)
+    return () => {
+      window.removeEventListener('open-new-appointment-modal', handleOpenNew)
+    }
+  }, [])
+
   const reloadCalendar = async (opt?: { from?: string; to?: string }): Promise<void> => {
     try {
       const from = opt?.from ?? range.from
@@ -411,10 +437,10 @@ export default function AppointmentsPage() {
     }
   }
 
-  const getCalendarApi = () => {
+  const getCalendarApi = (): FullCalendarApi | null => {
     const inst = calendarRef.current
     if (!inst) return null
-    return inst
+    return inst.getApi()
   }
 
   const handlePrev = () => {
@@ -501,6 +527,57 @@ export default function AppointmentsPage() {
     }
   }
 
+  const handleEventDrop = async (info: any) => {
+    try {
+      const { appointmentsApi } = await import('@/app/lib/api/appointments')
+      const newDate = new Date(info.event.startStr)
+      
+      await appointmentsApi.update(info.event.id, {
+        appointment_date: newDate.toISOString(),
+      })
+      
+      await reloadCalendar()
+    } catch (err) {
+      console.error('예약 이동 실패:', err)
+      if (info.revert) {
+      info.revert()
+      }
+      if (typeof window !== 'undefined') {
+        window.dispatchEvent(
+          new CustomEvent('show-toast', {
+            detail: { type: 'error', message: '예약 이동에 실패했습니다.' },
+          })
+        )
+      }
+    }
+  }
+
+  const handleEventResize = async (info: any) => {
+    try {
+      const { appointmentsApi } = await import('@/app/lib/api/appointments')
+      const startDate = new Date(info.event.startStr)
+      
+      // 시작 시간 업데이트 (현재 API는 appointment_date만 지원)
+      await appointmentsApi.update(info.event.id, {
+        appointment_date: startDate.toISOString(),
+      })
+      
+      await reloadCalendar()
+    } catch (err) {
+      console.error('예약 시간 변경 실패:', err)
+      if (info.revert) {
+      info.revert()
+      }
+      if (typeof window !== 'undefined') {
+        window.dispatchEvent(
+          new CustomEvent('show-toast', {
+            detail: { type: 'error', message: '예약 시간 변경에 실패했습니다.' },
+          })
+        )
+      }
+    }
+  }
+
   const handleDayCellClassNames = (arg: DayCellClassNamesArg) => {
     const d = arg.date.getDay()
     const classes = ['fc-daycell-modern']
@@ -526,9 +603,9 @@ export default function AppointmentsPage() {
     if (arg.view?.type === 'dayGridMonth') {
       const container = document.createElement('div')
       container.className =
-        'flex items-center gap-0 text-xs leading-tight text-neutral-800 break-words whitespace-normal px-1 py-0.5'
+        'flex items-center gap-0 text-xs leading-none text-neutral-800 whitespace-nowrap overflow-hidden px-0.5 py-0.25'
       container.innerHTML = `
-        <span class="break-words whitespace-normal flex-1 min-w-0 font-medium">${arg.event.title || '예약'}</span>
+        <span class="whitespace-nowrap overflow-hidden text-ellipsis flex-1 min-w-0 font-medium block">${arg.event.title || '예약'}</span>
       `
       return { domNodes: [container] }
     }
@@ -677,6 +754,11 @@ export default function AppointmentsPage() {
                 dateClick={handleDateClick}
                 eventContent={renderEventContent}
                 eventClick={handleEventClick}
+                eventDrop={handleEventDrop}
+                eventResize={handleEventResize}
+                editable={true}
+                eventStartEditable={true}
+                eventDurationEditable={true}
                 selectable
                 nowIndicator
                 height="auto"
@@ -720,6 +802,11 @@ export default function AppointmentsPage() {
               dateClick={handleDateClick}
               eventContent={renderEventContent}
               eventClick={handleEventClick}
+              eventDrop={handleEventDrop}
+              eventResize={handleEventResize}
+              editable={true}
+              eventStartEditable={true}
+              eventDurationEditable={true}
               selectable
               nowIndicator
               height="auto"
@@ -733,12 +820,7 @@ export default function AppointmentsPage() {
       </div>
 
       {/* 모바일 FAB */}
-      <button
-        className="md:hidden fixed right-4 bottom-4 h-14 w-14 rounded-full bg-gradient-to-r from-blue-600 to-blue-700 text-white shadow-xl hover:shadow-2xl active:scale-[0.95] inline-flex items-center justify-center z-[1000] touch-manipulation transition-all duration-200 safe-area-inset-bottom"
-        style={{
-          bottom: 'calc(1rem + env(safe-area-inset-bottom))',
-        }}
-        aria-label="예약 추가"
+      <FloatingActionButton
         onClick={() => {
           setDraft({
             date: new Date().toISOString().slice(0, 10),
@@ -749,9 +831,8 @@ export default function AppointmentsPage() {
           })
           setCreateOpen(true)
         }}
-      >
-        <Plus className="h-6 w-6" />
-      </button>
+        label="예약 추가"
+      />
       <ReservationCreateModal
         open={createOpen}
         draft={draft}

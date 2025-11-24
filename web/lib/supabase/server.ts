@@ -29,7 +29,7 @@ export function createSupabaseServerClient() {
       detectSessionInUrl: false,
     },
     global: {
-      headers: accessToken ? { Authorization: `Bearer ${accessToken}` } : undefined
+      ...(accessToken && { headers: { Authorization: `Bearer ${accessToken}` } })
     }
   })
 

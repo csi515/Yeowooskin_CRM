@@ -35,6 +35,7 @@ export class ApiClient {
       const parts = token.split('.')
       if (parts.length < 2) return null
       const payload = parts[1]
+      if (!payload) return null
       const base64 = payload.replace(/-/g, '+').replace(/_/g, '/')
       const pad = base64.length % 4 === 2 ? '==' : base64.length % 4 === 3 ? '=' : ''
       
@@ -62,7 +63,7 @@ export class ApiClient {
     const cookies = document.cookie.split(';')
     for (const cookie of cookies) {
       const [name, value] = cookie.trim().split('=')
-      if (name === 'sb:token') {
+      if (name === 'sb:token' && value) {
         return decodeURIComponent(value)
       }
     }
@@ -112,7 +113,7 @@ export class ApiClient {
         const response = await fetch(`${this.baseURL}/api/auth/refresh`, {
           method: 'POST',
           credentials: 'include',
-          signal: this.refreshAbortController?.signal,
+          ...(this.refreshAbortController?.signal && { signal: this.refreshAbortController.signal }),
         })
         
         if (!response.ok) {
@@ -205,7 +206,7 @@ export class ApiClient {
     }
 
     // 응답 데이터 파싱 (안전하게 처리)
-    let responseData: any
+    let responseData: unknown
     try {
       const text = await response.text()
       responseData = text ? JSON.parse(text) : {}
@@ -255,11 +256,12 @@ export class ApiClient {
 
     // 성공 응답 처리: { success: true, data: T }
     if (responseData && typeof responseData === 'object' && 'success' in responseData && responseData.success) {
-      return { data: responseData.data, response }
+      const successResponse = responseData as unknown as { data: unknown }
+      return { data: successResponse.data as T, response }
     }
     
     // 기존 형식 호환성 (data가 직접 반환되는 경우)
-    return { data: responseData, response }
+    return { data: responseData as T, response }
   }
 
   /**
@@ -277,11 +279,14 @@ export class ApiClient {
    * POST 요청
    */
   async post<T>(url: string, body?: unknown, options?: ApiRequestOptions): Promise<T> {
-    const { data } = await this.executeRequest<T>(url, {
+    const requestOptions = {
       ...options,
-      method: 'POST',
-      body: body ? JSON.stringify(body) : undefined,
-    })
+      method: 'POST' as const,
+    }
+    if (body) {
+      requestOptions.body = JSON.stringify(body)
+    }
+    const { data } = await this.executeRequest<T>(url, requestOptions)
     return data
   }
 
@@ -289,11 +294,14 @@ export class ApiClient {
    * PUT 요청
    */
   async put<T>(url: string, body?: unknown, options?: ApiRequestOptions): Promise<T> {
-    const { data } = await this.executeRequest<T>(url, {
+    const requestOptions = {
       ...options,
-      method: 'PUT',
-      body: body ? JSON.stringify(body) : undefined,
-    })
+      method: 'PUT' as const,
+    }
+    if (body) {
+      requestOptions.body = JSON.stringify(body)
+    }
+    const { data } = await this.executeRequest<T>(url, requestOptions)
     return data
   }
 

@@ -23,10 +23,10 @@ export async function GET(req: Request) {
       return NextResponse.redirect(new URL('/login?error=config', req.url))
     }
     
-  const supabase = createClient(supaUrl, anon)
-    const { data, error } = await supabase.auth.verifyOtp({ 
-      token_hash, 
-      type: type as any 
+    const supabase = createClient(supaUrl, anon)
+    const { data, error } = await supabase.auth.verifyOtp({
+      token_hash,
+      type: (type as 'recovery' | 'email' | 'invite' | 'signup' | 'magiclink') || 'magiclink'
     })
 
     if (error || !data.session) {

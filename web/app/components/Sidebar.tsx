@@ -4,32 +4,89 @@ import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import clsx from 'clsx'
 import type { ReactNode } from 'react'
-import { 
-  LayoutDashboard, 
-  Calendar, 
-  Package, 
-  Users, 
-  UserCheck, 
+import {
+  LayoutDashboard,
+  Calendar,
+  Package,
+  Users,
+  UserCheck,
   DollarSign,
-  Settings
+  Settings,
+  Building,
+  BarChart3,
+  Shield,
+  History,
+  Bell,
+  Database,
+  Key,
+  Activity,
+  FileText
 } from 'lucide-react'
 import LogoutButton from './ui/LogoutButton'
+import { useCurrentUser } from '@/app/lib/hooks/useCurrentUser'
 
-type Item = { 
+type Item = {
   href: string
   label: string
   icon?: ReactNode
+  roles?: ('HQ' | 'OWNER' | 'STAFF')[]
 }
 
-const items: Item[] = [
-  { href: '/dashboard', label: '대시보드', icon: <LayoutDashboard className="h-5 w-5" /> },
-  { href: '/appointments', label: '예약', icon: <Calendar className="h-5 w-5" /> },
-  { href: '/products', label: '제품', icon: <Package className="h-5 w-5" /> },
-  { href: '/customers', label: '고객', icon: <Users className="h-5 w-5" /> },
-  { href: '/staff', label: '직원', icon: <UserCheck className="h-5 w-5" /> },
-  { href: '/finance', label: '재무', icon: <DollarSign className="h-5 w-5" /> },
-  { href: '/settings', label: '설정', icon: <Settings className="h-5 w-5" /> },
-]
+// 역할별 메뉴 아이템
+const getMenuItems = (role: 'HQ' | 'OWNER' | 'STAFF' | null): Item[] => {
+  const baseItems: Item[] = []
+
+  if (role === 'HQ') {
+    // HQ: 모든 메뉴 + 추가 관리 메뉴
+    return [
+      { href: '/dashboard', label: '대시보드', icon: <LayoutDashboard className="h-5 w-5" /> },
+      { href: '/branches', label: '지점 관리', icon: <Building className="h-5 w-5" /> },
+      { href: '/analytics', label: '분석 리포트', icon: <BarChart3 className="h-5 w-5" /> },
+      { href: '/appointments', label: '예약', icon: <Calendar className="h-5 w-5" /> },
+      { href: '/products', label: '제품', icon: <Package className="h-5 w-5" /> },
+      { href: '/customers', label: '고객', icon: <Users className="h-5 w-5" /> },
+      { href: '/staff', label: '직원', icon: <UserCheck className="h-5 w-5" /> },
+      { href: '/finance', label: '재무', icon: <DollarSign className="h-5 w-5" /> },
+      { href: '/settings', label: '설정', icon: <Settings className="h-5 w-5" /> },
+      // HQ 전용 관리 메뉴
+      { href: '/admin', label: '사용자 승인', icon: <UserCheck className="h-5 w-5" /> },
+      { href: '/users', label: '사용자 관리', icon: <Users className="h-5 w-5" /> },
+      { href: '/admin/approval-history', label: '승인 히스토리', icon: <History className="h-5 w-5" /> },
+      { href: '/admin/statistics', label: '전체 통계', icon: <BarChart3 className="h-5 w-5" /> },
+      { href: '/admin/branch-reports', label: '지점별 리포트', icon: <FileText className="h-5 w-5" /> },
+      { href: '/admin/notifications', label: '알림 관리', icon: <Bell className="h-5 w-5" /> },
+      { href: '/admin/backup', label: '백업 관리', icon: <Database className="h-5 w-5" /> },
+      { href: '/admin/permissions', label: '권한 관리', icon: <Shield className="h-5 w-5" /> },
+      { href: '/admin/api-keys', label: 'API 키', icon: <Key className="h-5 w-5" /> },
+      { href: '/admin/system-status', label: '시스템 상태', icon: <Activity className="h-5 w-5" /> },
+    ]
+  } else if (role === 'OWNER') {
+    // Owner: 재무 포함한 모든 메뉴
+    return [
+      { href: '/dashboard', label: '대시보드', icon: <LayoutDashboard className="h-5 w-5" /> },
+      { href: '/appointments', label: '예약', icon: <Calendar className="h-5 w-5" /> },
+      { href: '/products', label: '제품', icon: <Package className="h-5 w-5" /> },
+      { href: '/customers', label: '고객', icon: <Users className="h-5 w-5" /> },
+      { href: '/staff', label: '직원', icon: <UserCheck className="h-5 w-5" /> },
+      { href: '/finance', label: '재무', icon: <DollarSign className="h-5 w-5" /> },
+      { href: '/settings', label: '설정', icon: <Settings className="h-5 w-5" /> },
+    ]
+  } else if (role === 'STAFF') {
+    // Staff: 제한된 메뉴 (재무/설정 일부 제한)
+    return [
+      { href: '/dashboard', label: '대시보드', icon: <LayoutDashboard className="h-5 w-5" /> },
+      { href: '/appointments', label: '예약', icon: <Calendar className="h-5 w-5" /> },
+      { href: '/products', label: '제품', icon: <Package className="h-5 w-5" /> },
+      { href: '/customers', label: '고객', icon: <Users className="h-5 w-5" /> },
+      { href: '/settings', label: '설정', icon: <Settings className="h-5 w-5" /> },
+    ]
+  }
+
+  // 기본 메뉴 (역할 로딩 중)
+  return [
+    { href: '/dashboard', label: '대시보드', icon: <LayoutDashboard className="h-5 w-5" /> },
+  ]
+}
 
 type Props = {
   mobile?: boolean
@@ -38,13 +95,15 @@ type Props = {
   onToggleCollapse?: () => void
 }
 
-export default function Sidebar({ 
-  mobile = false, 
+export default function Sidebar({
+  mobile = false,
   onNavigate,
   collapsed = false,
-  onToggleCollapse 
+  onToggleCollapse
 }: Props = {}) {
   const pathname = usePathname()
+  const { currentUser, role } = useCurrentUser()
+  const menuItems = getMenuItems(role)
   const wrapCls = mobile
     ? 'flex w-72 shrink-0 bg-white border-r border-neutral-200 min-h-screen flex-col shadow-md transition-all duration-300'
     : clsx(
@@ -100,7 +159,7 @@ export default function Sidebar({
       
       {/* 네비게이션 */}
       <nav className="flex-1 overflow-y-auto px-2 py-4 space-y-1 overscroll-contain scroll-smooth">
-        {items.map(it => {
+        {menuItems.map(it => {
           const active = pathname?.startsWith(it.href)
           return (
             <Link

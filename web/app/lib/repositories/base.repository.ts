@@ -31,13 +31,15 @@ export abstract class BaseRepository<T> {
    * 모든 레코드 조회 (페이지네이션 지원)
    */
   async findAll(options: QueryOptions = {}): Promise<T[]> {
+    // limit 기본값 50, 최대값 200으로 제한
     const {
-      limit = 50,
+      limit: rawLimit = 50,
       offset = 0,
       search,
       orderBy = 'created_at',
       ascending = false,
     } = options
+    const limit = Math.min(Math.max(1, rawLimit || 50), 200)
 
     let query = this.supabase
       .from(this.tableName)

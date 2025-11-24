@@ -1,10 +1,18 @@
 import { NextResponse } from 'next/server'
 
 export const dynamic = 'force-dynamic'
+export const runtime = 'nodejs'
+
+interface SessionRequest {
+  access_token: string
+  refresh_token?: string
+  expires_in?: number
+  remember?: boolean
+}
 
 export async function POST(req: Request) {
   try {
-    const { access_token, refresh_token, expires_in, remember } = await req.json() as any
+    const { access_token, refresh_token, expires_in, remember }: SessionRequest = await req.json()
     if (!access_token) {
       return NextResponse.json({ message: 'token required' }, { status: 400 })
     }
@@ -36,9 +44,10 @@ export async function POST(req: Request) {
     }
     
     return res
-  } catch (e: any) {
+  } catch (e: unknown) {
     console.error('Session route error:', e)
-    return NextResponse.json({ message: e?.message || 'bad request' }, { status: 400 })
+    const errorMessage = e instanceof Error ? e.message : 'bad request'
+    return NextResponse.json({ message: errorMessage }, { status: 400 })
   }
 }
 

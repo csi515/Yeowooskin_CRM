@@ -22,7 +22,7 @@ export function useUndoRedo<T>(initialValue: T, maxHistory = 50) {
     if (!canUndo) return
 
     setState((current) => {
-      const previous = current.past[current.past.length - 1]
+      const previous = current.past[current.past.length - 1] as T
       const newPast = current.past.slice(0, current.past.length - 1)
 
       return {
@@ -37,7 +37,7 @@ export function useUndoRedo<T>(initialValue: T, maxHistory = 50) {
     if (!canRedo) return
 
     setState((current) => {
-      const next = current.future[0]
+      const next = current.future[0] as T
       const newFuture = current.future.slice(1)
 
       return {

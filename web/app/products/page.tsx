@@ -1,9 +1,11 @@
 "use client"
 
 import { useEffect, useState, useMemo, lazy, Suspense, useCallback } from 'react'
-import { Pencil, Plus } from 'lucide-react'
+import { Pencil, Plus, Package } from 'lucide-react'
 import EmptyState from '../components/EmptyState'
 import { Skeleton } from '../components/ui/Skeleton'
+import FloatingActionButton from '../components/common/FloatingActionButton'
+import PageHeader, { createActionButton } from '../components/common/PageHeader'
 import { useAppToast } from '../lib/ui/toast'
 import Button from '../components/ui/Button'
 import Modal, { ModalBody, ModalFooter, ModalHeader } from '../components/ui/Modal'
@@ -34,7 +36,7 @@ export default function ProductsPage() {
   })
   const pagination = usePagination({
     initialPage: 1,
-    initialPageSize: 12,
+    initialPageSize: 10,
     totalItems: 0, // filteredProducts.length로 업데이트됨
   })
   const { page, pageSize, setPage, setPageSize, setTotalItems } = pagination
@@ -141,17 +143,16 @@ export default function ProductsPage() {
     <main className="space-y-3 sm:space-y-4">
       {error && <p className="text-sm text-error-600 bg-error-50 border border-error-200 rounded-lg p-3">{error}</p>}
 
-      <div className="bg-white rounded-xl border border-neutral-200 shadow-sm p-3 sm:p-4">
-        <div className="flex flex-col sm:flex-row items-stretch sm:items-end gap-3 w-full">
-          <div className="flex-1 min-w-0">
-            <label className="block text-xs sm:text-sm font-semibold text-neutral-700 mb-1.5">검색</label>
-            <input
-              className="h-11 w-full rounded-lg border border-neutral-300 bg-white px-4 text-sm text-neutral-800 outline-none shadow-sm placeholder:text-neutral-400 focus:border-secondary-500 focus:ring-2 focus:ring-secondary-200 transition-all duration-200 touch-manipulation"
-              placeholder="상품명 또는 설명으로 검색"
-              value={query}
-              onChange={e => setQuery(e.target.value)}
-            />
-          </div>
+      <PageHeader
+        title="제품 관리"
+        icon={<Package className="h-5 w-5" />}
+        description="제품 정보를 관리하고 추가할 수 있습니다"
+        search={{
+          value: query,
+          onChange: setQuery,
+          placeholder: '상품명 또는 설명으로 검색',
+        }}
+        filters={
           <div className="w-full sm:w-auto sm:min-w-[160px]">
             <label className="block text-xs sm:text-sm font-semibold text-neutral-700 mb-1.5">상태</label>
             <select
@@ -164,19 +165,9 @@ export default function ProductsPage() {
               <option value="inactive">비활성</option>
             </select>
           </div>
-          <div className="flex items-end">
-            <Button
-              variant="primary"
-              size="md"
-              leftIcon={<Plus className="h-4 w-4" />}
-              onClick={openCreate}
-              className="w-full sm:w-auto"
-            >
-              제품 추가
-            </Button>
-          </div>
-        </div>
-      </div>
+        }
+        actions={createActionButton('제품 추가', openCreate, 'primary')}
+      />
 
       <section className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-2 sm:gap-3">
         {loading && Array.from({ length: 12 }).map((_, i) => (
@@ -195,7 +186,7 @@ export default function ProductsPage() {
             { bg: 'from-purple-50 to-violet-100', border: 'border-purple-200', text: 'text-purple-700', label: 'text-purple-600' },
             { bg: 'from-indigo-50 to-blue-100', border: 'border-indigo-200', text: 'text-indigo-700', label: 'text-indigo-600' },
           ]
-          const scheme = colorSchemes[index % colorSchemes.length]
+          const scheme = colorSchemes[index % colorSchemes.length]!
           return (
           <div key={String(p.id)} className={`bg-gradient-to-br ${scheme.bg} rounded-lg border ${scheme.border} shadow-sm p-2.5 sm:p-3 flex flex-col gap-1.5 hover:shadow-md transition-all duration-200`}>
             <div className="flex items-start justify-between gap-1.5">
@@ -254,7 +245,7 @@ export default function ProductsPage() {
               setPageSize(size)
               setPage(1)
             }}
-            pageSizeOptions={[12, 24, 48, 96]}
+            pageSizeOptions={[10, 20, 30, 40]}
             showInfo={true}
           />
         </div>
@@ -369,13 +360,19 @@ export default function ProductsPage() {
         <Suspense fallback={<div>로딩 중...</div>}>
           <ProductDetailModal
             open={detailOpen}
-            item={selected}
+            item={selected as import('@/types/entities').Product | null}
             onClose={() => setDetailOpen(false)}
             onSaved={load}
             onDeleted={load}
           />
         </Suspense>
       )}
+
+      {/* 모바일 FAB */}
+      <FloatingActionButton
+        onClick={openCreate}
+        label="제품 추가"
+      />
       </main>
   )
 }

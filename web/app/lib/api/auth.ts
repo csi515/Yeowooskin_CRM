@@ -112,8 +112,8 @@ export function createAuthApi(supabase: SupabaseClient) {
      */
     async checkApproval(userId: string): Promise<UserProfile | null> {
       const { data, error } = await supabase
-        .from('users')
-        .select('id, approved')
+        .from('profiles')
+        .select('id, approved, email_verified')
         .eq('id', userId)
         .maybeSingle()
 

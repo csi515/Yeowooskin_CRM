@@ -20,17 +20,17 @@ export default function InstallPrompt() {
   const [isVisible, setIsVisible] = useState(false)
 
   useEffect(() => {
-    if (typeof window === 'undefined') return
-    
+    if (typeof window === 'undefined') return () => {}
+
     // 로컬 스토리지에서 닫힘 상태 확인
     const dismissed = localStorage.getItem(STORAGE_KEY_DISMISSED)
     const expiry = localStorage.getItem(STORAGE_KEY_EXPIRY)
-    
+
     if (dismissed === 'true' && expiry) {
       const expiryDate = new Date(expiry)
       if (new Date() < expiryDate) {
         setIsDismissed(true)
-        return
+        return () => {}
       } else {
         // 만료되었으면 로컬 스토리지 정리
         localStorage.removeItem(STORAGE_KEY_DISMISSED)
@@ -46,6 +46,8 @@ export default function InstallPrompt() {
       }, 1000)
       return () => clearTimeout(timer)
     }
+
+    return () => {} // 항상 cleanup 함수 반환
   }, [shouldShowPrompt, isDismissed, isInstalled])
 
   const handleInstall = async () => {

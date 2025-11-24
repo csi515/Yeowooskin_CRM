@@ -202,12 +202,12 @@ export function Modal({
     if (e.shiftKey) {
       if (target === first || !root.contains(target)) {
         e.preventDefault()
-        last.focus()
+        last?.focus()
       }
     } else {
       if (target === last || !root.contains(target)) {
         e.preventDefault()
-        first.focus()
+        first?.focus()
       }
     }
   }
@@ -285,6 +285,7 @@ export function Modal({
           }}
           onTouchStart={(e) => {
             const touch = e.touches[0]
+            if (!touch) return
             dragStartYRef.current = touch.clientY
             dragYRef.current = 0
             setIsDragging(true)
@@ -294,6 +295,7 @@ export function Modal({
           onTouchMove={(e) => {
             if (!isDragging) return
             const touch = e.touches[0]
+            if (!touch) return
             const deltaY = touch.clientY - dragStartYRef.current
             // 아래로만 드래그 허용
             if (deltaY > 0) {

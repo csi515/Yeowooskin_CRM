@@ -11,7 +11,7 @@ export function getUserIdFromCookies(): string | null {
     const token = cookies().get('sb:token')?.value
     if (!token) return null
     const parts = token.split('.')
-    if (parts.length < 2) return null
+    if (parts.length < 2 || !parts[1]) return null
     const payload = JSON.parse(base64UrlToString(parts[1]))
     return payload?.sub || null
   } catch {

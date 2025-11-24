@@ -41,6 +41,8 @@ export default function Autocomplete({
   clearable = true,
   filterable = true,
   className,
+  required,
+  autoFocus,
   ...inputProps
 }: Props) {
   const [isOpen, setIsOpen] = useState(false)
@@ -128,9 +130,11 @@ export default function Autocomplete({
         <Input
           {...inputProps}
           ref={inputRef}
-          label={label}
-          helpText={helpText}
-          error={error}
+          {...(label && { label })}
+          {...(helpText && { helpText })}
+          {...(error && { error })}
+          {...(required !== undefined && { required })}
+          {...(autoFocus !== undefined && { autoFocus })}
           value={isOpen ? searchQuery : displayValue}
           onChange={handleInputChange}
           onFocus={() => {

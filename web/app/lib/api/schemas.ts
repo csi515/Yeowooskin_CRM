@@ -8,7 +8,7 @@ import { z } from 'zod'
  * 페이지네이션 스키마
  */
 export const paginationSchema = z.object({
-  limit: z.coerce.number().int().min(1).max(1000).default(50),
+  limit: z.coerce.number().int().min(1).max(200).default(50), // 최대값 200으로 제한 (데이터 보호)
   offset: z.coerce.number().int().min(0).default(0),
 })
 
@@ -40,6 +40,17 @@ export const customerCreateSchema = z.object({
   phone: z.string().optional(),
   email: z.string().email('유효한 이메일을 입력하세요').optional().or(z.literal('')),
   address: z.string().optional(),
+  features: z.string().optional().nullable(),
+  health_allergies: z.string().optional().nullable(),
+  health_medications: z.string().optional().nullable(),
+  health_skin_conditions: z.string().optional().nullable(),
+  health_pregnant: z.boolean().optional().nullable(),
+  health_breastfeeding: z.boolean().optional().nullable(),
+  health_notes: z.string().optional().nullable(),
+  skin_type: z.string().optional().nullable(),
+  skin_concerns: z.array(z.string()).optional().nullable(),
+  birthdate: z.string().optional().nullable(),
+  recommended_visit_interval_days: z.number().int().optional().nullable(),
 })
 
 /**
@@ -135,4 +146,70 @@ export const pointsLedgerCreateSchema = z.object({
   }),
   reason: z.string().optional(),
 })
+
+/**
+ * 고객 상품 보유 내역 생성 스키마
+ */
+export const customerProductCreateSchema = z.object({
+  customer_id: z.string().uuid('올바른 고객 ID가 아닙니다'),
+  product_id: z.string().uuid('올바른 상품 ID가 아닙니다'),
+  quantity: z.coerce.number().int().min(0, '수량은 0 이상이어야 합니다'),
+  notes: z.string().optional().nullable(),
+  reason: z.string().optional(),
+})
+
+/**
+ * 고객 상품 보유 내역 업데이트 스키마
+ */
+export const customerProductUpdateSchema = z.object({
+  quantity: z.coerce.number().int().min(0, '수량은 0 이상이어야 합니다'),
+  notes: z.string().optional().nullable(),
+  reason: z.string().max(500, '사유는 500자 이하여야 합니다').optional(),
+  no_ledger: z.boolean().optional(),
+})
+
+/**
+ * 고객 상품 ledger 항목 추가 스키마
+ */
+export const customerProductLedgerCreateSchema = z.object({
+  delta: z.coerce.number().int().refine((val) => val !== 0, {
+    message: 'delta는 0이 아닌 값이어야 합니다',
+  }),
+  reason: z.string().max(500, '사유는 500자 이하여야 합니다').optional(),
+})
+
+/**
+ * 고객 상품 ledger 항목 업데이트 스키마
+ */
+export const customerProductLedgerUpdateSchema = z.object({
+  replace_from: z.string().optional(),
+  replace_to: z.string().optional(),
+  delta_override: z.coerce.number().int().optional(),
+})
+
+/**
+ * 초대 생성 스키마
+ */
+export const invitationCreateSchema = z.object({
+  email: z.string().email('올바른 이메일 형식이 아닙니다'),
+  role: z.enum(['OWNER', 'STAFF'], {
+    errorMap: () => ({ message: '역할은 OWNER 또는 STAFF여야 합니다' })
+  }),
+  branch_id: z.string().uuid('올바른 지점 ID가 아닙니다').optional(),
+})
+
+/**
+ * 지점 생성 스키마
+ */
+export const branchCreateSchema = z.object({
+  code: z.string().min(1, '지점 코드는 필수입니다'),
+  name: z.string().min(1, '지점명은 필수입니다'),
+  address: z.string().optional().nullable(),
+  phone: z.string().optional().nullable(),
+})
+
+/**
+ * 지점 업데이트 스키마
+ */
+export const branchUpdateSchema = branchCreateSchema.partial()
 

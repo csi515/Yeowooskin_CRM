@@ -15,16 +15,20 @@ export function parseQueryParams(req: Request): PaginationParams & SearchParams 
   const { searchParams } = new URL(req.url)
   
   try {
+    // limit 기본값 50, 최대값 200으로 제한 (데이터가 많이 쌓이는 테이블 보호)
+    const limitParam = searchParams.get('limit')
+    const limit = limitParam ? Math.min(Math.max(1, parseInt(limitParam, 10)), 200) : 50
+    
     const params = {
-      limit: searchParams.get('limit') || '50',
+      limit: String(limit),
       offset: searchParams.get('offset') || '0',
-      search: searchParams.get('search') || undefined,
-      from: searchParams.get('from') || undefined,
-      to: searchParams.get('to') || undefined,
+      search: searchParams.get('search') || '',
+      from: searchParams.get('from') || '',
+      to: searchParams.get('to') || '',
     }
     
     const validated = queryParamsSchema.parse(params)
-    return validated
+    return validated as PaginationParams & SearchParams & DateRangeParams
   } catch (error) {
     if (error instanceof ZodError) {
       throw new ValidationError('Invalid query parameters', {

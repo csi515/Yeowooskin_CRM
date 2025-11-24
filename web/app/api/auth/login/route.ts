@@ -3,6 +3,7 @@ import { createClient } from '@supabase/supabase-js'
 import { getEnv } from '@/app/lib/env'
 
 export const dynamic = 'force-dynamic'
+export const runtime = 'nodejs'
 
 export async function POST(req: Request) {
   try {

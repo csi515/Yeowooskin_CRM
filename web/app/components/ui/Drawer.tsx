@@ -52,11 +52,13 @@ export default function Drawer({
         onClose()
       }
     }
-    
+
     if (open) {
       window.addEventListener('keydown', handleEscape)
       return () => window.removeEventListener('keydown', handleEscape)
     }
+
+    return () => {} // 항상 cleanup 함수 반환
   }, [open, onClose])
 
   if (!mounted) return null

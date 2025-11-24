@@ -6,13 +6,11 @@ import { transactionCreateSchema } from '@/app/lib/api/schemas'
 
 export const GET = withAuth(async (req: NextRequest, { userId }) => {
   const params = parseQueryParams(req)
-  const customerId = new URL(req.url).searchParams.get('customer_id') || undefined
+  const customerId = new URL(req.url).searchParams.get('customer_id')
   const repository = new TransactionsRepository(userId)
   const options: Parameters<typeof repository.findAll>[0] = {
     ...params,
-  }
-  if (customerId) {
-    options.customer_id = customerId
+    ...(customerId && { customer_id: customerId }),
   }
   const data = await repository.findAll(options)
   return createSuccessResponse(data)

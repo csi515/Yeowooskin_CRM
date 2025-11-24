@@ -5,23 +5,56 @@ import { useEffect, useState, useMemo, lazy, Suspense, useCallback } from 'react
 import EmptyState from '../components/EmptyState'
 import { Skeleton } from '../components/ui/Skeleton'
 import CustomerHoldingsBadge from '../components/CustomerHoldingsBadge'
+import SwipeableCustomerCard from '../components/customers/SwipeableCustomerCard'
 import Button from '../components/ui/Button'
+import FloatingActionButton from '../components/common/FloatingActionButton'
 import type { Customer } from '@/types/entities'
+import type { CustomerFilterType } from '../components/customers/CustomerFilters'
 import { useSearch } from '../lib/hooks/useSearch'
 import { usePagination } from '../lib/hooks/usePagination'
 import { useSort } from '../lib/hooks/useSort'
+import { useRecentSearches } from '../lib/hooks/useRecentSearches'
 
 const CustomerDetailModal = lazy(() => import('../components/modals/CustomerDetailModal'))
 
 export default function CustomersPage() {
   const [rows, setRows] = useState<Customer[]>([])
   const { query, debouncedQuery, setQuery } = useSearch({ debounceMs: 300 })
+  const { recentSearches, addSearch } = useRecentSearches()
+  const [showRecentSearches, setShowRecentSearches] = useState(false)
+  const [activeFilter, setActiveFilter] = useState<CustomerFilterType>('all')
   const mode: 'table' | 'card' = 'table'
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
   const [detailOpen, setDetailOpen] = useState(false)
   const [selected, setSelected] = useState<Customer | null>(null)
-  const dense: 'compact' | 'comfortable' = 'comfortable'
+
+  // 고객 상세 모달 열기 이벤트 리스너
+  useEffect(() => {
+    const handleOpenDetail = (e: CustomEvent) => {
+      const customerId = e.detail?.customerId
+      if (customerId) {
+        const customer = rows.find((c) => c.id === customerId)
+        if (customer) {
+          setSelected(customer)
+          setDetailOpen(true)
+        }
+      }
+    }
+
+    const handleOpenNew = () => {
+      setSelected(null)
+      setDetailOpen(true)
+    }
+
+    window.addEventListener('open-customer-detail', handleOpenDetail as EventListener)
+    window.addEventListener('open-new-customer-modal', handleOpenNew)
+    return () => {
+      window.removeEventListener('open-customer-detail', handleOpenDetail as EventListener)
+      window.removeEventListener('open-new-customer-modal', handleOpenNew)
+    }
+  }, [rows])
+  // dense = 'comfortable' - 현재는 comfortable 모드만 지원
   const { sortKey, sortDirection, toggleSort, sortFn } = useSort<Customer & Record<string, unknown>>({
     initialKey: 'name',
     initialDirection: 'asc',
@@ -41,11 +74,16 @@ export default function CustomersPage() {
       const { customersApi } = await import('@/app/lib/api/customers')
       const data = await customersApi.list(debouncedQuery ? { search: debouncedQuery } : {})
       setRows(Array.isArray(data) ? data : [])
+      
+      // 검색 기록 저장
+      if (debouncedQuery && debouncedQuery.trim()) {
+        addSearch(debouncedQuery, 'customer')
+      }
     } catch (e: unknown) {
       const errorMessage = e instanceof Error ? e.message : '에러가 발생했습니다.'
       setError(errorMessage)
     } finally { setLoading(false) }
-  }, [debouncedQuery])
+  }, [debouncedQuery, addSearch])
 
   useEffect(() => { load() }, [load])
 
@@ -61,48 +99,90 @@ export default function CustomersPage() {
     return sortedRows.slice(start, end)
   }, [sortedRows, page, pageSize])
 
-  // 전체 아이템 수 업데이트
-  useEffect(() => {
-    // usePagination의 setTotalItems는 내부적으로 관리되므로 직접 접근 불가
-    // 대신 totalItems를 동적으로 계산
-  }, [rows.length])
+  // 전체 아이템 수는 usePagination에서 rows.length를 기반으로 자동 계산됨
 
   // 보유상품 합계는 각 행 렌더 시 배지 컴포넌트가 직접 불러오며, 이벤트로 동기화합니다.
   // 포인트 조회 최적화: 현재 페이지의 고객만 조회
   useEffect(() => {
+    if (paginatedRows.length === 0) return
+    
     const fetchPoints = async () => {
       try {
         const { pointsApi } = await import('@/app/lib/api/points')
-        const pairs = await Promise.all(paginatedRows.map(async (c) => {
-          try {
-            const data = await pointsApi.getBalance(c.id, { withLedger: false })
-            const balance = Number(data?.balance || 0)
-            return [c.id, balance] as [string, number]
-          } catch {
-            return [c.id, 0] as [string, number]
-          }
-        }))
+        const pairs = await Promise.all(
+          paginatedRows.map(async (c) => {
+            try {
+              const data = await pointsApi.getBalance(c.id, { withLedger: false })
+              const balance = Number(data?.balance || 0)
+              return [c.id, balance] as [string, number]
+            } catch {
+              return [c.id, 0] as [string, number]
+            }
+          })
+        )
         setPointsByCustomer(prev => ({ ...prev, ...Object.fromEntries(pairs) }))
-      } catch {}
+      } catch (error) {
+        // 포인트 조회 실패는 조용히 무시 (UI에 표시하지 않음)
+        console.debug('Failed to fetch points:', error)
+      }
     }
-    if (paginatedRows.length) fetchPoints()
+    
+    fetchPoints()
   }, [paginatedRows])
 
   return (
-    <main className="space-y-3 sm:space-y-4">
-      {/** 안전 가드: 빌드/핫리로드 타이밍 이슈 대비 */}
-      {(() => { void (typeof pointsByCustomer); return null })()}
-      
+    <div className="space-y-3 sm:space-y-4">
       <div className="bg-white rounded-xl border border-neutral-200 shadow-sm p-3 sm:p-4">
         <div className="flex flex-col sm:flex-row items-stretch sm:items-end gap-3 w-full">
           <div className="flex-1 min-w-0">
             <label className="block text-xs sm:text-sm font-semibold text-neutral-700 mb-1.5">검색</label>
-            <input
-              className="h-11 w-full rounded-lg border border-neutral-300 bg-white px-4 text-sm text-neutral-800 outline-none shadow-sm placeholder:text-neutral-400 focus:border-secondary-500 focus:ring-2 focus:ring-secondary-200 transition-all duration-200 touch-manipulation"
-              placeholder="이름, 이메일 또는 전화번호로 검색"
-              value={query}
-              onChange={e => setQuery(e.target.value)}
-            />
+            <div className="relative flex gap-2">
+              <input
+                className="h-11 w-full rounded-lg border border-neutral-300 bg-white px-4 text-sm text-neutral-800 outline-none shadow-sm placeholder:text-neutral-400 focus:border-secondary-500 focus:ring-2 focus:ring-secondary-200 transition-all duration-200 touch-manipulation"
+                placeholder="이름, 이메일 또는 전화번호로 검색 (Ctrl+K)"
+                value={query}
+                onChange={e => {
+                  setQuery(e.target.value)
+                  setShowRecentSearches(e.target.value.length === 0 && recentSearches.length > 0)
+                }}
+                onFocus={() => {
+                  if (!query && recentSearches.length > 0) {
+                    setShowRecentSearches(true)
+                  }
+                }}
+                onBlur={() => {
+                  // 약간의 지연을 두어 클릭 이벤트가 먼저 발생하도록
+                  setTimeout(() => setShowRecentSearches(false), 200)
+                }}
+              />
+              {/* 최근 검색 기록 */}
+              {showRecentSearches && recentSearches.length > 0 && (
+                <div className="absolute top-full left-0 right-0 mt-1 bg-white border border-neutral-200 rounded-lg shadow-lg z-50 max-h-64 overflow-y-auto">
+                  <div className="p-2 border-b border-neutral-200">
+                    <div className="text-xs font-medium text-neutral-500">최근 검색</div>
+                  </div>
+                  {recentSearches
+                    .filter((s) => s.type === 'customer' || !s.type)
+                    .slice(0, 5)
+                    .map((search) => (
+                      <button
+                        key={search.query}
+                        onClick={() => {
+                          setQuery(search.query)
+                          setShowRecentSearches(false)
+                        }}
+                        className="w-full text-left px-3 py-2 text-sm hover:bg-neutral-50 transition-colors"
+                      >
+                        {search.query}
+                      </button>
+                    ))}
+                </div>
+              )}
+            </div>
+              <div className="flex-shrink-0">
+                <CustomerFilters activeFilter={activeFilter} onFilterChange={setActiveFilter} />
+              </div>
+            </div>
           </div>
           <div className="flex items-end">
             <Button
@@ -110,10 +190,10 @@ export default function CustomersPage() {
               size="md"
               leftIcon={<Plus className="h-4 w-4" />}
               onClick={() => {
-                setSelected({ id: '', owner_id: '', name: '', phone: '', email: '', address: '' } as Customer)
+                setSelected(null)
                 setDetailOpen(true)
               }}
-              className="w-full sm:w-auto"
+              className="hidden md:flex w-full sm:w-auto"
             >
               새 고객
             </Button>
@@ -121,9 +201,9 @@ export default function CustomersPage() {
         </div>
       </div>
 
-      {error && <p className="text-sm text-error-600">{error}</p>}
+      {error ? <p className="text-sm text-error-600">{error}</p> : null}
 
-      {mode==='table' ? (
+      {mode === 'table' ? (
         <>
           {/* 모바일 카드 뷰 */}
           <div className="md:hidden space-y-3">
@@ -137,81 +217,29 @@ export default function CustomersPage() {
                 </div>
               </div>
             ))}
-            {!loading && paginatedRows.map((c, index) => (
-              <div
+            {!loading && paginatedRows.map((c) => (
+              <SwipeableCustomerCard
                 key={c.id}
-                onClick={() => { setSelected(c); setDetailOpen(true) }}
-                className={`rounded-lg border border-neutral-200 bg-white p-4 shadow-sm transition-all duration-200 cursor-pointer hover:shadow-md active:scale-[0.99] touch-manipulation ${
-                  index % 4 === 0 
-                    ? 'bg-pink-50/30 border-pink-200' 
-                    : index % 4 === 1 
-                    ? 'bg-purple-50/30 border-purple-200'
-                    : index % 4 === 2
-                    ? 'bg-blue-50/30 border-blue-200'
-                    : 'bg-emerald-50/30 border-emerald-200'
-                }`}
-                tabIndex={0}
-                onKeyDown={(e) => {
-                  if (e.key === 'Enter' || e.key === ' ') {
-                    e.preventDefault()
-                    setSelected(c)
-                    setDetailOpen(true)
-                  }
+                customer={c}
+                points={pointsByCustomer[c.id] || 0}
+                onEdit={(customer) => {
+                  setSelected(customer)
+                  setDetailOpen(true)
                 }}
-                role="button"
-                aria-label={`${c.name} 고객 상세보기`}
-              >
-                <div className="flex items-start justify-between mb-3 pb-2 border-b border-neutral-100">
-                  <h3 className="text-base font-semibold text-neutral-900">{c.name}</h3>
-                  <Button
-                    size="sm"
-                    variant="secondary"
-                    onClick={(e) => {
-                      e.stopPropagation()
-                      setSelected(c)
-                      setDetailOpen(true)
-                    }}
-                    aria-label="상세보기"
-                    className="h-8 w-8 p-0 flex-shrink-0"
-                  >
-                    <Pencil className="h-4 w-4" />
-                  </Button>
-                </div>
-                <div className="space-y-2 text-sm">
-                  <div className="flex items-center justify-between">
-                    <span className="text-neutral-500">연락처</span>
-                    <span className="text-neutral-700 font-medium">{c.phone || '-'}</span>
-                  </div>
-                  <div className="flex items-center justify-between">
-                    <span className="text-neutral-500">이메일</span>
-                    <span className="text-neutral-700 font-medium truncate ml-2">{c.email || '-'}</span>
-                  </div>
-                  <div className="flex items-center justify-between">
-                    <span className="text-neutral-500">보유상품</span>
-                    <CustomerHoldingsBadge customerId={c.id} />
-                  </div>
-                  <div className="flex items-center justify-between pt-2 border-t border-neutral-100">
-                    <span className="text-neutral-500 font-medium">포인트</span>
-                    <span className="text-amber-700 font-semibold">
-                      {Number(pointsByCustomer[c.id] ?? 0).toLocaleString()}P
-                    </span>
-                  </div>
-                </div>
-              </div>
+                onCall={(phone) => {
+                  window.location.href = `tel:${phone}`
+                }}
+                onEmail={(email) => {
+                  window.location.href = `mailto:${email}`
+                }}
+              />
             ))}
             {!loading && rows.length === 0 && (
               <EmptyState
                 title="고객 데이터가 없습니다."
                 actionLabel="새 고객"
                 actionOnClick={() => { 
-                  setSelected({ 
-                    id: '', 
-                    owner_id: '', 
-                    name: '', 
-                    phone: '', 
-                    email: '', 
-                    address: '' 
-                  } as Customer)
+                  setSelected(null)
                   setDetailOpen(true) 
                 }}
               />
@@ -224,7 +252,7 @@ export default function CustomersPage() {
               <table className="min-w-full text-sm" role="table" aria-label="고객 목록">
               <thead className="sticky top-0 z-[1010] bg-gradient-to-r from-pink-100 via-purple-100 to-blue-100">
                 <tr>
-                  <th className={`${dense==='compact' ? 'p-3' : 'p-4'} text-left align-top`} scope="col">
+                  <th className={`p-4 text-left align-top`} scope="col">
                     <button
                       className="inline-flex items-center gap-1 hover:underline text-pink-700 font-semibold touch-manipulation"
                       onClick={() => { toggleSort('name'); setPage(1) }}
@@ -233,7 +261,7 @@ export default function CustomersPage() {
                       이름 {sortKey==='name' ? (sortDirection==='asc' ? '▲' : '▼') : ''}
                     </button>
                   </th>
-                  <th className={`${dense==='compact' ? 'p-3' : 'p-4'} text-left align-top`}>
+                  <th className={`p-4 text-left align-top`}>
                     <button
                       className="inline-flex items-center gap-1 hover:underline text-purple-700 font-semibold touch-manipulation"
                       onClick={() => { toggleSort('phone'); setPage(1) }}
@@ -241,7 +269,7 @@ export default function CustomersPage() {
                       연락처 {sortKey==='phone' ? (sortDirection==='asc' ? '▲' : '▼') : ''}
                     </button>
                   </th>
-                  <th className={`${dense==='compact' ? 'p-3' : 'p-4'} text-left align-top`}>
+                  <th className={`p-4 text-left align-top`}>
                     <button
                       className="inline-flex items-center gap-1 hover:underline text-blue-700 font-semibold touch-manipulation"
                       onClick={() => { toggleSort('email'); setPage(1) }}
@@ -249,9 +277,9 @@ export default function CustomersPage() {
                       이메일 {sortKey==='email' ? (sortDirection==='asc' ? '▲' : '▼') : ''}
                     </button>
                   </th>
-                  <th className={`${dense==='compact' ? 'p-3' : 'p-4'} text-left align-top text-emerald-700 font-semibold`}>보유상품</th>
-                  <th className={`${dense==='compact' ? 'p-3' : 'p-4'} text-right align-top text-amber-700 font-semibold whitespace-nowrap`}>포인트</th>
-                  <th className={`${dense==='compact' ? 'p-3' : 'p-4'} text-center align-top text-indigo-700 font-semibold whitespace-nowrap`} scope="col">
+                  <th className={`p-4 text-left align-top text-emerald-700 font-semibold`}>보유상품</th>
+                  <th className={`p-4 text-right align-top text-amber-700 font-semibold whitespace-nowrap`}>포인트</th>
+                  <th className={`p-4 text-center align-top text-indigo-700 font-semibold whitespace-nowrap`} scope="col">
                     상세보기
                   </th>
                 </tr>
@@ -259,12 +287,12 @@ export default function CustomersPage() {
               <tbody className="divide-y divide-purple-100">
                 {loading && Array.from({ length: 6 }).map((_, i) => (
                   <tr key={`s-${i}`}>
-                    <td className={dense==='compact' ? 'p-3' : 'p-4'}><Skeleton className="h-4 w-40" /></td>
-                    <td className={dense==='compact' ? 'p-3' : 'p-4'}><Skeleton className="h-4 w-28" /></td>
-                    <td className={dense==='compact' ? 'p-3' : 'p-4'}><Skeleton className="h-4 w-32" /></td>
-                    <td className={dense==='compact' ? 'p-3' : 'p-4'}><Skeleton className="h-8 w-24" /></td>
-                    <td className={dense==='compact' ? 'p-3' : 'p-4'}><Skeleton className="h-4 w-16 ml-auto" /></td>
-                    <td className={dense==='compact' ? 'p-3' : 'p-4'}><Skeleton className="h-8 w-8 mx-auto" /></td>
+                    <td className={false ? 'p-3' : 'p-4'}><Skeleton className="h-4 w-40" /></td>
+                    <td className={false ? 'p-3' : 'p-4'}><Skeleton className="h-4 w-28" /></td>
+                    <td className={false ? 'p-3' : 'p-4'}><Skeleton className="h-4 w-32" /></td>
+                    <td className={false ? 'p-3' : 'p-4'}><Skeleton className="h-8 w-24" /></td>
+                    <td className={false ? 'p-3' : 'p-4'}><Skeleton className="h-4 w-16 ml-auto" /></td>
+                    <td className={false ? 'p-3' : 'p-4'}><Skeleton className="h-8 w-8 mx-auto" /></td>
                   </tr>
                 ))}
                 {!loading && paginatedRows.map((c, index) => (
@@ -283,16 +311,16 @@ export default function CustomersPage() {
                     onKeyDown={(e)=>{ if(e.key==='Enter'){ setSelected(c); setDetailOpen(true) }}}
                     onClick={() => { setSelected(c); setDetailOpen(true) }}
                   >
-                    <td className={`${dense==='compact' ? 'p-3' : 'p-4'} text-left align-top font-medium`}>{c.name}</td>
-                    <td className={`${dense==='compact' ? 'p-3' : 'p-4'} text-left align-top`}>{c.phone || '-'}</td>
-                    <td className={`${dense==='compact' ? 'p-3' : 'p-4'} text-left align-top`}>{c.email || '-'}</td>
-                    <td className={`${dense==='compact' ? 'p-3' : 'p-4'} text-left align-top`}>
+                    <td className={`p-4 text-left align-top font-medium`}>{c.name}</td>
+                    <td className={`p-4 text-left align-top`}>{c.phone || '-'}</td>
+                    <td className={`p-4 text-left align-top`}>{c.email || '-'}</td>
+                    <td className={`p-4 text-left align-top`}>
                       <CustomerHoldingsBadge customerId={c.id} />
                     </td>
-                    <td className={`${dense==='compact' ? 'p-3' : 'p-4'} text-right align-top whitespace-nowrap font-medium`}>
+                    <td className={`p-4 text-right align-top whitespace-nowrap font-medium`}>
                       {Number(pointsByCustomer[c.id] ?? 0).toLocaleString()}
                     </td>
-                    <td className={`${dense==='compact' ? 'p-3' : 'p-4'} text-center align-top`}>
+                    <td className={`p-4 text-center align-top`}>
                       <Button
                         size="sm"
                         variant="secondary"
@@ -316,14 +344,7 @@ export default function CustomersPage() {
                     title="고객 데이터가 없습니다."
                     actionLabel="새 고객"
                     actionOnClick={() => { 
-                      setSelected({ 
-                        id: '', 
-                        owner_id: '', 
-                        name: '', 
-                        phone: '', 
-                        email: '', 
-                        address: '' 
-                      } as Customer)
+                      setSelected(null)
                       setDetailOpen(true) 
                     }}
                   />
@@ -384,7 +405,7 @@ export default function CustomersPage() {
           {paginatedRows.length === 0 && !loading && <div className="text-sm text-neutral-500">데이터가 없습니다.</div>}
         </div>
       )}
-      {detailOpen && (
+      {detailOpen ? (
         <Suspense fallback={<div>로딩 중...</div>}>
           <CustomerDetailModal
             open={detailOpen}
@@ -394,7 +415,16 @@ export default function CustomersPage() {
             onDeleted={load}
           />
         </Suspense>
-      )}
-      </main>
+      ) : null}
+      
+      {/* 모바일 FAB */}
+      <FloatingActionButton
+        onClick={() => {
+          setSelected(null)
+          setDetailOpen(true)
+        }}
+        label="새 고객 추가"
+      />
+      </div>
   )
 }

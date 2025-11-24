@@ -22,9 +22,11 @@ export function getProjectById(id: string): Project | undefined {
 export function updateProject(id: string, patch: Partial<Pick<Project, 'title' | 'content'>>): Project | undefined {
   const idx = projects.findIndex(p => p.id === id)
   if (idx === -1) return undefined
+  const current = projects[idx]!
   const next: Project = {
-    ...projects[idx],
-    ...patch,
+    id: current.id,
+    title: patch.title ?? current.title,
+    content: patch.content ?? current.content,
     updatedAt: new Date().toISOString()
   }
   projects[idx] = next

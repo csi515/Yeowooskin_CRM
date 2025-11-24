@@ -8,6 +8,7 @@ type Props = React.TextareaHTMLAttributes<HTMLTextAreaElement> & {
   helpText?: string
   error?: string
   required?: boolean
+  maxLength?: number // 글자수 제한
 }
 
 const Textarea = React.forwardRef<HTMLTextAreaElement, Props>(
@@ -23,6 +24,7 @@ const Textarea = React.forwardRef<HTMLTextAreaElement, Props>(
                  <textarea
                    ref={ref}
                    {...rest}
+                   maxLength={rest.maxLength || 2000}
                    onFocus={(e) => {
                      // 모바일에서 입력 필드 포커스 시 자동 스크롤
                      if (typeof window !== 'undefined' && window.innerWidth < 768) {

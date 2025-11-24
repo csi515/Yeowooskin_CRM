@@ -9,12 +9,24 @@ export interface ApproveUserInput {
   approved: boolean
 }
 
+export interface BatchApproveUsersInput {
+  userIds: string[]
+  approved: boolean
+}
+
 export const adminApi = {
   /**
    * 사용자 승인
    */
   async approveUser(input: ApproveUserInput): Promise<{ ok: boolean }> {
     return apiClient.post<{ ok: boolean }>('/api/approve-user', input)
+  },
+
+  /**
+   * 일괄 승인/거절
+   */
+  async batchApproveUsers(input: BatchApproveUsersInput): Promise<{ ok: boolean; count: number }> {
+    return apiClient.post<{ ok: boolean; count: number }>('/api/approve-users-batch', input)
   },
 }
 

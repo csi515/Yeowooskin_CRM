@@ -69,13 +69,13 @@ export function isErrorResponse(response: unknown): response is { message: strin
  * Customer 타입 가드
  */
 export function isCustomer(value: unknown): value is { id: string; name: string } {
-  return isObject(value) && isString(value.id) && isString(value.name)
+  return isObject(value) && isString(value['id']) && isString(value['name'])
 }
 
 /**
  * Product 타입 가드
  */
 export function isProduct(value: unknown): value is { id: string | number; name: string } {
-  return isObject(value) && (isString(value.id) || isNumber(value.id)) && isString(value.name)
+  return isObject(value) && (isString(value['id']) || isNumber(value['id'])) && isString(value['name'])
 }
 

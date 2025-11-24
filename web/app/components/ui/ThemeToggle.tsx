@@ -40,7 +40,7 @@ export default function ThemeToggle({ variant = 'button', className }: Props) {
             onClick: () => setTheme('system'),
           },
         ]}
-        className={className}
+        {...(className && { className })}
       />
     )
   }

@@ -52,7 +52,9 @@ export class PointsRepository {
     customerId: string,
     options: QueryOptions & { withLedger?: boolean; from?: string; to?: string } = {}
   ): Promise<PointsBalance> {
-    const { withLedger = true, limit = 50, offset = 0, from, to } = options
+    // limit 기본값 50, 최대값 200으로 제한
+    const { withLedger = true, limit = Math.min(50, 200), offset = 0, from, to } = options
+    const safeLimit = Math.min(Math.max(1, limit || 50), 200)
 
     // 전체 잔액 계산 (기간 무관)
     const { data: allRows, error: e1 } = await this.supabase
@@ -87,7 +89,7 @@ export class PointsRepository {
       query = query.lt('created_at', to)
     }
 
-    const { data: ledger, error: e2 } = await query.range(offset, offset + limit - 1)
+    const { data: ledger, error: e2 } = await query.range(offset, offset + safeLimit - 1)
 
     if (e2) {
       throw new ApiError(e2.message, 500)

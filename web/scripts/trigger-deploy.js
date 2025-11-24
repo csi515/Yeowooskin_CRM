@@ -7,7 +7,7 @@ const PROJECT_ID = 'prj_2xQf400zau38GIna6YyGRKlCyPzs';
 const TEAM_ID = 'team_PA4CUVPRS0ESYk4ZBW9OOx2J';
 
 // Vercel 토큰은 환경변수에서 가져옴
-const VERCEL_TOKEN = process.env.VERCEL_TOKEN;
+const VERCEL_TOKEN = process.env['VERCEL_TOKEN'];
 
 if (!VERCEL_TOKEN) {
   console.error('❌ VERCEL_TOKEN 환경변수가 설정되지 않았습니다.');

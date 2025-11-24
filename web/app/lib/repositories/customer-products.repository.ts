@@ -35,15 +35,15 @@ export interface CustomerProductCreateInput {
   customer_id: string
   product_id: string
   quantity: number
-  notes?: string | null
-  reason?: string
+  notes?: string | null | undefined
+  reason?: string | undefined
 }
 
 export interface CustomerProductUpdateInput {
-  quantity?: number
-  notes?: string | null
-  reason?: string
-  no_ledger?: boolean
+  quantity: number
+  notes?: string | null | undefined
+  reason?: string | undefined
+  no_ledger?: boolean | undefined
 }
 
 export class CustomerProductsRepository extends BaseRepository<CustomerProduct> {
@@ -76,25 +76,27 @@ export class CustomerProductsRepository extends BaseRepository<CustomerProduct> 
     const { customer_id, product_id, quantity, notes } = input
 
     if (!customer_id || !product_id) {
-      throw new Error('customer_id and product_id required')
+      throw new ApiError('customer_id and product_id are required', 400)
     }
 
-    if (Number.isNaN(quantity) || quantity <= 0) {
-      throw new Error('invalid quantity')
+    const qty = Number(quantity)
+    if (isNaN(qty) || qty < 0) {
+      throw new ApiError('수량은 0 이상의 숫자여야 합니다', 400)
     }
+    const finalQuantity = Math.floor(qty) // 정수로 변환
 
     const payload: Record<string, unknown> = {
       customer_id,
       product_id,
-      quantity,
+      quantity: finalQuantity,
     }
     
     // notes는 값이 있을 때만 포함 (스키마에 없을 수 있음)
     if (notes !== undefined && notes !== null && notes !== '' && String(notes).trim() !== '') {
-      payload.notes = String(notes).trim()
+      payload['notes'] = String(notes).trim()
     }
-    if (payload.notes === undefined || payload.notes === null || payload.notes === '' || String(payload.notes).trim() === '') {
-      delete payload.notes
+    if (payload['notes'] === undefined || payload['notes'] === null || payload['notes'] === '' || String(payload['notes']).trim() === '') {
+      delete payload['notes']
     }
 
     const { data, error } = await this.supabase
@@ -129,16 +131,20 @@ export class CustomerProductsRepository extends BaseRepository<CustomerProduct> 
     }
 
     const patch: Record<string, unknown> = {}
-    if (typeof input.quantity !== 'undefined') {
-      patch.quantity = Number(input.quantity)
+    if (typeof input['quantity'] !== 'undefined') {
+      const qty = Number(input['quantity'])
+      if (isNaN(qty) || qty < 0) {
+        throw new ApiError('수량은 0 이상의 숫자여야 합니다', 400)
+      }
+      patch['quantity'] = Math.floor(qty) // 정수로 변환
     }
     // notes는 값이 있을 때만 업데이트 (스키마에 없을 수 있음)
-    const notesValue = input.notes
+    const notesValue = input['notes']
     if (notesValue !== undefined && notesValue !== null && notesValue !== '' && String(notesValue).trim() !== '') {
-      patch.notes = String(notesValue).trim()
+      patch['notes'] = String(notesValue).trim()
     }
-    if (patch.notes === undefined || patch.notes === null || patch.notes === '' || String(patch.notes).trim() === '') {
-      delete patch.notes
+    if (patch['notes'] === undefined || patch['notes'] === null || patch['notes'] === '' || String(patch['notes']).trim() === '') {
+      delete patch['notes']
     }
 
     const { data, error } = await this.supabase
@@ -156,18 +162,21 @@ export class CustomerProductsRepository extends BaseRepository<CustomerProduct> 
     // ledger 기록 (변경 시)
     if (!input.no_ledger) {
       try {
-        const beforeQty = Number(prev.quantity || 0)
-        const afterQty = typeof patch.quantity !== 'undefined' ? Number(patch.quantity) : beforeQty
+        const beforeQty = Number(prev['quantity'] || 0)
+        const afterQty = typeof patch['quantity'] !== 'undefined' ? Number(patch['quantity']) : beforeQty
         const delta = afterQty - beforeQty
 
         if (delta !== 0) {
+          const reasonText = input.reason || 'update'
+          // reason 필드 길이 제한 (500자)
+          const truncatedReason = reasonText.length > 500 ? reasonText.substring(0, 500) : reasonText
           await this.supabase.from('customer_product_ledger').insert({
             owner_id: this.userId,
             customer_id: prev.customer_id,
             product_id: prev.product_id,
             customer_product_id: id,
             delta,
-            reason: input.reason || 'update',
+            reason: truncatedReason,
           })
         }
       } catch {
@@ -182,7 +191,9 @@ export class CustomerProductsRepository extends BaseRepository<CustomerProduct> 
    * 상품 보유 내역의 ledger 조회
    */
   async getLedger(customerProductId: string, options: QueryOptions = {}): Promise<CustomerProductLedger[]> {
-    const { limit = 20, offset = 0 } = options
+    // limit 기본값 20, 최대값 200으로 제한
+    const { limit: rawLimit = 20, offset = 0 } = options
+    const limit = Math.min(Math.max(1, rawLimit || 20), 200)
 
     const { data, error } = await this.supabase
       .from('customer_product_ledger')
@@ -260,7 +271,7 @@ export class CustomerProductsRepository extends BaseRepository<CustomerProduct> 
 
       const updatePayload: Record<string, unknown> = { reason: newReason }
       if (typeof deltaOverride !== 'undefined' && !Number.isNaN(deltaOverride)) {
-        updatePayload.delta = deltaOverride
+        updatePayload['delta'] = deltaOverride
       }
 
       const { error: updateError } = await this.supabase
@@ -288,7 +299,7 @@ export class CustomerProductsRepository extends BaseRepository<CustomerProduct> 
 
       const updatePayload: Record<string, unknown> = { reason: replaceTo || latest.reason }
       if (typeof deltaOverride !== 'undefined' && !Number.isNaN(deltaOverride)) {
-        updatePayload.delta = deltaOverride
+        updatePayload['delta'] = deltaOverride
       }
 
       const { error: updateError } = await this.supabase
@@ -306,7 +317,9 @@ export class CustomerProductsRepository extends BaseRepository<CustomerProduct> 
    * 고객별 전체 ledger 조회
    */
   async getCustomerLedger(customerId: string, options: QueryOptions = {}): Promise<CustomerProductLedger[]> {
-    const { limit = 50, offset = 0 } = options
+    // limit 기본값 50, 최대값 200으로 제한
+    const { limit: rawLimit = 50, offset = 0 } = options
+    const limit = Math.min(Math.max(1, rawLimit || 50), 200)
 
     const { data, error } = await this.supabase
       .from('customer_product_ledger')

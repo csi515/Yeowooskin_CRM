@@ -54,7 +54,7 @@ function ToastContainer({ toasts, onRemove }: { toasts: Toast[]; onRemove: (id: 
   if (toasts.length === 0) return null
 
   return (
-    <div className="fixed top-4 right-4 z-[1100] flex flex-col gap-3 max-w-md w-full md:w-auto safe-area-inset-top">
+    <div className="fixed top-4 left-4 right-4 md:left-auto md:right-4 z-[1100] flex flex-col gap-3 max-w-md w-full md:w-auto safe-area-inset-top">
       {toasts.map((toast, index) => (
         <ToastItem 
           key={toast.id} 
@@ -173,8 +173,9 @@ function ToastItem({
           type="button"
           onClick={handleRemove}
           className={clsx(
-            'flex-shrink-0 p-1.5 rounded-lg transition-all duration-200',
+            'flex-shrink-0 p-2 rounded-lg transition-all duration-200',
             'hover:scale-110 active:scale-95 touch-manipulation',
+            'min-h-[44px] min-w-[44px] flex items-center justify-center',
             config.close
           )}
           aria-label="닫기"
@@ -194,12 +195,12 @@ export function useAppToast() {
 
   return {
     success: (title: string, description?: string) =>
-      context.addToast({ title, description, variant: 'success', duration: 3000 }),
+      context.addToast({ title, ...(description && { description }), variant: 'success', duration: 3000 }),
     error: (title: string, description?: string) =>
-      context.addToast({ title, description, variant: 'error', duration: 4000 }),
+      context.addToast({ title, ...(description && { description }), variant: 'error', duration: 4000 }),
     info: (title: string, description?: string) =>
-      context.addToast({ title, description, variant: 'info', duration: 3000 }),
+      context.addToast({ title, ...(description && { description }), variant: 'info', duration: 3000 }),
     warning: (title: string, description?: string) =>
-      context.addToast({ title, description, variant: 'warning', duration: 3500 }),
+      context.addToast({ title, ...(description && { description }), variant: 'warning', duration: 3500 }),
   }
 }

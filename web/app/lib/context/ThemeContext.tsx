@@ -28,7 +28,9 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
   }, [])
 
   useEffect(() => {
-    if (!mounted) return
+    if (!mounted) {
+      return undefined
+    }
 
     const updateResolvedTheme = () => {
       let newResolvedTheme: 'light' | 'dark'
@@ -38,7 +40,7 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
       } else {
         newResolvedTheme = theme
       }
-      
+
       setResolvedTheme(newResolvedTheme)
 
       const root = document.documentElement
@@ -54,6 +56,8 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
       mediaQuery.addEventListener('change', handleChange)
       return () => mediaQuery.removeEventListener('change', handleChange)
     }
+
+    return undefined
   }, [theme, mounted])
 
   const setTheme = (newTheme: Theme) => {

@@ -29,8 +29,8 @@ export function normalizeError(error: unknown): AppError {
   if (error && typeof error === 'object' && 'message' in error) {
     return {
       message: String(error.message),
-      code: 'code' in error ? String(error.code) : undefined,
-      status: 'status' in error ? Number(error.status) : undefined,
+      code: 'code' in error ? String(error.code) : '',
+      status: 'status' in error ? Number(error.status) : 500,
       originalError: error,
     }
   }

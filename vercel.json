@@ -1,6 +1,5 @@
 {
   "framework": "nextjs",
-  "rootDirectory": "web",
   "regions": ["icn1"],
-  "buildCommand": "npm run build"
+  "buildCommand": "cd web && npm run build"
 }

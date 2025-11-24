@@ -9,6 +9,7 @@ import Textarea from '../ui/Textarea'
 import { useCustomerAndProductLists } from '../hooks/useCustomerAndProductLists'
 import { appointmentsApi } from '@/app/lib/api/appointments'
 import { customerProductsApi } from '@/app/lib/api/customer-products'
+import { hapticFeedback } from '@/app/lib/utils/haptic'
 import type { AppointmentCreateInput, Customer } from '@/types/entities'
 
 type Draft = {
@@ -20,6 +21,7 @@ type Draft = {
   customer_id?: string
   staff_id?: string
   service_id?: string
+  room_id?: string
 }
 
 export default function ReservationCreateModal({ open, onClose, draft, onSaved }: { open: boolean; onClose: () => void; draft: Draft; onSaved: () => void }) {
@@ -33,6 +35,7 @@ export default function ReservationCreateModal({ open, onClose, draft, onSaved }
   const [holdingsByProduct, setHoldingsByProduct] = useState<Record<string, number>>({})
   const [autoCreateTransaction, setAutoCreateTransaction] = useState(false)
   const [transactionAmount, setTransactionAmount] = useState<string>('')
+  const [rooms, setRooms] = useState<{ id: string; name: string }[]>([])
 
   // Reset form to fresh draft on open
   useEffect(() => {
@@ -42,6 +45,21 @@ export default function ReservationCreateModal({ open, onClose, draft, onSaved }
       setShowSuggest(false)
     }
   }, [open, draft])
+
+  // 시술실 목록 로드
+  useEffect(() => {
+    const loadRooms = async () => {
+      if (!open) return
+      try {
+        const { treatmentRoomsApi } = await import('@/app/lib/api/treatment-rooms')
+        const data = await treatmentRoomsApi.list(true) // 활성 시술실만
+        setRooms(data.map(r => ({ id: r.id, name: r.name })))
+      } catch (err) {
+        console.error('시술실 로드 실패:', err)
+      }
+    }
+    loadRooms()
+  }, [open])
 
   // 고객 선택 시 보유 상품 수량 로드
   useEffect(() => {
@@ -77,6 +95,7 @@ export default function ReservationCreateModal({ open, onClose, draft, onSaved }
         customer_id: form.customer_id || null,
         staff_id: form.staff_id || null,
         service_id: form.service_id || null,
+        room_id: form.room_id || null,
       }
       // notes는 값이 있을 때만 포함
       if (form.notes && form.notes.trim() !== '') {
@@ -97,6 +116,7 @@ export default function ReservationCreateModal({ open, onClose, draft, onSaved }
               amount: Number(amountValue),
               notes: `예약 완료: ${form.notes || ''}`.trim(),
             })
+            hapticFeedback('success')
             toast.success('예약과 매출이 자동으로 생성되었습니다.')
           }
         } catch (error) {
@@ -107,10 +127,12 @@ export default function ReservationCreateModal({ open, onClose, draft, onSaved }
       
       // persist memo for customer detail modal
       try { if (form.customer_id && (form.notes || '').trim()) localStorage.setItem(`memoDraft:${form.customer_id}`, form.notes || '') } catch {}
+      hapticFeedback('success')
       onSaved(); onClose(); toast.success('예약이 저장되었습니다.')
     } catch (e: unknown) {
       const errorMessage = e instanceof Error ? e.message : '에러가 발생했습니다.'
       setError(errorMessage)
+      hapticFeedback('error')
       toast.error('예약 저장 실패', errorMessage)
     } finally { setLoading(false) }
   }
@@ -295,6 +317,34 @@ export default function ReservationCreateModal({ open, onClose, draft, onSaved }
                       개
                     </div>
                   )}
+                </div>
+                <div>
+                  <label className="mb-1 block text-sm font-medium text-gray-700">
+                    시술실 (선택)
+                  </label>
+                  <select
+                    className="h-10 w-full rounded-none border-2 border-neutral-500 bg-white px-3 text-sm text-neutral-900 outline-none hover:border-neutral-600 focus:border-[#1D4ED8] focus:ring-[4px] focus:ring-[#1D4ED8]/20"
+                    value={form.room_id || ''}
+                    onChange={(e) =>
+                      setForm((f) => {
+                        if (!f) return f
+                        const value = e.target.value
+                        if (value) {
+                          return { ...f, room_id: value }
+                        }
+                        const next = { ...f }
+                        delete next.room_id
+                        return next
+                      })
+                    }
+                  >
+                    <option value="">선택 안 함</option>
+                    {rooms.map((room) => (
+                      <option key={room.id} value={room.id}>
+                        {room.name}
+                      </option>
+                    ))}
+                  </select>
                 </div>
                 <div className="col-span-2">
                   <Textarea

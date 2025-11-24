@@ -1,10 +1,14 @@
 import { getUserIdFromCookies } from '@/lib/auth/user'
 import { unstable_cache } from 'next/cache'
+import { createSupabaseServerClient } from '@/lib/supabase/server'
 import Card from '../components/ui/Card'
 import Monthly from '../components/charts/Monthly'
 import MetricCard from '../components/MetricCard'
 import DashboardInstallPrompt from '../components/dashboard/DashboardInstallPrompt'
-import type { Transaction, Expense, Appointment, Product } from '@/types/entities'
+import HQDashboardSummary from '../components/dashboard/HQDashboardSummary'
+import DraggableDashboard from '../components/dashboard/DraggableDashboard'
+import TodayScheduleWidget from '../components/dashboard/TodayScheduleWidget'
+import type { Appointment, Product } from '@/types/entities'
 
 function getTodayRange() {
   const now = new Date()
@@ -40,9 +44,11 @@ const getCachedKpis = unstable_cache(
         autoRefreshToken: false,
         detectSessionInUrl: false,
       },
-      global: {
-        headers: accessToken ? { Authorization: `Bearer ${accessToken}` } : undefined
-      }
+      ...(accessToken && {
+        global: {
+          headers: { Authorization: `Bearer ${accessToken}` }
+        }
+      })
     })
     
     const { monthStart, monthEnd } = monthBounds()
@@ -97,7 +103,7 @@ const getCachedKpis = unstable_cache(
 
   const todayAppointments = Array.isArray(apRes.data) ? apRes.data.length : 0
   const todayRevenue = Array.isArray(trRes.data)
-    ? trRes.data.reduce((s: number, t: Transaction) => s + Number(t.amount || 0), 0)
+    ? trRes.data.reduce((s: number, t: { amount?: number }) => s + Number(t.amount || 0), 0)
     : 0
   const todayNewCustomers = Array.isArray(cuRes.data) ? cuRes.data.length : 0
 
@@ -119,18 +125,18 @@ const getCachedKpis = unstable_cache(
   const trMonthData = Array.isArray(trMonth.data) ? trMonth.data : []
   const exMonthData = Array.isArray(exMonth.data) ? exMonth.data : []
   
-  trMonthData.forEach((t: Transaction) => {
+  trMonthData.forEach((t: { transaction_date?: string; created_at?: string; amount?: number }) => {
     const dateStr = t.transaction_date || t.created_at || ''
     const bucket = bucketByWeek(dateStr)
-    if (bucket >= 0 && bucket < incomeBuckets.length) {
+    if (bucket >= 0 && bucket < incomeBuckets.length && incomeBuckets[bucket] !== undefined) {
       incomeBuckets[bucket] += Number(t.amount || 0)
     }
   })
   
-  exMonthData.forEach((e: Expense) => {
+  exMonthData.forEach((e: { expense_date?: string; amount?: number }) => {
     const dateStr = e.expense_date || ''
     const bucket = bucketByWeek(dateStr)
-    if (bucket >= 0 && bucket < expenseBuckets.length) {
+    if (bucket >= 0 && bucket < expenseBuckets.length && expenseBuckets[bucket] !== undefined) {
       expenseBuckets[bucket] += Number(e.amount || 0)
     }
   })
@@ -144,12 +150,12 @@ const getCachedKpis = unstable_cache(
 
   // 판매중인 상품: active가 true이거나 null인 경우만 필터링 (기본값이 true로 간주)
   const activeProducts = Array.isArray(productsRes.data)
-    ? productsRes.data.filter((p: Product) => p.active !== false)
+    ? productsRes.data.filter((p: { active?: boolean }) => p.active !== false)
     : []
 
   // 최근 예약: 고객 이름/시간/상품 이름으로 표시하기 위해 보조 조회
   const apRecentData = Array.isArray(apRecent.data) ? apRecent.data : []
-  const apIds = apRecentData.map((a: Appointment) => ({
+  const apIds = apRecentData.map((a: { customer_id?: string; service_id?: string }) => ({
     customer_id: a.customer_id,
     service_id: a.service_id,
   }))
@@ -157,8 +163,8 @@ const getCachedKpis = unstable_cache(
     new Set(apIds.map((x) => x.customer_id).filter((id): id is string => Boolean(id)))
   )
   const serviceIds = Array.from(
-    new Set(apIds.map((x) => x.service_id).filter((id): id is string => Boolean(id))
-  ))
+    new Set(apIds.map((x) => x.service_id).filter((id): id is string => Boolean(id)))
+  )
   const customersById: Record<string, string> = {}
   const productsById: Record<string, string> = {}
   
@@ -193,14 +199,14 @@ const getCachedKpis = unstable_cache(
   const exRecentData = Array.isArray(exRecent.data) ? exRecent.data : []
   
   const combinedTransactions = [
-    ...trRecentData.map((t: Transaction) => ({
+    ...trRecentData.map((t: { id: string; transaction_date?: string; created_at?: string; amount?: number; memo?: string }) => ({
       id: t.id,
       type: 'income' as const,
       date: t.transaction_date || t.created_at || '',
       amount: Number(t.amount || 0),
       memo: t.memo || '',
     })),
-    ...exRecentData.map((e: Expense) => ({
+    ...exRecentData.map((e: { id: string; expense_date?: string; created_at?: string; amount?: number; memo?: string; category?: string }) => ({
       id: e.id,
       type: 'expense' as const,
       date: e.expense_date || e.created_at || '',
@@ -219,7 +225,7 @@ const getCachedKpis = unstable_cache(
     todayAppointments,
     todayRevenue,
     todayNewCustomers,
-    recentAppointments: apRecentData.map((a: Appointment) => ({
+    recentAppointments: apRecentData.map((a: { id: string; appointment_date: string; customer_id?: string; service_id?: string }) => ({
       id: a.id,
       appointment_date: a.appointment_date,
       customer_name: a.customer_id ? customersById[a.customer_id] || '-' : '-',
@@ -257,11 +263,32 @@ async function getKpis({ start, end }: { start: string; end: string }) {
   }
 
   // 캐싱된 함수 호출 (cookies 데이터를 인자로 전달)
-  return getCachedKpis({ start, end, userId, accessToken })
+  return getCachedKpis(accessToken ? { start, end, userId, accessToken } : { start, end, userId })
+}
+
+async function getUserRole(): Promise<'HQ' | 'OWNER' | 'STAFF' | null> {
+  try {
+    const userId = getUserIdFromCookies()
+    if (!userId) return null
+
+    const supabase = createSupabaseServerClient()
+    const { data: profile } = await supabase
+      .from('profiles')
+      .select('role')
+      .eq('id', userId)
+      .single()
+
+    return (profile?.role as 'HQ' | 'OWNER' | 'STAFF') || null
+  } catch {
+    return null
+  }
 }
 
 export default async function DashboardPage() {
   const { start, end } = getTodayRange()
+  const userRole = await getUserRole()
+  const isHQ = userRole === 'HQ'
+  
   const {
     todayAppointments,
     todayRevenue,
@@ -277,70 +304,26 @@ export default async function DashboardPage() {
       {/* PWA 설치 프롬프트 */}
       <DashboardInstallPrompt />
       
-      {/* 핵심 지표 카드 */}
-      <section className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-5 md:gap-6">
-        <MetricCard
-          label="오늘 예약"
-          value={todayAppointments}
-          hint="오늘 기준"
-          className="h-full"
-          colorIndex={0}
-        />
-        <MetricCard
-          label="오늘 매출"
-          value={`₩${Number(todayRevenue).toLocaleString()}`}
-          className="h-full"
-          colorIndex={1}
-        />
-        <MetricCard
-          label="오늘 신규 고객"
-          value={todayNewCustomers}
-          className="h-full sm:col-span-2 lg:col-span-1"
-          colorIndex={2}
-        />
-      </section>
+      {/* HQ 전용 요약 카드 */}
+      {isHQ && (
+        <section>
+          <HQDashboardSummary />
+        </section>
+      )}
+      
+      {/* 오늘의 일정 위젯 (모바일 최적화) */}
+      <div className="md:hidden">
+        <TodayScheduleWidget />
+      </div>
 
-      {/* 그래프 & 판매중인 상품 */}
-      <section className="grid grid-cols-1 lg:grid-cols-3 gap-4 sm:gap-5 md:gap-6">
-        <Card className="p-4 sm:p-5 lg:col-span-2">
-          <div className="text-sm sm:text-base font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent mb-3 sm:mb-4">
-            이번 달 수입/지출
-          </div>
-          <div className="overflow-x-auto -mx-2 sm:mx-0">
-            <div className="min-w-[280px] sm:min-w-0">
-              <Monthly data={monthlySeries} />
-            </div>
-          </div>
-        </Card>
-        <Card className="p-4 sm:p-5">
-          <div className="text-xs sm:text-sm font-bold bg-gradient-to-r from-emerald-600 to-teal-600 bg-clip-text text-transparent mb-3">
-            판매중인 상품
-          </div>
-          <div className="space-y-2 max-h-[240px] sm:max-h-[200px] overflow-y-auto overscroll-contain">
-            {activeProducts.length > 0 ? (
-              activeProducts.slice(0, 5).map((p: Product, index: number) => (
-                <div
-                  key={p.id}
-                  className={`text-xs sm:text-sm py-2 px-3 rounded-md flex items-center justify-between gap-2 touch-manipulation ${
-                    index % 2 === 0 ? 'bg-emerald-50/50' : 'bg-teal-50/50'
-                  }`}
-                >
-                  <span className="font-medium text-neutral-800 truncate flex-1 min-w-0">{p.name}</span>
-                  <span className="text-emerald-700 font-semibold whitespace-nowrap flex-shrink-0">
-                    ₩{Number(p.price || 0).toLocaleString()}
-                  </span>
-                </div>
-              ))
-            ) : (
-              <div className="text-xs sm:text-sm text-neutral-500 py-3">
-                <a className="underline hover:text-emerald-600 touch-manipulation" href="/products">
-                  상품 추가
-                </a>
-              </div>
-            )}
-          </div>
-        </Card>
-      </section>
+      {/* 드래그 가능한 대시보드 위젯 */}
+      <DraggableDashboard
+        todayAppointments={todayAppointments}
+        todayRevenue={todayRevenue}
+        todayNewCustomers={todayNewCustomers}
+        monthlySeries={monthlySeries}
+        activeProducts={activeProducts}
+      />
 
       {/* 최근 예약 / 최근 거래 */}
       <section className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-5 md:gap-6">
@@ -352,14 +335,19 @@ export default async function DashboardPage() {
             {recentAppointments.map((a: { id: string; appointment_date: string; customer_name: string; product_name: string }) => (
               <li
                 key={a.id}
-                className="p-3 sm:p-4 text-sm flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 touch-manipulation"
+                className="p-3 sm:p-4 text-sm flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 touch-manipulation min-h-[44px]"
               >
-                <span className="text-neutral-900 font-medium">
-                  {a.customer_name} · {a.product_name}
-                </span>
-                <span className="text-xs sm:text-sm text-neutral-500">
+                <div className="flex-1 min-w-0">
+                  <div className="text-neutral-900 font-medium truncate">
+                    {a.customer_name}
+                  </div>
+                  <div className="text-xs text-neutral-600 truncate">
+                    {a.product_name}
+                  </div>
+                </div>
+                <span className="text-xs sm:text-sm text-neutral-500 flex-shrink-0">
                   {String(a.appointment_date)
-                    .slice(0, 16)
+                    .slice(5, 16)
                     .replace('T', ' ')}
                 </span>
               </li>
@@ -383,12 +371,12 @@ export default async function DashboardPage() {
             {recentTransactions.map((t: { id: string; type: 'income' | 'expense'; date: string; amount: number; memo: string }) => {
               const dateLabel = String(t.date || '')
                 .replace('T', ' ')
-                .slice(0, 16)
+                .slice(5, 16)
               const isExpense = t.type === 'expense'
               return (
                 <li
                   key={`${t.type}-${t.id}`}
-                  className="p-3 sm:p-4 text-sm flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 touch-manipulation"
+                  className="p-3 sm:p-4 text-sm flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 touch-manipulation min-h-[44px]"
                 >
                   <div className="min-w-0 flex-1">
                     <div className="flex flex-wrap items-center gap-2 mb-1">

@@ -6,6 +6,7 @@ import TransactionDetailModal from '../components/modals/TransactionDetailModal'
 import { Pencil, Plus, Download } from 'lucide-react'
 import EmptyState from '../components/EmptyState'
 import { Skeleton } from '../components/ui/Skeleton'
+import FloatingActionButton from '../components/common/FloatingActionButton'
 import { useAppToast } from '../lib/ui/toast'
 import Button from '../components/ui/Button'
 import { usePagination } from '../lib/hooks/usePagination'
@@ -13,7 +14,9 @@ import { useForm } from '../lib/hooks/useForm'
 import { exportFinanceToExcel, type FinanceExportData } from '../lib/utils/excelExport'
 import { generateTaxReport } from '../lib/utils/taxReport'
 import { FileText } from 'lucide-react'
-import type { Expense, Transaction, TransactionCreateInput, ExpenseCreateInput } from '@/types/entities'
+import { createOwnerOrAbovePage } from '../lib/hocs/createProtectedPage'
+import { useCurrentUser } from '../lib/hooks/useCurrentUser'
+import type { Expense, Transaction, TransactionCreateInput, ExpenseCreateInput, Branch } from '@/types/entities'
 
 type ExpenseForm = {
   expense_date: string
@@ -28,13 +31,15 @@ function isoMonthRange(d = new Date()) {
   return { from: start.toISOString().slice(0,10), to: end.toISOString().slice(0,10) }
 }
 
-export default function FinancePage() {
+function FinancePage() {
+  const { currentUser, isHQ, branchId } = useCurrentUser()
   const [{ from, to }, setRange] = useState(() => isoMonthRange())
   const [expenses, setExpenses] = useState<Expense[]>([])
   const [transactions, setTransactions] = useState<Transaction[]>([])
+  const [branches, setBranches] = useState<Branch[]>([])
+  const [selectedBranchId, setSelectedBranchId] = useState<string>('')
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
-  const density: 'compact' | 'comfortable' = 'comfortable'
   // combined는 특별한 형태이므로 useSort를 직접 사용하지 않고 상태만 관리
   const [sortKey, setSortKey] = useState<'date' | 'amount'>('date')
   const [sortDir, setSortDir] = useState<'asc' | 'desc'>('desc')
@@ -52,9 +57,13 @@ export default function FinancePage() {
       setLoading(true); setError('')
       const { expensesApi } = await import('@/app/lib/api/expenses')
       const { transactionsApi } = await import('@/app/lib/api/transactions')
+
+      // 지점 필터링 파라미터
+      const branchFilter = isHQ ? {} : { branch_id: selectedBranchId || branchId }
+
       const [ex, tr] = await Promise.all([
-        expensesApi.list({ from, to }),
-        transactionsApi.list({ limit: 500 }),
+        expensesApi.list({ from, to, ...branchFilter }),
+        transactionsApi.list({ limit: 500, ...branchFilter }),
       ])
       setExpenses(Array.isArray(ex) ? ex : [])
       setTransactions(Array.isArray(tr) ? tr : [])
@@ -62,7 +71,41 @@ export default function FinancePage() {
       const errorMessage = e instanceof Error ? e.message : '에러가 발생했습니다.'
       setError(errorMessage)
     } finally { setLoading(false) }
-  }, [from, to])
+  }, [from, to, isHQ, selectedBranchId, branchId])
+
+  // 지점 목록 로드 (HQ 전용)
+  const loadBranches = useCallback(async () => {
+    if (!isHQ) return
+
+    try {
+      const { createSupabaseBrowserClient } = await import('@/lib/supabase/client')
+      const supabase = createSupabaseBrowserClient()
+
+      const { data, error } = await supabase
+        .from('branches')
+        .select('*')
+        .order('name')
+
+      if (error) throw error
+
+      setBranches(data || [])
+      // 기본적으로 첫 번째 지점 선택
+      if (data && data.length > 0 && !selectedBranchId) {
+        setSelectedBranchId(data[0].id)
+      }
+    } catch (err) {
+      console.error('Failed to load branches:', err)
+    }
+  }, [isHQ, selectedBranchId])
+
+  // 초기 로드 및 지점 설정
+  useEffect(() => {
+    if (isHQ) {
+      loadBranches()
+    } else if (branchId && !selectedBranchId) {
+      setSelectedBranchId(branchId)
+    }
+  }, [isHQ, branchId, selectedBranchId, loadBranches])
 
   useEffect(() => { load() }, [load])
 
@@ -80,11 +123,38 @@ export default function FinancePage() {
   const [newDate, setNewDate] = useState<string>(new Date().toISOString().slice(0,10))
   const [newAmount, setNewAmount] = useState<string>('')
   const [newMemo, setNewMemo] = useState<string>('')
+  const [newCategory, setNewCategory] = useState<string>('')
+  const [expenseCategories, setExpenseCategories] = useState<string[]>([])
   const [expenseDetail, setExpenseDetail] = useState<Expense | null>(null)
   const [expenseOpen, setExpenseOpen] = useState(false)
   const [txDetail, setTxDetail] = useState<Transaction | null>(null)
   const [txOpen, setTxOpen] = useState(false)
   const toast = useAppToast()
+  
+  // 설정에서 비용 항목 목록 가져오기
+  useEffect(() => {
+    const loadCategories = async () => {
+      try {
+        const { settingsApi } = await import('@/app/lib/api/settings')
+        const settings = await settingsApi.get()
+        const categories = settings.financialSettings?.expenseCategories || []
+        if (categories.length > 0) {
+          setExpenseCategories(categories)
+        } else {
+          // 설정에 카테고리가 없으면 기본값 사용
+          const { getExpenseCategories } = await import('@/app/lib/utils/expenseCategories')
+          setExpenseCategories(getExpenseCategories())
+        }
+      } catch (error) {
+        console.error('설정 로드 실패:', error)
+        // 설정 로드 실패 시 기본 카테고리 사용
+        const { getExpenseCategories } = await import('@/app/lib/utils/expenseCategories')
+        setExpenseCategories(getExpenseCategories())
+      }
+    }
+    
+    loadCategories()
+  }, [])
 
   const expenseForm = useForm<ExpenseForm>({
     initialValues: {
@@ -193,8 +263,8 @@ export default function FinancePage() {
         date: row.date,
         type: row.type === 'income' ? '수입' : '지출',
         amount: row.amount,
-        category: row.type === 'expense' ? (row.raw as Expense).category : undefined,
-        memo: row.note || undefined,
+        category: row.type === 'expense' ? (row.raw as Expense).category : '',
+        memo: row.note || '',
       }))
 
       const summary = {
@@ -226,15 +296,15 @@ export default function FinancePage() {
         .map(t => ({
           date: (t.transaction_date || t.created_at || '').slice(0, 10),
           amount: Number(t.amount || 0),
-          customer: t.customer_id ? '고객' : undefined,
-          notes: t.notes || undefined,
+          customer: t.customer_id ? '고객' : '',
+          notes: t.notes || '',
         }))
 
       const expenseData = expenses.map(e => ({
         date: e.expense_date,
         amount: Number(e.amount || 0),
         category: e.category,
-        memo: e.memo || undefined,
+        memo: e.memo || '',
       }))
 
       generateTaxReport({
@@ -252,9 +322,28 @@ export default function FinancePage() {
 
   return (
     <main className="space-y-2 md:space-y-3">
-      {/* 헤더 영역 - 엑셀 내보내기 버튼 */}
+      {/* 헤더 영역 - 지점 선택 및 엑셀 내보내기 버튼 */}
       <div className="flex items-center justify-between flex-wrap gap-2">
-        <h1 className="text-xl sm:text-2xl font-bold text-neutral-900">재무 관리</h1>
+        <div className="flex items-center gap-4">
+          <h1 className="text-xl sm:text-2xl font-bold text-neutral-900">재무 관리</h1>
+          {isHQ && branches.length > 0 && (
+            <select
+              value={selectedBranchId}
+              onChange={(e) => setSelectedBranchId(e.target.value)}
+              className="h-9 px-3 rounded-lg border border-neutral-300 bg-white text-sm focus:border-[#F472B6] focus:ring-[2px] focus:ring-[#F472B6]/20 outline-none"
+            >
+              <option value="">전체 지점</option>
+              {branches.map(branch => (
+                <option key={branch.id} value={branch.id}>{branch.name}</option>
+              ))}
+            </select>
+          )}
+          {!isHQ && currentUser?.branch && (
+            <span className="text-sm text-neutral-600 bg-neutral-100 px-2 py-1 rounded">
+              {currentUser.branch.name}
+            </span>
+          )}
+        </div>
         <div className="flex items-center gap-2">
           <Button
             variant="outline"
@@ -338,46 +427,46 @@ export default function FinancePage() {
             variant="primary"
             size="sm"
             leftIcon={<Plus className="h-4 w-4" />}
-            onClick={() => { setNewType('income'); setNewDate(new Date().toISOString().slice(0,10)); setNewAmount(''); setNewMemo(''); setNewOpen(true) }}
+            onClick={() => { setNewType('income'); setNewDate(new Date().toISOString().slice(0,10)); setNewAmount(''); setNewMemo(''); setNewCategory(''); setNewOpen(true) }}
             className="w-full sm:w-auto"
           >
             새 수입/지출
           </Button>
         </div>
-          <div className="overflow-hidden">
-          <table className="w-full text-sm table-fixed">
+          <div className="overflow-x-auto -mx-3 md:mx-0">
+          <table className="w-full text-xs sm:text-sm min-w-[640px]">
             <thead className="bg-gradient-to-r from-pink-100 via-purple-100 to-blue-100 border-b-2 border-purple-200 sticky top-0 z-[40]">
               <tr>
-                <th className={density==='compact' ? 'text-left p-3 font-semibold text-pink-700 whitespace-nowrap w-[100px]' : 'text-left p-4 font-semibold text-pink-700 whitespace-nowrap w-[100px]'}>
+                <th className="text-left p-2 sm:p-4 font-semibold text-pink-700 whitespace-nowrap min-w-[90px]">
                   <button className="inline-flex items-center gap-1 hover:text-pink-900 transition-colors duration-300 font-semibold" onClick={() => { setSortKey('date'); setSortDir(d => (sortKey==='date' && d==='asc') ? 'desc' : 'asc'); setPage(1) }}>
                     일자 {sortKey==='date' ? (sortDir==='asc' ? '▲' : '▼') : ''}
                   </button>
                 </th>
-              <th className={density==='compact' ? 'text-left p-3 font-semibold text-purple-700 whitespace-nowrap w-[80px]' : 'text-left p-4 font-semibold text-purple-700 whitespace-nowrap w-[80px]'}>유형</th>
-                <th className={density==='compact' ? 'text-right p-3 font-semibold text-blue-700 whitespace-nowrap w-[120px]' : 'text-right p-4 font-semibold text-blue-700 whitespace-nowrap w-[120px]'}>
+              <th className="text-left p-2 sm:p-4 font-semibold text-purple-700 whitespace-nowrap min-w-[60px]">유형</th>
+                <th className="text-right p-2 sm:p-4 font-semibold text-blue-700 whitespace-nowrap min-w-[100px]">
                   <button className="inline-flex items-center gap-1 hover:text-blue-900 transition-colors duration-300 font-semibold" onClick={() => { setSortKey('amount'); setSortDir(d => (sortKey==='amount' && d==='asc') ? 'desc' : 'asc'); setPage(1) }}>
                     금액 {sortKey==='amount' ? (sortDir==='asc' ? '▲' : '▼') : ''}
                   </button>
                 </th>
-              <th className={density==='compact' ? 'text-left p-3 font-semibold text-emerald-700 whitespace-nowrap' : 'text-left p-4 font-semibold text-emerald-700 whitespace-nowrap'}>메모/카테고리</th>
-                <th className={density==='compact' ? 'text-right p-3 font-semibold text-amber-700 w-[60px]' : 'text-right p-4 font-semibold text-amber-700 w-[60px]'}></th>
+              <th className="text-left p-2 sm:p-4 font-semibold text-emerald-700 whitespace-nowrap min-w-[120px]">메모/카테고리</th>
+                <th className="text-right p-2 sm:p-4 font-semibold text-amber-700 min-w-[60px] sticky right-0 bg-gradient-to-r from-transparent via-purple-100/50 to-purple-100"></th>
               </tr>
             </thead>
             <tbody className="divide-y divide-neutral-200">
               {loading && Array.from({ length: 6 }).map((_, i) => (
               <tr key={`ex-s-${i}`}>
-                  <td className={density==='compact' ? 'p-3' : 'p-4'}><Skeleton className="h-4 w-28" /></td>
-                <td className={density==='compact' ? 'p-3' : 'p-4'}><Skeleton className="h-4 w-16" /></td>
-                  <td className={density==='compact' ? 'p-3 text-right' : 'p-4 text-right'}><Skeleton className="h-4 w-20 ml-auto" /></td>
-                <td className={density==='compact' ? 'p-3' : 'p-4'}><Skeleton className="h-4 w-24" /></td>
-                  <td className={density==='compact' ? 'p-3' : 'p-4'}><Skeleton className="h-8 w-24 ml-auto" /></td>
+                  <td className="p-2 sm:p-4"><Skeleton className="h-4 w-20 sm:w-28" /></td>
+                <td className="p-2 sm:p-4"><Skeleton className="h-4 w-12 sm:w-16" /></td>
+                  <td className="p-2 sm:p-4 text-right"><Skeleton className="h-4 w-16 sm:w-20 ml-auto" /></td>
+                <td className="p-2 sm:p-4"><Skeleton className="h-4 w-20 sm:w-24" /></td>
+                  <td className="p-2 sm:p-4 sticky right-0 bg-white"><Skeleton className="h-6 w-6 sm:h-8 sm:w-8 ml-auto" /></td>
                 </tr>
               ))}
             {!loading && pagedCombined.map(row => (
               <tr key={`${row.type}-${row.id}`} className="hover:bg-neutral-50 transition-colors duration-300 min-h-[48px] border-b border-neutral-200">
-                <td className={density==='compact' ? 'p-3 text-neutral-900' : 'p-4 text-neutral-900'}>{row.date}</td>
-                <td className={density==='compact' ? 'p-3' : 'p-4'}>
-                  <span className={`inline-flex items-center px-2 py-1 rounded-lg text-xs font-medium ${
+                <td className="p-2 sm:p-4 text-neutral-900 whitespace-nowrap">{row.date}</td>
+                <td className="p-2 sm:p-4">
+                  <span className={`inline-flex items-center px-1.5 sm:px-2 py-0.5 sm:py-1 rounded-lg text-xs font-medium ${
                     row.type === 'income' 
                       ? 'bg-emerald-50 text-emerald-700 border border-emerald-200' 
                       : 'bg-rose-50 text-rose-700 border border-rose-200'
@@ -385,29 +474,29 @@ export default function FinancePage() {
                     {row.type === 'income' ? '수입' : '지출'}
                   </span>
                 </td>
-                <td className={`${density==='compact' ? 'p-3 text-right font-medium' : 'p-4 text-right font-medium'} ${
+                <td className={`p-2 sm:p-4 text-right font-medium whitespace-nowrap ${
                   row.type === 'income' ? 'text-emerald-600' : 'text-rose-600'
                 }`}>₩{Number(row.amount || 0).toLocaleString()}</td>
-                <td className={density==='compact' ? 'p-3 text-neutral-600 min-w-0' : 'p-4 text-neutral-600 min-w-0'}>
-                  <div className="truncate max-w-[200px] sm:max-w-none" title={row.note || '-'}>{row.note || '-'}</div>
+                <td className="p-2 sm:p-4 text-neutral-600 min-w-0">
+                  <div className="truncate max-w-[150px] sm:max-w-none" title={row.note || '-'}>{row.note || '-'}</div>
                 </td>
-                  <td className={density==='compact' ? 'p-3' : 'p-4'}>
+                  <td className="p-2 sm:p-4 sticky right-0 bg-white z-10">
                     <button
                     onClick={() => {
                       if (row.type === 'income') { setTxDetail(row.raw); setTxOpen(true) }
                       else { setExpenseDetail(row.raw); setExpenseOpen(true) }
                     }}
-                      className="h-8 w-8 inline-flex items-center justify-center rounded-lg border border-neutral-300 hover:bg-[#F472B6] hover:text-white hover:border-[#F472B6] transition-all duration-300"
+                      className="h-6 w-6 sm:h-8 sm:w-8 inline-flex items-center justify-center rounded-lg border border-neutral-300 hover:bg-[#F472B6] hover:text-white hover:border-[#F472B6] transition-all duration-300 flex-shrink-0"
                       aria-label="상세보기"
                       title="상세보기"
                     >
-                      <Pencil className="h-4 w-4" />
+                      <Pencil className="h-3 w-3 sm:h-4 sm:w-4" />
                     </button>
                   </td>
                 </tr>
               ))}
             {!loading && combined.length === 0 && (
-              <tr><td colSpan={5}><EmptyState title="표시할 데이터가 없습니다." /></td></tr>
+              <tr><td colSpan={5} className="p-4"><EmptyState title="표시할 데이터가 없습니다." /></td></tr>
               )}
             </tbody>
           </table>
@@ -496,12 +585,25 @@ export default function FinancePage() {
                 />
               </div>
               <div>
+                <label className="block text-sm text-neutral-700 mb-1">카테고리(선택)</label>
+                <select
+                  className="h-10 w-full rounded-lg border border-neutral-300 px-3 outline-none focus:border-[#F472B6] focus:ring-[2px] focus:ring-[#F472B6]/20 bg-white text-neutral-900 transition-all duration-300"
+                  value={newCategory}
+                  onChange={e => setNewCategory(e.target.value)}
+                >
+                  <option value="">선택하세요</option>
+                  {expenseCategories.map(cat => (
+                    <option key={cat} value={cat}>{cat}</option>
+                  ))}
+                </select>
+              </div>
+              <div>
                 <label className="block text-sm text-neutral-700 mb-1">메모(선택)</label>
                 <input className="h-10 w-full rounded-lg border border-neutral-300 px-3 outline-none focus:border-[#F472B6] focus:ring-[2px] focus:ring-[#F472B6]/20 bg-white text-neutral-900 placeholder:text-neutral-500 transition-all duration-300" value={newMemo} onChange={e => setNewMemo(e.target.value)} placeholder="설명 입력" />
               </div>
             </div>
             <div className="flex items-center justify-end gap-2 border-t border-neutral-200 pt-4">
-              <Button variant="secondary" onClick={() => { setNewOpen(false); setNewAmount(''); setNewMemo('') }} className="flex-1 sm:flex-none">취소</Button>
+              <Button variant="secondary" onClick={() => { setNewOpen(false); setNewAmount(''); setNewMemo(''); setNewCategory('') }} className="flex-1 sm:flex-none">취소</Button>
               <Button
                 variant="primary"
                 className="flex-1 sm:flex-none"
@@ -517,14 +619,27 @@ export default function FinancePage() {
                     if (newType === 'income') {
                       const { transactionsApi } = await import('@/app/lib/api/transactions')
                       const createPayload: TransactionCreateInput = { transaction_date: newDate, amount: amountNumber }
-                      // notes가 있을 때만 포함
+                      // 카테고리와 메모를 결합하여 notes에 저장
+                      const notesParts: string[] = []
+                      if (newCategory && newCategory.trim() !== '') {
+                        notesParts.push(newCategory.trim())
+                      }
                       if (newMemo && newMemo.trim() !== '') {
-                        createPayload.notes = newMemo.trim()
+                        notesParts.push(newMemo.trim())
+                      }
+                      if (notesParts.length > 0) {
+                        createPayload.notes = notesParts.length === 2 
+                          ? `${notesParts[0]}: ${notesParts[1]}` 
+                          : notesParts[0]
                       }
                       await transactionsApi.create(createPayload)
                     } else {
                       const { expensesApi } = await import('@/app/lib/api/expenses')
-                      const expensePayload: ExpenseCreateInput = { expense_date: newDate, amount: amountNumber, category: '기타' }
+                      const expensePayload: ExpenseCreateInput = { 
+                        expense_date: newDate, 
+                        amount: amountNumber, 
+                        category: newCategory || '기타' 
+                      }
                       // memo는 값이 있을 때만 포함
                       if (newMemo && newMemo.trim() !== '') {
                         expensePayload.memo = newMemo.trim()
@@ -533,6 +648,8 @@ export default function FinancePage() {
                     }
                     setNewOpen(false)
                     setNewAmount('')
+                    setNewMemo('')
+                    setNewCategory('')
                     await load()
                     toast.success('저장되었습니다.')
                   } catch (err) {
@@ -547,17 +664,10 @@ export default function FinancePage() {
       )}
 
       {/* 모바일 FAB */}
-      <button
-        aria-label="내역 추가"
-        title="내역 추가"
-        onClick={() => { setNewType('income'); setNewDate(new Date().toISOString().slice(0,10)); setNewAmount(''); setNewMemo(''); setNewOpen(true) }}
-        className="md:hidden fixed right-4 bottom-4 h-14 w-14 rounded-full bg-gradient-to-r from-blue-600 to-blue-700 text-white shadow-xl hover:shadow-2xl active:scale-[0.95] inline-flex items-center justify-center z-[1000] touch-manipulation transition-all duration-200 safe-area-inset-bottom"
-        style={{
-          bottom: 'calc(1rem + env(safe-area-inset-bottom))',
-        }}
-      >
-        <Plus className="h-6 w-6" />
-      </button>
+      <FloatingActionButton
+        onClick={() => { setNewType('income'); setNewDate(new Date().toISOString().slice(0,10)); setNewAmount(''); setNewMemo(''); setNewCategory(''); setNewOpen(true) }}
+        label="내역 추가"
+      />
       <ExpenseDetailModal
         open={expenseOpen}
         item={expenseDetail}
@@ -577,4 +687,4 @@ export default function FinancePage() {
   )
 }
 
-
+export default createOwnerOrAbovePage(FinancePage)

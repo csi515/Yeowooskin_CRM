@@ -2,9 +2,17 @@
 
 import { useEffect, useState, useCallback } from 'react'
 import { customerProductsApi } from '@/app/lib/api/customer-products'
-import type { CustomerProduct } from '@/types/entities'
 
-interface CustomerProductWithProduct extends CustomerProduct {
+interface CustomerProductWithProduct {
+  id: string
+  customer_id: string
+  product_id: string
+  quantity: number
+  notes?: string | null
+  reason?: string
+  branch_id?: string | null
+  created_at?: string
+  updated_at?: string
   products?: { name: string } | null
 }
 

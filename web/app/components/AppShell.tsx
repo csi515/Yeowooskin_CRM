@@ -3,6 +3,10 @@
 import { usePathname } from 'next/navigation'
 import Sidebar from './Sidebar'
 import TopBar from './TopBar'
+import CommandPalette from './CommandPalette'
+import QuickTreatmentModal from './modals/QuickTreatmentModal'
+import MobileBottomNav from './mobile/MobileBottomNav'
+import { useDefaultKeyboardShortcuts } from '@/app/lib/hooks/useKeyboardShortcuts'
 import { useState, useEffect, useRef } from 'react'
 
 export default function AppShell({ children }: { children: React.ReactNode }) {
@@ -37,18 +41,23 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
     }
   }, [navOpen])
 
+  // 전역 키보드 단축키 활성화
+  useDefaultKeyboardShortcuts()
+
   if (isPublic) {
     return <>{children}</>
   }
   return (
     <div className="flex min-h-screen">
+      <CommandPalette />
+      <QuickTreatmentModal />
       {/* 데스크톱 사이드바 */}
       <Sidebar />
       
       {/* 메인 컨텐츠 영역 */}
       <div className="flex-1 flex flex-col min-w-0">
         <TopBar onMenu={() => setNavOpen(prev => !prev)} />
-        <main className="flex-1 overflow-x-hidden scroll-smooth">
+        <main className="flex-1 overflow-x-hidden scroll-smooth pb-16 md:pb-0">
           <div className="container mx-auto py-3 px-4 sm:py-4 sm:px-6 md:py-5 md:px-8 lg:px-10">
             <div className="space-y-4 sm:space-y-5 md:space-y-6">
               {children}
@@ -56,6 +65,9 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
           </div>
         </main>
       </div>
+
+      {/* 모바일 하단 네비게이션 */}
+      <MobileBottomNav />
 
       {/* 모바일 네비게이션 드로어 */}
       {navOpen && (

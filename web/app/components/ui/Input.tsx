@@ -12,6 +12,7 @@ type Props = React.InputHTMLAttributes<HTMLInputElement> & {
   autoFocus?: boolean
   leftIcon?: React.ReactNode
   rightIcon?: React.ReactNode
+  maxLength?: number // 글자수 제한
 }
 
 const Input = React.forwardRef<HTMLInputElement, Props>(
@@ -45,6 +46,8 @@ const Input = React.forwardRef<HTMLInputElement, Props>(
         const timer = setTimeout(() => setShowError(false), 400)
         return () => clearTimeout(timer)
       }
+
+      return () => {} // 항상 cleanup 함수 반환
     }, [error])
 
     const getBorderColor = () => {
@@ -74,6 +77,7 @@ const Input = React.forwardRef<HTMLInputElement, Props>(
             value={value}
             required={required}
             autoFocus={autoFocus}
+            maxLength={rest.maxLength || (rest.type === 'email' ? 255 : rest.type === 'tel' ? 20 : rest.type === 'text' ? 500 : undefined)}
             onFocus={(e) => {
               setIsFocused(true)
               // 모바일에서 입력 필드 포커스 시 자동 스크롤

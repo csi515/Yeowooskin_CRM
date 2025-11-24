@@ -28,7 +28,7 @@ class Logger {
       message,
       data,
       timestamp: new Date().toISOString(),
-      context,
+      context: context || '',
     }
 
     // 개발 환경에서는 항상 로그 저장

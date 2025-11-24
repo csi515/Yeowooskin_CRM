@@ -4,6 +4,7 @@ import { createClient } from '@supabase/supabase-js'
 import { getEnv } from '@/app/lib/env'
 
 export const dynamic = 'force-dynamic'
+export const runtime = 'nodejs'
 
 export async function POST() {
   try {
@@ -48,9 +49,10 @@ export async function POST() {
     }
     
     return res
-  } catch (e: any) {
+  } catch (e: unknown) {
     console.error('Refresh route error:', e)
-    return NextResponse.json({ success: false, error: e?.message || 'refresh error' }, { status: 500 })
+    const errorMessage = e instanceof Error ? e.message : 'refresh error'
+    return NextResponse.json({ success: false, error: errorMessage }, { status: 500 })
   }
 }
 

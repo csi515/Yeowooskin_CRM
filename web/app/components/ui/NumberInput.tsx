@@ -23,6 +23,8 @@ export default function NumberInput({
   helpText,
   error,
   value,
+  required,
+  autoFocus,
   onChange,
   formatOnBlur = true,
   min,
@@ -98,9 +100,11 @@ export default function NumberInput({
   return (
     <Input
       {...rest}
-      label={label}
-      helpText={helpText}
-      error={error}
+      {...(label && { label })}
+      {...(helpText && { helpText })}
+      {...(error && { error })}
+      {...(required !== undefined && { required })}
+      {...(autoFocus !== undefined && { autoFocus })}
       type="text"
       inputMode="numeric"
       step={step}
