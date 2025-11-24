@@ -179,10 +179,10 @@ export default function CustomersPage() {
                 </div>
               )}
             </div>
-              <div className="flex-shrink-0">
-                <CustomerFilters activeFilter={activeFilter} onFilterChange={setActiveFilter} />
-              </div>
+            <div className="flex-shrink-0">
+              <CustomerFilters activeFilter={activeFilter} onFilterChange={setActiveFilter} />
             </div>
+          </div>
           </div>
           <div className="flex items-end">
             <Button
