@@ -1,10 +1,8 @@
 'use client'
 
-import { useEffect, useState } from 'react'
 import Modal, { ModalBody, ModalFooter, ModalHeader } from '../components/ui/Modal'
 import Button from '../components/ui/Button'
-import Card from '../components/ui/Card'
-import { User, Mail, Phone, Building2, Calendar, Shield } from 'lucide-react'
+import { Phone, Building2, Calendar, Shield } from 'lucide-react'
 
 type PendingUser = {
   id: string
