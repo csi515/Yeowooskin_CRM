@@ -23,6 +23,7 @@ export async function POST(req: NextRequest) {
     // 예: Resend, SendGrid, AWS SES 등
 
     // 임시로 로그만 남김
+    // eslint-disable-next-line no-console
     console.log('Approval notification:', {
       userId,
       email,

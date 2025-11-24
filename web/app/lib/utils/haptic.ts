@@ -29,6 +29,7 @@ export function hapticFeedback(type: HapticFeedbackType = 'medium'): void {
     navigator.vibrate(pattern)
   } catch (error) {
     // 진동이 지원되지 않거나 실패한 경우 무시
+    // eslint-disable-next-line no-console
     console.debug('Haptic feedback not supported:', error)
   }
 }

@@ -123,6 +123,7 @@ export default function CustomersPage() {
         setPointsByCustomer(prev => ({ ...prev, ...Object.fromEntries(pairs) }))
       } catch (error) {
         // 포인트 조회 실패는 조용히 무시 (UI에 표시하지 않음)
+        // eslint-disable-next-line no-console
         console.debug('Failed to fetch points:', error)
       }
     }

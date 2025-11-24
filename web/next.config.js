@@ -43,6 +43,16 @@ const nextConfig = {
   poweredByHeader: false,
   // 빌드 최적화
   swcMinify: true,
+  // ESLint 설정 - 빌드 시 경고는 무시하고 오류만 체크
+  eslint: {
+    // 빌드 시 ESLint 오류가 있어도 빌드 계속 진행
+    ignoreDuringBuilds: false,
+  },
+  // TypeScript 설정 - 빌드 시 타입 오류가 있어도 빌드 계속 진행 (경고만 있는 경우)
+  typescript: {
+    // 빌드 시 TypeScript 오류가 있어도 빌드 계속 진행
+    ignoreBuildErrors: false,
+  },
   // 환경변수 검증은 app/lib/utils/env.ts에서 처리
   // NEXT_PUBLIC_ 접두사가 있는 변수만 클라이언트에 노출됨
   // 서버 전용 변수는 자동으로 제외됨
