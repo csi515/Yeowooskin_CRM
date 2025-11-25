@@ -29,7 +29,7 @@ type Notification = {
   message: string
   read: boolean
   read_at: string | null
-  metadata: any
+  metadata: Record<string, unknown>
   created_at: string
 }
 

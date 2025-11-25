@@ -24,7 +24,7 @@ type SystemStatus = {
     id: string
     action: string
     resource_type: string
-    details: any
+    details: Record<string, unknown>
     created_at: string
   }>
   timestamp: string

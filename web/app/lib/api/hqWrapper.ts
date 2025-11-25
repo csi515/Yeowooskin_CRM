@@ -22,7 +22,7 @@ export function withHQ(handler: HQHandler) {
     try {
       const hqProfile = await requireHQ(req)
       return await handler(req, hqProfile)
-    } catch (e: any) {
+    } catch (e: unknown) {
       // 인증/권한 에러 처리
       if (e.message === '인증이 필요합니다.' || e.message === '접근 권한이 없습니다.') {
         return NextResponse.json({ error: e.message }, { status: e.statusCode || 403 })

@@ -94,7 +94,7 @@ export const GET = withHQ(async (req: NextRequest) => {
               ? ((recentCount || 0) / totalCount * 100).toFixed(2)
               : '0.00',
           }
-        } catch (error: any) {
+        } catch (error: unknown) {
           // 테이블이 존재하지 않거나 접근 권한이 없는 경우
           return {
             table: tableName,

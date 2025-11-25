@@ -36,7 +36,7 @@ export async function GET() {
 		}
 
 		return NextResponse.json({ profile: data })
-	} catch (e: any) {
+  } catch (e: unknown) {
 		console.error('API /user/me error:', e)
 		return NextResponse.json({ error: e?.message || 'unknown error' }, { status: 500 })
 	}

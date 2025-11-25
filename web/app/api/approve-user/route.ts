@@ -91,7 +91,7 @@ export async function POST(req: NextRequest) {
     }
 
     return NextResponse.json({ ok: true })
-  } catch (e: any) {
+    } catch (e: unknown) {
     if (e.message === '인증이 필요합니다.' || e.message === '접근 권한이 없습니다.') {
       return NextResponse.json({ error: e.message }, { status: e.statusCode || 403 })
     }

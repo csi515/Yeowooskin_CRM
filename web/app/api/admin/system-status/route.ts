@@ -31,7 +31,13 @@ export const GET = withHQ(async (req: NextRequest) => {
     ])
 
     // 최근 에러 로그 (audit_logs 사용 안 함)
-    const recentErrors: any[] = []
+    const recentErrors: Array<{
+    id: string
+    action: string
+    resource_type: string
+    details: Record<string, unknown>
+    created_at: string
+  }> = []
 
     return NextResponse.json({
       database: {

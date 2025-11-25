@@ -37,9 +37,9 @@ export async function POST(req: NextRequest) {
     // 2. 또는 외부 이메일 서비스 API 호출
 
     return NextResponse.json({ ok: true, message: 'Notification queued' })
-  } catch (e: any) {
-    console.error('Notification error:', e)
-    return NextResponse.json({ error: e?.message || 'unknown error' }, { status: 500 })
-  }
+    } catch (e: unknown) {
+      console.error('Notification error:', e)
+      return NextResponse.json({ error: e instanceof Error ? e.message : 'unknown error' }, { status: 500 })
+    }
 }
 

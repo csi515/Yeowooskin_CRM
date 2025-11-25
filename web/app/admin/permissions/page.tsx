@@ -133,7 +133,7 @@ export default function PermissionsPage() {
             <label className="text-sm font-medium text-neutral-700">역할 필터:</label>
             <Select
               value={selectedRole}
-              onChange={(e) => setSelectedRole(e.target.value as any)}
+              onChange={(e) => setSelectedRole(e.target.value as 'hq' | 'owner' | 'staff')}
               options={[
                 { value: 'all', label: '전체' },
                 { value: 'HQ', label: '본사' },

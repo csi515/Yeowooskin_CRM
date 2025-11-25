@@ -46,7 +46,7 @@ export async function POST() {
 		const { error } = await admin.from('users').insert(payload)
 		if (error) return NextResponse.json({ error: error.message }, { status: 400 })
 		return NextResponse.json({ ok: true })
-	} catch (e: any) {
+  } catch (e: unknown) {
 		return NextResponse.json({ error: e?.message || 'unknown error' }, { status: 500 })
 	}
 }
