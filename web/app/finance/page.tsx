@@ -16,6 +16,7 @@ import { generateTaxReport } from '../lib/utils/taxReport'
 import { FileText } from 'lucide-react'
 import { createOwnerOrAbovePage } from '../lib/hocs/createProtectedPage'
 import { useCurrentUser } from '../lib/hooks/useCurrentUser'
+import { Card, CardContent, CardHeader, CardTitle } from '../components/ui/Card'
 import type { Expense, Transaction, TransactionCreateInput, ExpenseCreateInput, Branch } from '@/types/entities'
 
 type ExpenseForm = {
