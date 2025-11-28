@@ -67,27 +67,27 @@ export function BottomSheet({
 
   // 스와이프 제스처 처리
   const handleTouchStart = (e: React.TouchEvent) => {
-    if (!swipeToClose) return
+    if (!swipeToClose || !e.touches[0]) return
     startYRef.current = e.touches[0].clientY
     currentYRef.current = startYRef.current
     setIsDragging(true)
   }
 
   const handleTouchMove = (e: React.TouchEvent) => {
-    if (!swipeToClose || !isDragging) return
+    if (!swipeToClose || !isDragging || !e.touches[0]) return
     const sheet = sheetRef.current
     if (!sheet) return
-    
+
     // 스크롤 가능한 영역에서 스크롤이 맨 위에 있을 때만 드래그 허용
     const scrollTop = sheet.scrollTop
     const isAtTop = scrollTop === 0
-    
+
     if (!isAtTop) {
       // 스크롤 가능한 경우 드래그 비활성화
       setIsDragging(false)
       return
     }
-    
+
     currentYRef.current = e.touches[0].clientY
     const deltaY = currentYRef.current - startYRef.current
     if (deltaY > 0) {

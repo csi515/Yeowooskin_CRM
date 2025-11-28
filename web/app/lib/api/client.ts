@@ -35,9 +35,10 @@ export class ApiClient {
       const parts = token.split('.')
       if (parts.length < 2) return null
       const payload = parts[1]
+      if (!payload) return null
       const base64 = payload.replace(/-/g, '+').replace(/_/g, '/')
       const pad = base64.length % 4 === 2 ? '==' : base64.length % 4 === 3 ? '=' : ''
-      
+
       // 브라우저 환경에서는 atob 사용, Node.js 환경에서는 Buffer 사용
       let decoded: string
       if (typeof window !== 'undefined' && typeof atob !== 'undefined') {
@@ -47,7 +48,7 @@ export class ApiClient {
       } else {
         return null
       }
-      
+
       return JSON.parse(decoded)
     } catch {
       return null
@@ -62,7 +63,7 @@ export class ApiClient {
     const cookies = document.cookie.split(';')
     for (const cookie of cookies) {
       const [name, value] = cookie.trim().split('=')
-      if (name === 'sb:token') {
+      if (name === 'sb:token' && value) {
         return decodeURIComponent(value)
       }
     }
@@ -76,11 +77,11 @@ export class ApiClient {
     if (!token) return true
     const decoded = this.decodeJWT(token)
     if (!decoded || !decoded.exp) return true
-    
+
     const expirationTime = decoded.exp * 1000 // exp는 초 단위이므로 밀리초로 변환
     const now = Date.now()
     const fiveMinutes = 5 * 60 * 1000 // 5분을 밀리초로
-    
+
     // 만료 시간이 5분 이내면 true
     return expirationTime - now < fiveMinutes
   }
@@ -112,15 +113,15 @@ export class ApiClient {
         const response = await fetch(`${this.baseURL}/api/auth/refresh`, {
           method: 'POST',
           credentials: 'include',
-          signal: this.refreshAbortController?.signal,
+          signal: this.refreshAbortController?.signal || null,
         })
-        
+
         if (!response.ok) {
           // refresh 실패 시 플래그 설정
           this.refreshFailed = true
           return false
         }
-        
+
         // 성공 시 플래그 리셋
         this.refreshFailed = false
         return true
@@ -213,11 +214,11 @@ export class ApiClient {
       // JSON 파싱 실패 시 빈 객체 사용
       responseData = {}
     }
-    
+
     // 통일된 응답 형식 처리: { success: boolean, data?: T, error?: string }
     if (!response.ok || (responseData && typeof responseData === 'object' && 'success' in responseData && !responseData.success)) {
       let errorMessage = '요청을 처리할 수 없습니다.'
-      
+
       if (responseData && typeof responseData === 'object') {
         // 새로운 형식: { success: false, error: string }
         if ('error' in responseData && typeof responseData.error === 'string') {
@@ -257,7 +258,7 @@ export class ApiClient {
     if (responseData && typeof responseData === 'object' && 'success' in responseData && responseData.success) {
       return { data: responseData.data, response }
     }
-    
+
     // 기존 형식 호환성 (data가 직접 반환되는 경우)
     return { data: responseData, response }
   }
@@ -280,7 +281,7 @@ export class ApiClient {
     const { data } = await this.executeRequest<T>(url, {
       ...options,
       method: 'POST',
-      body: body ? JSON.stringify(body) : undefined,
+      body: body ? JSON.stringify(body) : null,
     })
     return data
   }
@@ -292,7 +293,7 @@ export class ApiClient {
     const { data } = await this.executeRequest<T>(url, {
       ...options,
       method: 'PUT',
-      body: body ? JSON.stringify(body) : undefined,
+      body: body ? JSON.stringify(body) : null,
     })
     return data
   }

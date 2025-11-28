@@ -126,11 +126,13 @@ export default function Autocomplete({
     <div ref={containerRef} className={clsx('relative', className)}>
       <div className="relative">
         <Input
-          {...inputProps}
+          {...Object.fromEntries(
+            Object.entries(inputProps).filter(([key]) => !['label', 'helpText', 'error'].includes(key))
+          )}
           ref={inputRef}
-          label={label}
-          helpText={helpText}
-          error={error}
+          {...(label ? { label } : {})}
+          {...(helpText ? { helpText } : {})}
+          {...(error ? { error } : {})}
           value={isOpen ? searchQuery : displayValue}
           onChange={handleInputChange}
           onFocus={() => {

@@ -118,7 +118,7 @@ export default function FileUpload({
 
   const handleRemove = (index: number) => {
     const fileToRemove = files[index]
-    if (fileToRemove.preview) {
+    if (fileToRemove && fileToRemove.preview) {
       URL.revokeObjectURL(fileToRemove.preview)
     }
     

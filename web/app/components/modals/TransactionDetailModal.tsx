@@ -45,7 +45,7 @@ export default function TransactionDetailModal({ open, onClose, item, onSaved, o
       }
       const payload: TransactionUpdateInput = {
         amount: amountValue,
-        transaction_date: form.transaction_date,
+        transaction_date: form.transaction_date || '',
         customer_id: form.customer_id || null,
       }
       // notes는 값이 있을 때만 포함

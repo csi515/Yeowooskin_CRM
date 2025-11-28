@@ -44,6 +44,8 @@ const Input = React.forwardRef<HTMLInputElement, Props>(
         setShowError(true)
         const timer = setTimeout(() => setShowError(false), 400)
         return () => clearTimeout(timer)
+      } else {
+        return undefined
       }
     }, [error])
 

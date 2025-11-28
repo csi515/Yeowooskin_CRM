@@ -31,7 +31,7 @@ export default function InfiniteScroll({
   useEffect(() => {
     const observer = new IntersectionObserver(
       (entries) => {
-        if (entries[0].isIntersecting && hasMore && !loading && !isLoading) {
+        if (entries[0] && entries[0].isIntersecting && hasMore && !loading && !isLoading) {
           setIsLoading(true)
           Promise.resolve(onLoadMore()).finally(() => {
             setIsLoading(false)

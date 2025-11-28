@@ -29,11 +29,11 @@ const getCachedKpis = unstable_cache(
     const { createClient } = await import('@supabase/supabase-js')
     const url = getEnv.supabaseUrl()
     const anon = getEnv.supabaseAnonKey()
-    
+
     if (!url || !anon) {
       throw new Error('Supabase 환경변수가 설정되지 않았습니다.')
     }
-    
+
     const supabase = createClient(url, anon, {
       auth: {
         persistSession: false,
@@ -41,194 +41,194 @@ const getCachedKpis = unstable_cache(
         detectSessionInUrl: false,
       },
       global: {
-        headers: accessToken ? { Authorization: `Bearer ${accessToken}` } : undefined
+        headers: accessToken ? { Authorization: `Bearer ${accessToken}` } : {}
       }
     })
-    
+
     const { monthStart, monthEnd } = monthBounds()
 
-  const [apRes, trRes, cuRes, apRecent, trRecent, exRecent, exMonth, trMonth, productsRes] = await Promise.all([
-    supabase
-      .from('appointments')
-      .select('id, appointment_date')
-      .eq('owner_id', userId)
-      .gte('appointment_date', start)
-      .lt('appointment_date', end),
-    supabase
-      .from('transactions')
-      .select('id, amount, transaction_date, created_at')
-      .eq('owner_id', userId)
-      .gte('transaction_date', start)
-      .lt('transaction_date', end),
-    supabase
-      .from('customers')
-      .select('id, created_at')
-      .eq('owner_id', userId)
-      .gte('created_at', start)
-      .lt('created_at', end),
-    supabase
-      .from('appointments')
-      .select('id, appointment_date, status, notes, customer_id, service_id')
-      .eq('owner_id', userId)
-      .order('appointment_date', { ascending: false })
-      .limit(5),
-    supabase
-      .from('transactions')
-      .select('id, amount, transaction_date, created_at, memo')
-      .eq('owner_id', userId)
-      .order('transaction_date', { ascending: false })
-      .limit(5),
-    supabase
-      .from('expenses')
-      .select('id, amount, expense_date, created_at, memo, category')
-      .eq('owner_id', userId)
-      .order('expense_date', { ascending: false })
-      .limit(5),
-    // 월간 집계용
-    supabase.from('expenses').select('amount, expense_date').eq('owner_id', userId).gte('expense_date', monthStart).lt('expense_date', monthEnd),
-    supabase.from('transactions').select('amount, transaction_date').eq('owner_id', userId).gte('transaction_date', monthStart).lt('transaction_date', monthEnd),
-    supabase
-      .from('products')
-      .select('id, name, price, active')
-      .eq('owner_id', userId)
-      .order('created_at', { ascending: false })
-      .limit(10)
-  ])
+    const [apRes, trRes, cuRes, apRecent, trRecent, exRecent, exMonth, trMonth, productsRes] = await Promise.all([
+      supabase
+        .from('appointments')
+        .select('id, appointment_date')
+        .eq('owner_id', userId)
+        .gte('appointment_date', start)
+        .lt('appointment_date', end),
+      supabase
+        .from('transactions')
+        .select('id, amount, transaction_date, created_at')
+        .eq('owner_id', userId)
+        .gte('transaction_date', start)
+        .lt('transaction_date', end),
+      supabase
+        .from('customers')
+        .select('id, created_at')
+        .eq('owner_id', userId)
+        .gte('created_at', start)
+        .lt('created_at', end),
+      supabase
+        .from('appointments')
+        .select('id, appointment_date, status, notes, customer_id, service_id')
+        .eq('owner_id', userId)
+        .order('appointment_date', { ascending: false })
+        .limit(5),
+      supabase
+        .from('transactions')
+        .select('id, amount, transaction_date, created_at, memo')
+        .eq('owner_id', userId)
+        .order('transaction_date', { ascending: false })
+        .limit(5),
+      supabase
+        .from('expenses')
+        .select('id, amount, expense_date, created_at, memo, category')
+        .eq('owner_id', userId)
+        .order('expense_date', { ascending: false })
+        .limit(5),
+      // 월간 집계용
+      supabase.from('expenses').select('amount, expense_date').eq('owner_id', userId).gte('expense_date', monthStart).lt('expense_date', monthEnd),
+      supabase.from('transactions').select('amount, transaction_date').eq('owner_id', userId).gte('transaction_date', monthStart).lt('transaction_date', monthEnd),
+      supabase
+        .from('products')
+        .select('id, name, price, active')
+        .eq('owner_id', userId)
+        .order('created_at', { ascending: false })
+        .limit(10)
+    ])
 
-  const todayAppointments = Array.isArray(apRes.data) ? apRes.data.length : 0
-  const todayRevenue = Array.isArray(trRes.data)
-    ? trRes.data.reduce((s: number, t: Transaction) => s + Number(t.amount || 0), 0)
-    : 0
-  const todayNewCustomers = Array.isArray(cuRes.data) ? cuRes.data.length : 0
+    const todayAppointments = Array.isArray(apRes.data) ? apRes.data.length : 0
+    const todayRevenue = Array.isArray(trRes.data)
+      ? trRes.data.reduce((s: number, t: Partial<Transaction>) => s + Number(t.amount || 0), 0)
+      : 0
+    const todayNewCustomers = Array.isArray(cuRes.data) ? cuRes.data.length : 0
 
-  // 월간 시계열(주차별)
-  const bucketByWeek = (dateIso: string): number => {
-    if (!dateIso) return 0
-    const d = new Date(dateIso)
-    if (isNaN(d.getTime())) return 0
-    const day = d.getDate()
-    if (day <= 7) return 0
-    if (day <= 14) return 1
-    if (day <= 21) return 2
-    if (day <= 28) return 3
-    return 4
-  }
-  const incomeBuckets: number[] = [0, 0, 0, 0, 0]
-  const expenseBuckets: number[] = [0, 0, 0, 0, 0]
-  
-  const trMonthData = Array.isArray(trMonth.data) ? trMonth.data : []
-  const exMonthData = Array.isArray(exMonth.data) ? exMonth.data : []
-  
-  trMonthData.forEach((t: Transaction) => {
-    const dateStr = t.transaction_date || t.created_at || ''
-    const bucket = bucketByWeek(dateStr)
-    if (bucket >= 0 && bucket < incomeBuckets.length) {
-      incomeBuckets[bucket] += Number(t.amount || 0)
+    // 월간 시계열(주차별)
+    const bucketByWeek = (dateIso: string): number => {
+      if (!dateIso) return 0
+      const d = new Date(dateIso)
+      if (isNaN(d.getTime())) return 0
+      const day = d.getDate()
+      if (day <= 7) return 0
+      if (day <= 14) return 1
+      if (day <= 21) return 2
+      if (day <= 28) return 3
+      return 4
     }
-  })
-  
-  exMonthData.forEach((e: Expense) => {
-    const dateStr = e.expense_date || ''
-    const bucket = bucketByWeek(dateStr)
-    if (bucket >= 0 && bucket < expenseBuckets.length) {
-      expenseBuckets[bucket] += Number(e.amount || 0)
-    }
-  })
-  
-  const weeklyNames = ['1주', '2주', '3주', '4주', '5주']
-  const monthlySeries = weeklyNames.map((name, i) => ({
-    name,
-    income: incomeBuckets[i] ?? 0,
-    expense: expenseBuckets[i] ?? 0,
-  }))
+    const incomeBuckets: number[] = [0, 0, 0, 0, 0]
+    const expenseBuckets: number[] = [0, 0, 0, 0, 0]
 
-  // 판매중인 상품: active가 true이거나 null인 경우만 필터링 (기본값이 true로 간주)
-  const activeProducts = Array.isArray(productsRes.data)
-    ? productsRes.data.filter((p: Product) => p.active !== false)
-    : []
+    const trMonthData = Array.isArray(trMonth.data) ? trMonth.data : []
+    const exMonthData = Array.isArray(exMonth.data) ? exMonth.data : []
 
-  // 최근 예약: 고객 이름/시간/상품 이름으로 표시하기 위해 보조 조회
-  const apRecentData = Array.isArray(apRecent.data) ? apRecent.data : []
-  const apIds = apRecentData.map((a: Appointment) => ({
-    customer_id: a.customer_id,
-    service_id: a.service_id,
-  }))
-  const customerIds = Array.from(
-    new Set(apIds.map((x) => x.customer_id).filter((id): id is string => Boolean(id)))
-  )
-  const serviceIds = Array.from(
-    new Set(apIds.map((x) => x.service_id).filter((id): id is string => Boolean(id))
-  ))
-  const customersById: Record<string, string> = {}
-  const productsById: Record<string, string> = {}
-  
-  if (customerIds.length > 0) {
-    const { data } = await supabase
-      .from('customers')
-      .select('id,name')
-      .in('id', customerIds)
-    const customerData = Array.isArray(data) ? data : []
-    customerData.forEach((c: { id: string; name: string }) => {
-      if (c.id && c.name) {
-        customersById[c.id] = c.name
+    trMonthData.forEach((t: Partial<Transaction>) => {
+      const dateStr = t.transaction_date || t.created_at || ''
+      const bucket = bucketByWeek(dateStr)
+      if (bucket >= 0 && bucket < incomeBuckets.length) {
+        incomeBuckets[bucket] = (incomeBuckets[bucket] || 0) + Number(t.amount || 0)
       }
     })
-  }
-  
-  if (serviceIds.length > 0) {
-    const { data } = await supabase
-      .from('products')
-      .select('id,name')
-      .in('id', serviceIds)
-    const productData = Array.isArray(data) ? data : []
-    productData.forEach((p: { id: string; name: string }) => {
-      if (p.id && p.name) {
-        productsById[p.id] = p.name
+
+    exMonthData.forEach((e: Partial<Expense>) => {
+      const dateStr = e.expense_date || ''
+      const bucket = bucketByWeek(dateStr)
+      if (bucket >= 0 && bucket < expenseBuckets.length) {
+        expenseBuckets[bucket] = (expenseBuckets[bucket] || 0) + Number(e.amount || 0)
       }
     })
-  }
 
-  // 최근 거래: 수입과 지출을 합쳐서 날짜순으로 정렬
-  const trRecentData = Array.isArray(trRecent.data) ? trRecent.data : []
-  const exRecentData = Array.isArray(exRecent.data) ? exRecent.data : []
-  
-  const combinedTransactions = [
-    ...trRecentData.map((t: Transaction) => ({
-      id: t.id,
-      type: 'income' as const,
-      date: t.transaction_date || t.created_at || '',
-      amount: Number(t.amount || 0),
-      memo: t.memo || '',
-    })),
-    ...exRecentData.map((e: Expense) => ({
-      id: e.id,
-      type: 'expense' as const,
-      date: e.expense_date || e.created_at || '',
-      amount: Number(e.amount || 0),
-      memo: e.memo || e.category || '',
-    })),
-  ]
-    .sort((a, b) => {
-      const dateA = new Date(a.date).getTime()
-      const dateB = new Date(b.date).getTime()
-      return dateB - dateA // 최신순
-    })
-    .slice(0, 5) // 최대 5개만
+    const weeklyNames = ['1주', '2주', '3주', '4주', '5주']
+    const monthlySeries = weeklyNames.map((name, i) => ({
+      name,
+      income: incomeBuckets[i] ?? 0,
+      expense: expenseBuckets[i] ?? 0,
+    }))
 
-  return {
-    todayAppointments,
-    todayRevenue,
-    todayNewCustomers,
-    recentAppointments: apRecentData.map((a: Appointment) => ({
-      id: a.id,
-      appointment_date: a.appointment_date,
-      customer_name: a.customer_id ? customersById[a.customer_id] || '-' : '-',
-      product_name: a.service_id ? productsById[a.service_id] || '-' : '-',
-    })),
-    recentTransactions: combinedTransactions,
-    monthlySeries,
-    activeProducts,
-  }
+    // 판매중인 상품: active가 true이거나 null인 경우만 필터링 (기본값이 true로 간주)
+    const activeProducts = Array.isArray(productsRes.data)
+      ? productsRes.data.filter((p: Partial<Product>) => p.active !== false)
+      : []
+
+    // 최근 예약: 고객 이름/시간/상품 이름으로 표시하기 위해 보조 조회
+    const apRecentData = Array.isArray(apRecent.data) ? apRecent.data : []
+    const apIds = apRecentData.map((a: Partial<Appointment>) => ({
+      customer_id: a.customer_id,
+      service_id: a.service_id,
+    }))
+    const customerIds = Array.from(
+      new Set(apIds.map((x) => x.customer_id).filter((id): id is string => Boolean(id)))
+    )
+    const serviceIds = Array.from(
+      new Set(apIds.map((x) => x.service_id).filter((id): id is string => Boolean(id))
+      ))
+    const customersById: Record<string, string> = {}
+    const productsById: Record<string, string> = {}
+
+    if (customerIds.length > 0) {
+      const { data } = await supabase
+        .from('customers')
+        .select('id,name')
+        .in('id', customerIds)
+      const customerData = Array.isArray(data) ? data : []
+      customerData.forEach((c: { id: string; name: string }) => {
+        if (c.id && c.name) {
+          customersById[c.id] = c.name
+        }
+      })
+    }
+
+    if (serviceIds.length > 0) {
+      const { data } = await supabase
+        .from('products')
+        .select('id,name')
+        .in('id', serviceIds)
+      const productData = Array.isArray(data) ? data : []
+      productData.forEach((p: { id: string; name: string }) => {
+        if (p.id && p.name) {
+          productsById[p.id] = p.name
+        }
+      })
+    }
+
+    // 최근 거래: 수입과 지출을 합쳐서 날짜순으로 정렬
+    const trRecentData = Array.isArray(trRecent.data) ? trRecent.data : []
+    const exRecentData = Array.isArray(exRecent.data) ? exRecent.data : []
+
+    const combinedTransactions = [
+      ...trRecentData.map((t: Partial<Transaction>) => ({
+        id: t.id || '',
+        type: 'income' as const,
+        date: t.transaction_date || t.created_at || '',
+        amount: Number(t.amount || 0),
+        memo: (t as any).memo || '',
+      })),
+      ...exRecentData.map((e: Partial<Expense>) => ({
+        id: e.id || '',
+        type: 'expense' as const,
+        date: e.expense_date || e.created_at || '',
+        amount: Number(e.amount || 0),
+        memo: e.memo || e.category || '',
+      })),
+    ]
+      .sort((a, b) => {
+        const dateA = new Date(a.date).getTime()
+        const dateB = new Date(b.date).getTime()
+        return dateB - dateA // 최신순
+      })
+      .slice(0, 5) // 최대 5개만
+
+    return {
+      todayAppointments,
+      todayRevenue,
+      todayNewCustomers,
+      recentAppointments: apRecentData.map((a: Partial<Appointment>) => ({
+        id: a.id || '',
+        appointment_date: a.appointment_date || '',
+        customer_name: a.customer_id ? customersById[a.customer_id] || '-' : '-',
+        product_name: a.service_id ? productsById[a.service_id] || '-' : '-',
+      })),
+      recentTransactions: combinedTransactions,
+      monthlySeries,
+      activeProducts,
+    }
   },
   ['dashboard-kpis'],
   {
@@ -243,7 +243,7 @@ async function getKpis({ start, end }: { start: string; end: string }) {
   const cookieStore = cookies()
   const userId = getUserIdFromCookies()
   const accessToken = cookieStore.get('sb:token')?.value || cookieStore.get('sb-access-token')?.value
-  
+
   if (!userId) {
     return {
       todayAppointments: 0,
@@ -257,7 +257,7 @@ async function getKpis({ start, end }: { start: string; end: string }) {
   }
 
   // 캐싱된 함수 호출 (cookies 데이터를 인자로 전달)
-  return getCachedKpis({ start, end, userId, accessToken })
+  return getCachedKpis({ start, end, userId, ...(accessToken ? { accessToken } : {}) })
 }
 
 export default async function DashboardPage() {
@@ -276,7 +276,7 @@ export default async function DashboardPage() {
     <main className="space-y-4 sm:space-y-5 md:space-y-6">
       {/* PWA 설치 프롬프트 */}
       <DashboardInstallPrompt />
-      
+
       {/* 핵심 지표 카드 */}
       <section className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-5 md:gap-6">
         <MetricCard
@@ -318,12 +318,11 @@ export default async function DashboardPage() {
           </div>
           <div className="space-y-2 max-h-[240px] sm:max-h-[200px] overflow-y-auto overscroll-contain">
             {activeProducts.length > 0 ? (
-              activeProducts.slice(0, 5).map((p: Product, index: number) => (
+              activeProducts.slice(0, 5).map((p: Partial<Product>, index: number) => (
                 <div
                   key={p.id}
-                  className={`text-xs sm:text-sm py-2 px-3 rounded-md flex items-center justify-between gap-2 touch-manipulation ${
-                    index % 2 === 0 ? 'bg-emerald-50/50' : 'bg-teal-50/50'
-                  }`}
+                  className={`text-xs sm:text-sm py-2 px-3 rounded-md flex items-center justify-between gap-2 touch-manipulation ${index % 2 === 0 ? 'bg-emerald-50/50' : 'bg-teal-50/50'
+                    }`}
                 >
                   <span className="font-medium text-neutral-800 truncate flex-1 min-w-0">{p.name}</span>
                   <span className="text-emerald-700 font-semibold whitespace-nowrap flex-shrink-0">
@@ -392,11 +391,10 @@ export default async function DashboardPage() {
                 >
                   <div className="min-w-0 flex-1">
                     <div className="flex flex-wrap items-center gap-2 mb-1">
-                      <span className={`inline-flex items-center px-2 py-0.5 rounded text-xs font-medium flex-shrink-0 ${
-                        isExpense 
-                          ? 'bg-rose-50 text-rose-700 border border-rose-200' 
-                          : 'bg-emerald-50 text-emerald-700 border border-emerald-200'
-                      }`}>
+                      <span className={`inline-flex items-center px-2 py-0.5 rounded text-xs font-medium flex-shrink-0 ${isExpense
+                        ? 'bg-rose-50 text-rose-700 border border-rose-200'
+                        : 'bg-emerald-50 text-emerald-700 border border-emerald-200'
+                        }`}>
                         {isExpense ? '지출' : '수입'}
                       </span>
                       <div className="font-medium text-neutral-900 truncate">
@@ -407,9 +405,8 @@ export default async function DashboardPage() {
                       {dateLabel}
                     </div>
                   </div>
-                  <div className={`font-semibold whitespace-nowrap text-base sm:text-sm flex-shrink-0 ${
-                    isExpense ? 'text-rose-600' : 'text-emerald-600'
-                  }`}>
+                  <div className={`font-semibold whitespace-nowrap text-base sm:text-sm flex-shrink-0 ${isExpense ? 'text-rose-600' : 'text-emerald-600'
+                    }`}>
                     {isExpense ? '-' : '+'}₩{Number(t.amount || 0).toLocaleString()}
                   </div>
                 </li>

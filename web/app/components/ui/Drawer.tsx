@@ -52,10 +52,12 @@ export default function Drawer({
         onClose()
       }
     }
-    
+
     if (open) {
       window.addEventListener('keydown', handleEscape)
       return () => window.removeEventListener('keydown', handleEscape)
+    } else {
+      return undefined
     }
   }, [open, onClose])
 

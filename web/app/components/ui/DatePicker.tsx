@@ -30,8 +30,8 @@ function formatDate(date: Date, format: string = defaultDateFormat): string {
 
 function parseDate(value: string): Date | null {
   const match = value.match(/^(\d{4})-(\d{2})-(\d{2})$/)
-  if (!match) return null
-  
+  if (!match || !match[1] || !match[2] || !match[3]) return null
+
   const year = parseInt(match[1], 10)
   const month = parseInt(match[2], 10) - 1
   const day = parseInt(match[3], 10)
@@ -185,10 +185,12 @@ export default function DatePicker({
     <div ref={containerRef} className={clsx('relative', className)}>
       <div className="relative">
         <Input
-          {...rest}
-          label={label}
-          helpText={helpText}
-          error={error}
+          {...Object.fromEntries(
+            Object.entries(rest).filter(([key]) => !['label', 'helpText', 'error'].includes(key))
+          )}
+          {...(label ? { label } : {})}
+          {...(helpText ? { helpText } : {})}
+          {...(error ? { error } : {})}
           value={displayValue}
           onChange={handleInputChange}
           placeholder={dateFormat.toLowerCase()}

@@ -9,6 +9,8 @@ import { Plus, ChevronLeft, ChevronRight, Calendar } from 'lucide-react'
 import Button from '../components/ui/Button'
 import { Skeleton } from '../components/ui/Skeleton'
 
+// FullCalendar 컴포넌트의 ref 타입 정의
+type FullCalendarComponentRef = React.ComponentRef<typeof import('@fullcalendar/react').default>
 
 // FullCalendar를 동적 import로 로드하여 번들 크기 감소
 const FullCalendarWrapper = lazy(async () => {
@@ -414,7 +416,7 @@ export default function AppointmentsPage() {
   const getCalendarApi = () => {
     const inst = calendarRef.current
     if (!inst) return null
-    return inst
+    return inst.getApi()
   }
 
   const handlePrev = () => {

@@ -97,10 +97,12 @@ export default function NumberInput({
 
   return (
     <Input
-      {...rest}
-      label={label}
-      helpText={helpText}
-      error={error}
+      {...Object.fromEntries(
+        Object.entries(rest).filter(([key]) => !['label', 'helpText', 'error'].includes(key))
+      )}
+      {...(label ? { label } : {})}
+      {...(helpText ? { helpText } : {})}
+      {...(error ? { error } : {})}
       type="text"
       inputMode="numeric"
       step={step}

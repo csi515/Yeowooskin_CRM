@@ -15,7 +15,7 @@ export class ExpensesRepository extends BaseRepository<Expense> {
   /**
    * 날짜 범위로 지출 조회
    */
-  async findAll(options: QueryOptions & { from?: string; to?: string } = {}): Promise<Expense[]> {
+  override async findAll(options: QueryOptions & { from?: string; to?: string } = {}): Promise<Expense[]> {
     const {
       limit = 50,
       offset = 0,
@@ -70,17 +70,17 @@ export class ExpensesRepository extends BaseRepository<Expense> {
       amount,
       category,
     }
-    
+
     // memo는 값이 있을 때만 포함 (스키마에 없을 수 있음)
     const memoValue = input.memo
     if (memoValue !== undefined && memoValue !== null && memoValue !== '' && String(memoValue).trim() !== '') {
-      payload.memo = String(memoValue).trim()
+      payload['memo'] = String(memoValue).trim()
     }
-    if (payload.memo === undefined || payload.memo === null || payload.memo === '' || String(payload.memo).trim() === '') {
-      delete payload.memo
+    if (payload['memo'] === undefined || payload['memo'] === null || payload['memo'] === '' || String(payload['memo']).trim() === '') {
+      delete payload['memo']
     }
-    
-    return this.create(payload as Expense)
+
+    return this.create(payload as unknown as Expense)
   }
 
   /**
