@@ -5,7 +5,6 @@
 import { BaseRepository } from './base.repository'
 import type { Expense, ExpenseCreateInput, ExpenseUpdateInput } from '@/types/entities'
 import type { QueryOptions } from './base.repository'
-import { ApiError } from '../api/errors'
 
 export class ExpensesRepository extends BaseRepository<Expense> {
   constructor(userId: string) {
@@ -41,7 +40,7 @@ export class ExpensesRepository extends BaseRepository<Expense> {
     const { data, error } = await query.range(offset, offset + limit - 1)
 
     if (error) {
-      throw new ApiError(error.message, 500)
+      this.handleSupabaseError(error)
     }
 
     return (data || []) as Expense[]

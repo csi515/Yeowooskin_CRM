@@ -8,11 +8,20 @@ function base64UrlToString(input: string): string {
 
 export function getUserIdFromCookies(): string | null {
   try {
-    const token = cookies().get('sb:token')?.value
+    const cookieStore = cookies()
+    const token = cookieStore.get('sb:token')?.value || cookieStore.get('sb-access-token')?.value
     if (!token) return null
+
     const parts = token.split('.')
     if (parts.length < 2) return null
+
     const payload = JSON.parse(base64UrlToString(parts[1]!))
+
+    // 토큰 만료 확인
+    if (payload.exp && Date.now() >= payload.exp * 1000) {
+      return null
+    }
+
     return payload?.sub || null
   } catch {
     return null

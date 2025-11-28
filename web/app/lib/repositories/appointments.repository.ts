@@ -6,7 +6,6 @@ import { BaseRepository } from './base.repository'
 import type { Appointment, AppointmentCreateInputExtended, AppointmentUpdateInput } from '@/types/entities'
 import type { QueryOptions } from './base.repository'
 import { appointmentUpdateSchema } from '../api/schemas'
-import { ApiError } from '../api/errors'
 
 import { z } from 'zod'
 
@@ -44,7 +43,7 @@ export class AppointmentsRepository extends BaseRepository<Appointment> {
     const { data, error } = await query.range(offset, offset + limit - 1)
 
     if (error) {
-      throw new ApiError(error.message, 500)
+      this.handleSupabaseError(error)
     }
 
     return (data || []) as Appointment[]

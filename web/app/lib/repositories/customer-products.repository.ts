@@ -3,7 +3,7 @@
  */
 
 import { BaseRepository } from './base.repository'
-import { ApiError, NotFoundError } from '../api/errors'
+import { NotFoundError } from '../api/errors'
 import type { QueryOptions } from './base.repository'
 
 export interface CustomerProduct {
@@ -63,7 +63,7 @@ export class CustomerProductsRepository extends BaseRepository<CustomerProduct> 
       .order('created_at', { ascending: true })
 
     if (error) {
-      throw new ApiError(error.message, 500)
+      this.handleSupabaseError(error)
     }
 
     return (data || []) as CustomerProduct[]
@@ -104,7 +104,7 @@ export class CustomerProductsRepository extends BaseRepository<CustomerProduct> 
       .single()
 
     if (error) {
-      throw new ApiError(error.message, 400)
+      this.handleSupabaseError(error)
     }
 
     // 레저 항목은 자동으로 생성하지 않음 - 사용자가 직접 입력해야 함
@@ -150,7 +150,7 @@ export class CustomerProductsRepository extends BaseRepository<CustomerProduct> 
       .single()
 
     if (error) {
-      throw new ApiError(error.message, 400)
+      this.handleSupabaseError(error)
     }
 
     // ledger 기록 (변경 시)
@@ -193,7 +193,7 @@ export class CustomerProductsRepository extends BaseRepository<CustomerProduct> 
       .range(offset, offset + limit - 1)
 
     if (error) {
-      throw new ApiError(error.message, 500)
+      this.handleSupabaseError(error)
     }
 
     return (data || []) as CustomerProductLedger[]
@@ -225,7 +225,7 @@ export class CustomerProductsRepository extends BaseRepository<CustomerProduct> 
     })
 
     if (error) {
-      throw new ApiError(error.message, 400)
+      this.handleSupabaseError(error)
     }
   }
 
@@ -269,7 +269,7 @@ export class CustomerProductsRepository extends BaseRepository<CustomerProduct> 
         .eq('id', matching.id)
 
       if (updateError) {
-        throw new ApiError(updateError.message, 400)
+        this.handleSupabaseError(updateError)
       }
     } else {
       // replaceFrom이 없으면 최신 항목을 업데이트
@@ -297,7 +297,7 @@ export class CustomerProductsRepository extends BaseRepository<CustomerProduct> 
         .eq('id', latest.id)
 
       if (updateError) {
-        throw new ApiError(updateError.message, 400)
+        this.handleSupabaseError(updateError)
       }
     }
   }
@@ -317,7 +317,7 @@ export class CustomerProductsRepository extends BaseRepository<CustomerProduct> 
       .range(offset, offset + limit - 1)
 
     if (error) {
-      throw new ApiError(error.message, 500)
+      this.handleSupabaseError(error)
     }
 
     return (data || []) as CustomerProductLedger[]

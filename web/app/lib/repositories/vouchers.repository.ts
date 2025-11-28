@@ -3,7 +3,7 @@
  */
 
 import { BaseRepository } from './base.repository'
-import { ApiError, NotFoundError } from '../api/errors'
+import { NotFoundError } from '../api/errors'
 
 export interface Voucher {
   id: string
@@ -61,7 +61,7 @@ export class VouchersRepository extends BaseRepository<Voucher> {
       .order('created_at', { ascending: false })
 
     if (error) {
-      throw new ApiError(error.message, 500)
+      this.handleSupabaseError(error)
     }
 
     return (data || []) as Voucher[]
@@ -91,7 +91,7 @@ export class VouchersRepository extends BaseRepository<Voucher> {
       .single()
 
     if (error) {
-      throw new ApiError(error.message, 400)
+      this.handleSupabaseError(error)
     }
 
     return data as Voucher
@@ -133,7 +133,7 @@ export class VouchersRepository extends BaseRepository<Voucher> {
       .eq('owner_id', this.userId)
 
     if (upErr) {
-      throw new ApiError(upErr.message, 400)
+      this.handleSupabaseError(upErr)
     }
 
     // 사용 내역 기록
@@ -149,7 +149,7 @@ export class VouchersRepository extends BaseRepository<Voucher> {
       .single()
 
     if (useErr) {
-      throw new ApiError(useErr.message, 400)
+      this.handleSupabaseError(useErr)
     }
 
     return {

@@ -3,7 +3,7 @@
  */
 
 import { createSupabaseServerClient } from '@/lib/supabase/server'
-import { ApiError } from '../api/errors'
+import { ApiError, NotFoundError, UnauthorizedError } from '../api/errors'
 import type { QueryOptions } from './base.repository'
 
 export interface PointsLedger {
@@ -46,6 +46,40 @@ export class PointsRepository {
   }
 
   /**
+   * Supabase 에러 처리
+   */
+  private handleSupabaseError(error: any): never {
+    console.error(`[PointsRepository] Supabase Error:`, error)
+
+    // 인증 관련 에러 (401, JWT expired 등)
+    if (
+      error.code === 'PGRST301' ||
+      error.message?.includes('JWT') ||
+      error.status === 401 ||
+      error.message?.includes('invalid claim')
+    ) {
+      throw new UnauthorizedError()
+    }
+
+    if (error.code === 'PGRST116') {
+      throw new NotFoundError('Resource not found')
+    }
+
+    // Postgres 에러 코드 처리
+    if (error.code?.startsWith('23')) {
+      if (error.code === '23505') {
+        throw new ApiError(error.message, 409)
+      }
+      if (error.code === '23503') {
+        throw new ApiError(error.message, 400)
+      }
+      throw new ApiError(error.message, 400)
+    }
+
+    throw new ApiError(error.message, (error.status && error.status >= 400) ? error.status : 500)
+  }
+
+  /**
    * 고객의 포인트 잔액 및 ledger 조회
    */
   async getBalance(
@@ -63,7 +97,7 @@ export class PointsRepository {
       .order('created_at', { ascending: false })
 
     if (e1) {
-      throw new ApiError(e1.message, 500)
+      this.handleSupabaseError(e1)
     }
 
     const balance = (allRows || []).reduce((s: number, r: { delta?: number }) => s + Number(r.delta || 0), 0)
@@ -90,7 +124,7 @@ export class PointsRepository {
     const { data: ledger, error: e2 } = await query.range(offset, offset + limit - 1)
 
     if (e2) {
-      throw new ApiError(e2.message, 500)
+      this.handleSupabaseError(e2)
     }
 
     return {
@@ -117,7 +151,7 @@ export class PointsRepository {
     })
 
     if (insErr) {
-      throw new ApiError(insErr.message, 400)
+      this.handleSupabaseError(insErr)
     }
 
     // 새로운 잔액 계산
@@ -128,7 +162,7 @@ export class PointsRepository {
       .eq('owner_id', this.userId)
 
     if (error) {
-      throw new ApiError(error.message, 500)
+      this.handleSupabaseError(error)
     }
 
     const balance = (ledger || []).reduce((s: number, r: { delta?: number }) => s + Number(r.delta || 0), 0)
@@ -156,7 +190,7 @@ export class PointsRepository {
     const { data, error } = await query
 
     if (error) {
-      throw new ApiError(error.message, 500)
+      this.handleSupabaseError(error)
     }
 
     const rows = data || []

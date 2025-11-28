@@ -5,7 +5,7 @@
 
 import { SupabaseClient } from '@supabase/supabase-js'
 import { createSupabaseServerClient } from '@/lib/supabase/server'
-import { NotFoundError, ApiError } from '../api/errors'
+import { NotFoundError, ApiError, UnauthorizedError } from '../api/errors'
 import type { PaginationParams, SearchParams } from '@/types/common'
 
 export interface QueryOptions extends PaginationParams, Partial<SearchParams> {
@@ -25,6 +25,42 @@ export abstract class BaseRepository<T> {
     this.userId = userId
     this.tableName = tableName
     this.supabase = createSupabaseServerClient()
+  }
+
+  /**
+   * Supabase 에러 처리
+   */
+  protected handleSupabaseError(error: any): never {
+    console.error(`[${this.tableName}] Supabase Error:`, error)
+
+    // 인증 관련 에러 (401, JWT expired 등)
+    if (
+      error.code === 'PGRST301' ||
+      error.message?.includes('JWT') ||
+      error.status === 401 ||
+      error.message?.includes('invalid claim')
+    ) {
+      throw new UnauthorizedError()
+    }
+
+    if (error.code === 'PGRST116') {
+      throw new NotFoundError(`${this.tableName} not found`)
+    }
+
+    // Postgres 에러 코드 처리
+    if (error.code?.startsWith('23')) {
+      // 23505: Unique violation
+      if (error.code === '23505') {
+        throw new ApiError(error.message, 409)
+      }
+      // 23503: Foreign key violation
+      if (error.code === '23503') {
+        throw new ApiError(error.message, 400)
+      }
+      throw new ApiError(error.message, 400)
+    }
+
+    throw new ApiError(error.message, (error.status && error.status >= 400) ? error.status : 500)
   }
 
   /**
@@ -56,7 +92,7 @@ export abstract class BaseRepository<T> {
     const { data, error } = await query.range(offset, offset + limit - 1)
 
     if (error) {
-      throw new ApiError(error.message, 500)
+      this.handleSupabaseError(error)
     }
 
     return (data || []) as T[]
@@ -74,10 +110,7 @@ export abstract class BaseRepository<T> {
       .single()
 
     if (error) {
-      if (error.code === 'PGRST116') {
-        throw new NotFoundError(`${this.tableName} not found`)
-      }
-      throw new ApiError(error.message, 500)
+      this.handleSupabaseError(error)
     }
 
     return data as T
@@ -94,7 +127,7 @@ export abstract class BaseRepository<T> {
       .single()
 
     if (error) {
-      throw new ApiError(error.message, 400)
+      this.handleSupabaseError(error)
     }
 
     return data as T
@@ -113,10 +146,7 @@ export abstract class BaseRepository<T> {
       .single()
 
     if (error) {
-      if (error.code === 'PGRST116') {
-        throw new NotFoundError(`${this.tableName} not found`)
-      }
-      throw new ApiError(error.message, 400)
+      this.handleSupabaseError(error)
     }
 
     return data as T
@@ -133,7 +163,7 @@ export abstract class BaseRepository<T> {
       .eq('owner_id', this.userId)
 
     if (error) {
-      throw new ApiError(error.message, 400)
+      this.handleSupabaseError(error)
     }
   }
 

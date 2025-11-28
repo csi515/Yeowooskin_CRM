@@ -63,7 +63,7 @@ export class ApiClient {
     const cookies = document.cookie.split(';')
     for (const cookie of cookies) {
       const [name, value] = cookie.trim().split('=')
-      if (name === 'sb:token' && value) {
+      if ((name === 'sb:token' || name === 'sb-access-token') && value) {
         return decodeURIComponent(value)
       }
     }
