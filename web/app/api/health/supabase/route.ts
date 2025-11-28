@@ -19,9 +19,10 @@ export async function GET() {
       ok: true,
       sampleCount: data?.length ?? 0,
     })
-  } catch (err: any) {
+  } catch (err: unknown) {
+    const message = err instanceof Error ? err.message : 'Supabase health check failed'
     return NextResponse.json(
-      { ok: false, message: err?.message ?? 'Supabase health check failed' },
+      { ok: false, message },
       { status: 500 },
     )
   }

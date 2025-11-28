@@ -28,24 +28,24 @@ export interface UseTableDataReturn<T> {
   debouncedQuery: string
   setQuery: (query: string) => void
   clearSearch: () => void
-  
+
   // 정렬
   sortKey: keyof T | null
   sortDirection: 'asc' | 'desc'
   toggleSort: (key: keyof T) => void
-  
+
   // 페이지네이션
   page: number
   pageSize: number
   totalPages: number
   setPage: (page: number) => void
   setPageSize: (size: number) => void
-  
+
   // 처리된 데이터
   filteredData: T[]
   sortedData: T[]
   paginatedData: T[]
-  
+
   // 메타 정보
   totalItems: number
   showingFrom: number
@@ -128,14 +128,15 @@ export function useTableData<T extends Record<string, unknown>>(
   }, [data, search.debouncedQuery, searchFields, searchFn])
 
   // 정렬된 데이터
+  const { sortFn } = sort
   const sortedData = useMemo(() => {
-    return sort.sortFn(filteredData)
-  }, [filteredData, sort.sortFn])
+    return sortFn(filteredData)
+  }, [filteredData, sortFn])
 
   // 페이지네이션 정보 업데이트
   const totalItems = sortedData.length
   const totalPages = Math.max(1, Math.ceil(totalItems / pagination.pageSize))
-  
+
   // 페이지 범위 조정
   const adjustedPage = Math.min(pagination.page, totalPages)
 

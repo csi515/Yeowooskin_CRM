@@ -206,7 +206,7 @@ export class ApiClient {
     }
 
     // 응답 데이터 파싱 (안전하게 처리)
-    let responseData: any
+    let responseData: unknown
     try {
       const text = await response.text()
       responseData = text ? JSON.parse(text) : {}
@@ -255,12 +255,12 @@ export class ApiClient {
     }
 
     // 성공 응답 처리: { success: true, data: T }
-    if (responseData && typeof responseData === 'object' && 'success' in responseData && responseData.success) {
-      return { data: responseData.data, response }
+    if (responseData && typeof responseData === 'object' && 'success' in responseData && (responseData as Record<string, unknown>)['success']) {
+      return { data: (responseData as Record<string, unknown>)['data'] as T, response }
     }
 
     // 기존 형식 호환성 (data가 직접 반환되는 경우)
-    return { data: responseData, response }
+    return { data: responseData as T, response }
   }
 
   /**

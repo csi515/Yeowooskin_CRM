@@ -2,6 +2,10 @@
 
 import { useEffect, useState } from 'react'
 
+interface WindowWithOrientation {
+  orientation?: number
+}
+
 type Orientation = 'portrait' | 'landscape'
 
 /**
@@ -18,12 +22,12 @@ export function useOrientation() {
     const updateOrientation = () => {
       const isPortrait = window.innerHeight > window.innerWidth
       setOrientation(isPortrait ? 'portrait' : 'landscape')
-      
+
       // 화면 각도 (0, 90, 180, 270)
       if (window.screen?.orientation) {
         setAngle(window.screen.orientation.angle)
-      } else if ((window as any).orientation !== undefined) {
-        setAngle((window as any).orientation)
+      } else if ((window as unknown as WindowWithOrientation).orientation !== undefined) {
+        setAngle((window as unknown as WindowWithOrientation).orientation!)
       }
     }
 

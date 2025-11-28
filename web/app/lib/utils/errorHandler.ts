@@ -27,8 +27,8 @@ export function normalizeError(error: unknown): AppError {
   }
 
   if (error && typeof error === 'object' && 'message' in error) {
-    const code = 'code' in error ? String((error as any).code) : undefined
-    const status = 'status' in error ? Number((error as any).status) : undefined
+    const code = 'code' in error ? String((error as Record<string, unknown>)['code']) : undefined
+    const status = 'status' in error ? Number((error as Record<string, unknown>)['status']) : undefined
 
     return {
       message: String(error.message),

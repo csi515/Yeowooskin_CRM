@@ -7,7 +7,7 @@ export async function GET() {
 	try {
 		const supabase = createSupabaseServerClient()
 		const { data: { user }, error: authError } = await supabase.auth.getUser()
-		
+
 		// 토큰 만료 또는 유효하지 않은 경우
 		if (authError) {
 			const isExpired = authError.message.includes('expired') || authError.message.includes('invalid')
@@ -19,7 +19,7 @@ export async function GET() {
 			}
 			return NextResponse.json({ error: 'unauthorized', message: authError.message }, { status: 401 })
 		}
-		
+
 		if (!user) {
 			return NextResponse.json({ error: 'unauthorized' }, { status: 401 })
 		}
@@ -35,9 +35,10 @@ export async function GET() {
 		}
 
 		return NextResponse.json({ profile: data })
-	} catch (e: any) {
+	} catch (e: unknown) {
 		console.error('API /user/me error:', e)
-		return NextResponse.json({ error: e?.message || 'unknown error' }, { status: 500 })
+		const message = e instanceof Error ? e.message : 'unknown error'
+		return NextResponse.json({ error: message }, { status: 500 })
 	}
 }
 

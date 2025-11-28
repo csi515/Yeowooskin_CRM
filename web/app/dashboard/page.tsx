@@ -198,7 +198,7 @@ const getCachedKpis = unstable_cache(
         type: 'income' as const,
         date: t.transaction_date || t.created_at || '',
         amount: Number(t.amount || 0),
-        memo: (t as any).memo || '',
+        memo: (t as Record<string, unknown>)['memo'] as string || '',
       })),
       ...exRecentData.map((e: Partial<Expense>) => ({
         id: e.id || '',
