@@ -13,7 +13,7 @@ import { ZodError, z } from 'zod'
  */
 export function parseQueryParams(req: Request): PaginationParams & SearchParams & DateRangeParams {
   const { searchParams } = new URL(req.url)
-  
+
   try {
     const params = {
       limit: searchParams.get('limit') || '50',
@@ -22,9 +22,17 @@ export function parseQueryParams(req: Request): PaginationParams & SearchParams 
       from: searchParams.get('from') || undefined,
       to: searchParams.get('to') || undefined,
     }
-    
+
     const validated = queryParamsSchema.parse(params)
-    return validated
+
+    // exactOptionalPropertyTypes: true 대응을 위해 undefined 값 제거
+    Object.keys(validated).forEach(key => {
+      if (validated[key as keyof typeof validated] === undefined) {
+        delete validated[key as keyof typeof validated]
+      }
+    })
+
+    return validated as PaginationParams & SearchParams & DateRangeParams
   } catch (error) {
     if (error instanceof ZodError) {
       throw new ValidationError('Invalid query parameters', {

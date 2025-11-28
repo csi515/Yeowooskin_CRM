@@ -26,12 +26,16 @@ export function useLongPress({
   const start = useCallback(
     (e: React.TouchEvent | React.MouseEvent) => {
       isLongPressRef.current = false
-      
+
       // 터치 시작 위치 저장
       if ('touches' in e) {
-        startPosRef.current = {
-          x: e.touches[0].clientX,
-          y: e.touches[0].clientY,
+        if (e.touches.length > 0) {
+          startPosRef.current = {
+            x: e.touches[0]!.clientX,
+            y: e.touches[0]!.clientY,
+          }
+        } else {
+          return
         }
       } else {
         startPosRef.current = {
@@ -64,8 +68,12 @@ export function useLongPress({
       let currentY: number
 
       if ('touches' in e) {
-        currentX = e.touches[0].clientX
-        currentY = e.touches[0].clientY
+        if (e.touches.length > 0) {
+          currentX = e.touches[0]!.clientX
+          currentY = e.touches[0]!.clientY
+        } else {
+          return
+        }
       } else {
         currentX = e.clientX
         currentY = e.clientY
@@ -83,7 +91,7 @@ export function useLongPress({
   )
 
   const handleEnd = useCallback(
-    (e: React.TouchEvent | React.MouseEvent) => {
+    (_: React.TouchEvent | React.MouseEvent) => {
       clear()
 
       // 롱프레스가 아니었으면 클릭 처리

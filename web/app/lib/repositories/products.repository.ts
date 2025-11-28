@@ -29,17 +29,17 @@ export class ProductsRepository extends BaseRepository<Product> {
       price,
       active: input.active !== false,
     }
-    
+
     // description은 값이 있을 때만 포함 (스키마에 없을 수 있음)
     const descriptionValue = input.description
     if (descriptionValue !== undefined && descriptionValue !== null && descriptionValue !== '' && String(descriptionValue).trim() !== '') {
-      payload.description = String(descriptionValue).trim()
+      payload['description'] = String(descriptionValue).trim()
     }
-    if (payload.description === undefined || payload.description === null || payload.description === '' || String(payload.description).trim() === '') {
-      delete payload.description
+    if (payload['description'] === undefined || payload['description'] === null || payload['description'] === '' || String(payload['description']).trim() === '') {
+      delete payload['description']
     }
-    
-    return this.create(payload as Product)
+
+    return this.create(payload as unknown as Product)
   }
 
   /**
@@ -67,10 +67,10 @@ export class ProductsRepository extends BaseRepository<Product> {
     // description은 값이 있을 때만 업데이트 (스키마에 없을 수 있음)
     const descriptionValue = input.description
     if (descriptionValue !== undefined && descriptionValue !== null && descriptionValue !== '' && String(descriptionValue).trim() !== '') {
-      payload.description = String(descriptionValue).trim()
+      payload['description'] = String(descriptionValue).trim()
     }
-    if (payload.description === undefined || payload.description === null || payload.description === '' || String(payload.description).trim() === '') {
-      delete payload.description
+    if (payload['description'] === undefined || payload['description'] === null || payload['description'] === '' || String(payload['description']).trim() === '') {
+      delete payload['description']
     }
     if (input.active !== undefined) payload.active = input.active
 

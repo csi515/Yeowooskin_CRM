@@ -10,7 +10,7 @@ export class StaffRepository extends BaseRepository<Staff> {
     super(userId, 'staff')
   }
 
-  protected getSearchFields(): string[] {
+  protected override getSearchFields(): string[] {
     return ['name', 'email', 'phone', 'role']
   }
 
@@ -30,17 +30,17 @@ export class StaffRepository extends BaseRepository<Staff> {
       role: input.role || null,
       active: input.active !== false,
     }
-    
+
     // notes는 값이 있을 때만 포함 (스키마에 없을 수 있음)
     const notesValue = input.notes
     if (notesValue !== undefined && notesValue !== null && notesValue !== '' && String(notesValue).trim() !== '') {
-      payload.notes = String(notesValue).trim()
+      payload['notes'] = String(notesValue).trim()
     }
-    if (payload.notes === undefined || payload.notes === null || payload.notes === '' || String(payload.notes).trim() === '') {
-      delete payload.notes
+    if (payload['notes'] === undefined || payload['notes'] === null || payload['notes'] === '' || String(payload['notes']).trim() === '') {
+      delete payload['notes']
     }
-    
-    return this.create(payload as Staff)
+
+    return this.create(payload as unknown as Staff)
   }
 
   /**
@@ -63,10 +63,10 @@ export class StaffRepository extends BaseRepository<Staff> {
     // notes는 값이 있을 때만 업데이트 (스키마에 없을 수 있음)
     const notesValue = input.notes
     if (notesValue !== undefined && notesValue !== null && notesValue !== '' && String(notesValue).trim() !== '') {
-      payload.notes = String(notesValue).trim()
+      payload['notes'] = String(notesValue).trim()
     }
-    if (payload.notes === undefined || payload.notes === null || payload.notes === '' || String(payload.notes).trim() === '') {
-      delete payload.notes
+    if (payload['notes'] === undefined || payload['notes'] === null || payload['notes'] === '' || String(payload['notes']).trim() === '') {
+      delete payload['notes']
     }
     if (input.active !== undefined) payload.active = input.active
 

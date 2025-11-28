@@ -88,13 +88,13 @@ export class CustomerProductsRepository extends BaseRepository<CustomerProduct> 
       product_id,
       quantity,
     }
-    
+
     // notes는 값이 있을 때만 포함 (스키마에 없을 수 있음)
     if (notes !== undefined && notes !== null && notes !== '' && String(notes).trim() !== '') {
-      payload.notes = String(notes).trim()
+      payload['notes'] = String(notes).trim()
     }
-    if (payload.notes === undefined || payload.notes === null || payload.notes === '' || String(payload.notes).trim() === '') {
-      delete payload.notes
+    if (payload['notes'] === undefined || payload['notes'] === null || payload['notes'] === '' || String(payload['notes']).trim() === '') {
+      delete payload['notes']
     }
 
     const { data, error } = await this.supabase
@@ -130,15 +130,15 @@ export class CustomerProductsRepository extends BaseRepository<CustomerProduct> 
 
     const patch: Record<string, unknown> = {}
     if (typeof input.quantity !== 'undefined') {
-      patch.quantity = Number(input.quantity)
+      patch['quantity'] = Number(input.quantity)
     }
     // notes는 값이 있을 때만 업데이트 (스키마에 없을 수 있음)
     const notesValue = input.notes
     if (notesValue !== undefined && notesValue !== null && notesValue !== '' && String(notesValue).trim() !== '') {
-      patch.notes = String(notesValue).trim()
+      patch['notes'] = String(notesValue).trim()
     }
-    if (patch.notes === undefined || patch.notes === null || patch.notes === '' || String(patch.notes).trim() === '') {
-      delete patch.notes
+    if (patch['notes'] === undefined || patch['notes'] === null || patch['notes'] === '' || String(patch['notes']).trim() === '') {
+      delete patch['notes']
     }
 
     const { data, error } = await this.supabase
@@ -157,7 +157,7 @@ export class CustomerProductsRepository extends BaseRepository<CustomerProduct> 
     if (!input.no_ledger) {
       try {
         const beforeQty = Number(prev.quantity || 0)
-        const afterQty = typeof patch.quantity !== 'undefined' ? Number(patch.quantity) : beforeQty
+        const afterQty = typeof patch['quantity'] !== 'undefined' ? Number(patch['quantity']) : beforeQty
         const delta = afterQty - beforeQty
 
         if (delta !== 0) {
@@ -260,7 +260,7 @@ export class CustomerProductsRepository extends BaseRepository<CustomerProduct> 
 
       const updatePayload: Record<string, unknown> = { reason: newReason }
       if (typeof deltaOverride !== 'undefined' && !Number.isNaN(deltaOverride)) {
-        updatePayload.delta = deltaOverride
+        updatePayload['delta'] = deltaOverride
       }
 
       const { error: updateError } = await this.supabase
@@ -288,7 +288,7 @@ export class CustomerProductsRepository extends BaseRepository<CustomerProduct> 
 
       const updatePayload: Record<string, unknown> = { reason: replaceTo || latest.reason }
       if (typeof deltaOverride !== 'undefined' && !Number.isNaN(deltaOverride)) {
-        updatePayload.delta = deltaOverride
+        updatePayload['delta'] = deltaOverride
       }
 
       const { error: updateError } = await this.supabase

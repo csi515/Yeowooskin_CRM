@@ -15,7 +15,7 @@ import Pagination from '../components/common/Pagination'
 
 const ProductDetailModal = lazy(() => import('../components/modals/ProductDetailModal'))
 
-type Product = { id?: string | number; name: string; price?: number; description?: string; active?: boolean }
+import type { Product } from '@/types/entities'
 
 type ProductForm = {
   name: string
@@ -118,12 +118,12 @@ export default function ProductsPage() {
 
   // totalPages 계산 (필터링된 데이터 기준)
   const totalPages = Math.max(1, Math.ceil(filteredProducts.length / pageSize))
-  
+
   // 필터링된 데이터의 길이로 totalItems 업데이트
   useEffect(() => {
     setTotalItems(filteredProducts.length)
   }, [filteredProducts.length, setTotalItems])
-  
+
   // 페이지 변경 시 필터/검색 변경으로 인해 현재 페이지가 유효 범위를 벗어나면 첫 페이지로 이동
   useEffect(() => {
     if (page > totalPages && totalPages > 0) {
@@ -195,41 +195,41 @@ export default function ProductsPage() {
             { bg: 'from-purple-50 to-violet-100', border: 'border-purple-200', text: 'text-purple-700', label: 'text-purple-600' },
             { bg: 'from-indigo-50 to-blue-100', border: 'border-indigo-200', text: 'text-indigo-700', label: 'text-indigo-600' },
           ]
-          const scheme = colorSchemes[index % colorSchemes.length]
+          const scheme = colorSchemes[index % colorSchemes.length]!
           return (
-          <div key={String(p.id)} className={`bg-gradient-to-br ${scheme.bg} rounded-lg border ${scheme.border} shadow-sm p-2.5 sm:p-3 flex flex-col gap-1.5 hover:shadow-md transition-all duration-200`}>
-            <div className="flex items-start justify-between gap-1.5">
-              <div className="min-w-0 flex-1">
-                <div className={`text-xs font-medium ${scheme.label} mb-0.5`}>제품명</div>
-                <button className={`text-sm font-semibold ${scheme.text} underline-offset-2 hover:underline truncate block w-full text-left`} onClick={() => { setSelected(p); setDetailOpen(true) }}>
-                  {p.name}
-                </button>
-              </div>
-              <span className={`text-[10px] px-1.5 py-0.5 rounded-full border font-medium whitespace-nowrap flex-shrink-0 ${
-                p.active === false 
-                  ? 'bg-gray-100 text-gray-600 border-gray-200' 
+            <div key={String(p['id'])} className={`bg-gradient-to-br ${scheme.bg} rounded-lg border ${scheme.border} shadow-sm p-2.5 sm:p-3 flex flex-col gap-1.5 hover:shadow-md transition-all duration-200`}>
+              <div className="flex items-start justify-between gap-1.5">
+                <div className="min-w-0 flex-1">
+                  <div className={`text-xs font-medium ${scheme.label} mb-0.5`}>제품명</div>
+                  <button className={`text-sm font-semibold ${scheme.text} underline-offset-2 hover:underline truncate block w-full text-left`} onClick={() => { setSelected(p); setDetailOpen(true) }}>
+                    {p['name']}
+                  </button>
+                </div>
+                <span className={`text-[10px] px-1.5 py-0.5 rounded-full border font-medium whitespace-nowrap flex-shrink-0 ${p['active'] === false
+                  ? 'bg-gray-100 text-gray-600 border-gray-200'
                   : 'bg-emerald-100 text-emerald-700 border-emerald-300'
-              }`}>
-                {p.active === false ? '비활성' : '활성'}
-              </span>
+                  }`}>
+                  {p['active'] === false ? '비활성' : '활성'}
+                </span>
+              </div>
+              <div className={`text-xs font-medium ${scheme.label}`}>가격</div>
+              <div className={`text-base font-bold ${scheme.text}`}>₩{Number(p['price'] || 0).toLocaleString()}</div>
+              <div className="mt-1">
+                <Button
+                  size="sm"
+                  variant="secondary"
+                  onClick={() => { setSelected(p); setDetailOpen(true) }}
+                  aria-label="상세보기"
+                  title="상세보기"
+                  className="w-full h-8 px-2 text-xs touch-manipulation"
+                  leftIcon={<Pencil className="h-3 w-3" />}
+                >
+                  수정
+                </Button>
+              </div>
             </div>
-            <div className={`text-xs font-medium ${scheme.label}`}>가격</div>
-            <div className={`text-base font-bold ${scheme.text}`}>₩{Number(p.price || 0).toLocaleString()}</div>
-            <div className="mt-1">
-              <Button
-                size="sm"
-                variant="secondary"
-                onClick={() => { setSelected(p); setDetailOpen(true) }}
-                aria-label="상세보기"
-                title="상세보기"
-                className="w-full h-8 px-2 text-xs touch-manipulation"
-                leftIcon={<Pencil className="h-3 w-3" />}
-              >
-                수정
-              </Button>
-            </div>
-          </div>
-        )})}
+          )
+        })}
         {!loading && filteredProducts.length === 0 && (
           <div className="col-span-full">
             <EmptyState
@@ -280,11 +280,10 @@ export default function ProductsPage() {
                   <div>
                     <label className="mb-1 block text-sm font-medium text-neutral-700">이름</label>
                     <input
-                      className={`h-10 w-full rounded-lg border bg-white px-3 text-sm text-neutral-800 outline-none shadow-sm placeholder:text-neutral-400 focus:ring-2 transition-all duration-fast ${
-                        form.errors.name && form.touched.name
-                          ? 'border-error-500 focus:border-error-500 focus:ring-error-200'
-                          : 'border-neutral-300 focus:border-secondary-500 focus:ring-secondary-200'
-                      }`}
+                      className={`h-10 w-full rounded-lg border bg-white px-3 text-sm text-neutral-800 outline-none shadow-sm placeholder:text-neutral-400 focus:ring-2 transition-all duration-fast ${form.errors.name && form.touched.name
+                        ? 'border-error-500 focus:border-error-500 focus:ring-error-200'
+                        : 'border-neutral-300 focus:border-secondary-500 focus:ring-secondary-200'
+                        }`}
                       placeholder="예) 로션 기획세트"
                       value={form.values.name}
                       onChange={e => {
@@ -300,11 +299,10 @@ export default function ProductsPage() {
                   <div>
                     <label className="mb-1 block text-sm font-medium text-neutral-700">가격</label>
                     <input
-                      className={`h-10 w-full rounded-lg border bg-white px-3 text-sm text-neutral-800 outline-none shadow-sm placeholder:text-neutral-400 focus:ring-2 transition-all duration-fast ${
-                        form.errors.price && form.touched.price
-                          ? 'border-error-500 focus:border-error-500 focus:ring-error-200'
-                          : 'border-neutral-300 focus:border-secondary-500 focus:ring-secondary-200'
-                      }`}
+                      className={`h-10 w-full rounded-lg border bg-white px-3 text-sm text-neutral-800 outline-none shadow-sm placeholder:text-neutral-400 focus:ring-2 transition-all duration-fast ${form.errors.price && form.touched.price
+                        ? 'border-error-500 focus:border-error-500 focus:ring-error-200'
+                        : 'border-neutral-300 focus:border-secondary-500 focus:ring-secondary-200'
+                        }`}
                       placeholder="숫자만 입력 (원)"
                       type="number"
                       value={form.values.price}
@@ -376,6 +374,6 @@ export default function ProductsPage() {
           />
         </Suspense>
       )}
-      </main>
+    </main>
   )
 }

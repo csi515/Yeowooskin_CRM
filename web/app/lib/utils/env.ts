@@ -43,7 +43,7 @@ export function validateEnv(): EnvSchema {
     NEXT_PUBLIC_SUPABASE_URL: env.NEXT_PUBLIC_SUPABASE_URL!,
     NEXT_PUBLIC_SUPABASE_ANON_KEY: env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
     SUPABASE_SERVICE_ROLE_KEY: env.SUPABASE_SERVICE_ROLE_KEY!,
-    NEXT_PUBLIC_SITE_URL: process.env.NEXT_PUBLIC_SITE_URL,
+    ...(process.env['NEXT_PUBLIC_SITE_URL'] ? { NEXT_PUBLIC_SITE_URL: process.env['NEXT_PUBLIC_SITE_URL'] } : {}),
   }
 }
 
@@ -53,9 +53,9 @@ export function validateEnv(): EnvSchema {
  */
 export function getPublicEnv() {
   return {
-    supabaseUrl: process.env.NEXT_PUBLIC_SUPABASE_URL || '',
-    supabaseAnonKey: process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || '',
-    siteUrl: process.env.NEXT_PUBLIC_SITE_URL || '',
+    supabaseUrl: process.env['NEXT_PUBLIC_SUPABASE_URL'] || '',
+    supabaseAnonKey: process.env['NEXT_PUBLIC_SUPABASE_ANON_KEY'] || '',
+    siteUrl: process.env['NEXT_PUBLIC_SITE_URL'] || '',
   }
 }
 
@@ -64,7 +64,7 @@ export function getPublicEnv() {
  */
 export function getServerEnv() {
   return {
-    supabaseServiceRoleKey: process.env.SUPABASE_SERVICE_ROLE_KEY || '',
+    supabaseServiceRoleKey: process.env['SUPABASE_SERVICE_ROLE_KEY'] || '',
   }
 }
 

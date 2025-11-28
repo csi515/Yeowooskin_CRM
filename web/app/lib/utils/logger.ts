@@ -26,9 +26,9 @@ class Logger {
     const entry: LogEntry = {
       level,
       message,
-      data,
       timestamp: new Date().toISOString(),
-      context,
+      ...(data !== undefined ? { data } : {}),
+      ...(context !== undefined ? { context } : {}),
     }
 
     // 개발 환경에서는 항상 로그 저장
@@ -44,7 +44,7 @@ class Logger {
     if (this.isDevelopment) {
       const prefix = context ? `[${context}]` : ''
       const logMessage = `${prefix} ${message}`
-      
+
       switch (level) {
         case 'debug':
           // eslint-disable-next-line no-console
@@ -90,7 +90,7 @@ class Logger {
   }
 
   error(message: string, error?: unknown, context?: string) {
-    const errorData = error instanceof Error 
+    const errorData = error instanceof Error
       ? { message: error.message, stack: error.stack, name: error.name }
       : error
     this.log('error', message, errorData, context)

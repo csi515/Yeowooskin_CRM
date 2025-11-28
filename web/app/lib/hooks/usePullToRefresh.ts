@@ -35,29 +35,33 @@ export function usePullToRefresh({
 
     const handleTouchStart = (e: TouchEvent) => {
       if (isRefreshingRef.current) return
-      
-      const touch = e.touches[0]
-      touchStartY = touch.clientY
-      scrollTop = container.scrollTop
-      
-      // 맨 위에 있을 때만 활성화
-      if (scrollTop === 0) {
-        startYRef.current = touchStartY
-        currentYRef.current = touchStartY
+
+      if (e.touches.length > 0) {
+        const touch = e.touches[0]!
+        touchStartY = touch.clientY
+        scrollTop = container.scrollTop
+
+        // 맨 위에 있을 때만 활성화
+        if (scrollTop === 0) {
+          startYRef.current = touchStartY
+          currentYRef.current = touchStartY
+        }
       }
     }
 
     const handleTouchMove = (e: TouchEvent) => {
       if (isRefreshingRef.current || scrollTop > 0) return
 
-      const touch = e.touches[0]
-      currentYRef.current = touch.clientY
-      const deltaY = currentYRef.current - startYRef.current
+      if (e.touches.length > 0) {
+        const touch = e.touches[0]!
+        currentYRef.current = touch.clientY
+        const deltaY = currentYRef.current - startYRef.current
 
-      if (deltaY > 0 && scrollTop === 0) {
-        e.preventDefault()
-        setIsPulling(true)
-        setPullDistance(Math.min(deltaY, threshold * 1.5))
+        if (deltaY > 0 && scrollTop === 0) {
+          e.preventDefault()
+          setIsPulling(true)
+          setPullDistance(Math.min(deltaY, threshold * 1.5))
+        }
       }
     }
 
@@ -70,7 +74,7 @@ export function usePullToRefresh({
         isRefreshingRef.current = true
         setIsPulling(false)
         setPullDistance(0)
-        
+
         try {
           await onRefresh()
         } finally {

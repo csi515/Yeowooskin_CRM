@@ -35,7 +35,16 @@ export function useSwipe(options: UseSwipeOptions = {}) {
   const isTrackingRef = useRef<boolean>(false)
 
   const handleTouchStart = useCallback((e: React.TouchEvent | TouchEvent) => {
-    const touch = 'touches' in e ? e.touches[0] : e
+    let touch: React.Touch | Touch
+    if ('touches' in e) {
+      if (e.touches.length > 0) {
+        touch = e.touches[0]!
+      } else {
+        return
+      }
+    } else {
+      touch = e
+    }
     startXRef.current = touch.clientX
     startYRef.current = touch.clientY
     startTimeRef.current = Date.now()
@@ -45,7 +54,16 @@ export function useSwipe(options: UseSwipeOptions = {}) {
   const handleTouchEnd = useCallback((e: React.TouchEvent | TouchEvent) => {
     if (!isTrackingRef.current) return
 
-    const touch = 'changedTouches' in e ? e.changedTouches[0] : e
+    let touch: React.Touch | Touch
+    if ('changedTouches' in e) {
+      if (e.changedTouches.length > 0) {
+        touch = e.changedTouches[0]!
+      } else {
+        return
+      }
+    } else {
+      touch = e
+    }
     const endX = touch.clientX
     const endY = touch.clientY
     const endTime = Date.now()

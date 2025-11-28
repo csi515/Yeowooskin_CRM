@@ -48,6 +48,7 @@
   ],
   "exclude": [
     "node_modules",
-    ".next/types/app/api/admin/users/route.ts"
+    ".next/types/app/api/admin/users/route.ts",
+    "scripts"
   ]
 }

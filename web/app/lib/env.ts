@@ -8,17 +8,17 @@
  * 빌드 시점에 undefined가 아니어야 함
  */
 const requiredEnvVars = {
-  NEXT_PUBLIC_SUPABASE_URL: process.env.NEXT_PUBLIC_SUPABASE_URL,
-  NEXT_PUBLIC_SUPABASE_ANON_KEY: process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY,
+  NEXT_PUBLIC_SUPABASE_URL: process.env['NEXT_PUBLIC_SUPABASE_URL'],
+  NEXT_PUBLIC_SUPABASE_ANON_KEY: process.env['NEXT_PUBLIC_SUPABASE_ANON_KEY'],
 } as const
 
 /**
  * 선택적 환경 변수 목록
  */
 const optionalEnvVars = {
-  NEXT_PUBLIC_BASE_URL: process.env.NEXT_PUBLIC_BASE_URL || '',
-  NEXT_PUBLIC_SITE_URL: process.env.NEXT_PUBLIC_SITE_URL || '',
-  SUPABASE_SERVICE_ROLE_KEY: process.env.SUPABASE_SERVICE_ROLE_KEY,
+  NEXT_PUBLIC_BASE_URL: process.env['NEXT_PUBLIC_BASE_URL'] || '',
+  NEXT_PUBLIC_SITE_URL: process.env['NEXT_PUBLIC_SITE_URL'] || '',
+  SUPABASE_SERVICE_ROLE_KEY: process.env['SUPABASE_SERVICE_ROLE_KEY'],
 } as const
 
 /**
@@ -53,9 +53,9 @@ function validateEnv(): Env {
   return {
     NEXT_PUBLIC_SUPABASE_URL: requiredEnvVars.NEXT_PUBLIC_SUPABASE_URL!,
     NEXT_PUBLIC_SUPABASE_ANON_KEY: requiredEnvVars.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-    NEXT_PUBLIC_BASE_URL: optionalEnvVars.NEXT_PUBLIC_BASE_URL,
-    NEXT_PUBLIC_SITE_URL: optionalEnvVars.NEXT_PUBLIC_SITE_URL,
-    SUPABASE_SERVICE_ROLE_KEY: optionalEnvVars.SUPABASE_SERVICE_ROLE_KEY,
+    NEXT_PUBLIC_BASE_URL: optionalEnvVars.NEXT_PUBLIC_BASE_URL || '',
+    NEXT_PUBLIC_SITE_URL: optionalEnvVars.NEXT_PUBLIC_SITE_URL || '',
+    ...(optionalEnvVars.SUPABASE_SERVICE_ROLE_KEY ? { SUPABASE_SERVICE_ROLE_KEY: optionalEnvVars.SUPABASE_SERVICE_ROLE_KEY } : {}),
   }
 }
 

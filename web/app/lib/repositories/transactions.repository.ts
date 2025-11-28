@@ -52,42 +52,42 @@ export class TransactionsRepository extends BaseRepository<Transaction> {
       amount: input.amount,
       transaction_date: input.transaction_date || new Date().toISOString(),
     }
-    
+
     if (input.type !== undefined) {
       const typeValue = String(input.type).trim()
       if (typeValue) {
-        payload.type = typeValue
+        payload['type'] = typeValue
       }
     }
-    
+
     // appointment_id가 명시적으로 제공된 경우에만 포함
     if (input.appointment_id !== undefined) {
       payload.appointment_id = input.appointment_id || null
     }
-    
+
     // payment_method는 값이 있을 때만 포함 (스키마에 없을 수 있음)
     const paymentMethodValue = input.payment_method
     if (paymentMethodValue !== undefined) {
       if (paymentMethodValue === null) {
-        payload.payment_method = null
+        payload['payment_method'] = null
       } else {
         const trimmed = String(paymentMethodValue).trim()
-        payload.payment_method = trimmed ? trimmed : null
+        payload['payment_method'] = trimmed ? trimmed : null
       }
     }
-    
+
     // notes는 값이 있을 때만 포함 (스키마에 없을 수 있음)
     // undefined, null, 빈 문자열, 공백만 있는 경우 제외
     const notesValue = input.notes
     if (notesValue !== undefined) {
       if (notesValue === null) {
-        payload.notes = null
+        payload['notes'] = null
       } else {
         const trimmed = String(notesValue).trim()
-        payload.notes = trimmed ? trimmed : null
+        payload['notes'] = trimmed ? trimmed : null
       }
     }
-    
+
     return this.create(payload)
   }
 
@@ -108,9 +108,9 @@ export class TransactionsRepository extends BaseRepository<Transaction> {
     if (input.type !== undefined) {
       const typeValue = String(input.type).trim()
       if (typeValue) {
-        payload.type = typeValue
+        payload['type'] = typeValue
       } else {
-        delete payload.type
+        delete payload['type']
       }
     }
     if (input.amount !== undefined) payload.amount = input.amount
@@ -118,10 +118,10 @@ export class TransactionsRepository extends BaseRepository<Transaction> {
     const paymentMethodValue = input.payment_method
     if (paymentMethodValue !== undefined) {
       if (paymentMethodValue === null) {
-        payload.payment_method = null
+        payload['payment_method'] = null
       } else {
         const trimmed = String(paymentMethodValue).trim()
-        payload.payment_method = trimmed ? trimmed : null
+        payload['payment_method'] = trimmed ? trimmed : null
       }
     }
     if (input.transaction_date !== undefined) {
@@ -131,10 +131,10 @@ export class TransactionsRepository extends BaseRepository<Transaction> {
     const notesValue = input.notes
     if (notesValue !== undefined) {
       if (notesValue === null) {
-        payload.notes = null
+        payload['notes'] = null
       } else {
         const trimmed = String(notesValue).trim()
-        payload.notes = trimmed ? trimmed : null
+        payload['notes'] = trimmed ? trimmed : null
       }
     }
 

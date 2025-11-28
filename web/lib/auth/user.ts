@@ -12,7 +12,7 @@ export function getUserIdFromCookies(): string | null {
     if (!token) return null
     const parts = token.split('.')
     if (parts.length < 2) return null
-    const payload = JSON.parse(base64UrlToString(parts[1]))
+    const payload = JSON.parse(base64UrlToString(parts[1]!))
     return payload?.sub || null
   } catch {
     return null

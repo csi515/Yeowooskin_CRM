@@ -27,10 +27,13 @@ export function normalizeError(error: unknown): AppError {
   }
 
   if (error && typeof error === 'object' && 'message' in error) {
+    const code = 'code' in error ? String((error as any).code) : undefined
+    const status = 'status' in error ? Number((error as any).status) : undefined
+
     return {
       message: String(error.message),
-      code: 'code' in error ? String(error.code) : undefined,
-      status: 'status' in error ? Number(error.status) : undefined,
+      ...(code ? { code } : {}),
+      ...(status ? { status } : {}),
       originalError: error,
     }
   }

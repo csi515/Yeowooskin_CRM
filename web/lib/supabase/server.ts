@@ -12,7 +12,7 @@ import { getEnv } from '@/app/lib/env'
 export function createSupabaseServerClient() {
   const url = getEnv.supabaseUrl()
   const anon = getEnv.supabaseAnonKey()
-  
+
   if (!url || !anon) {
     throw new Error('Supabase 환경변수가 설정되지 않았습니다.')
   }
@@ -29,7 +29,7 @@ export function createSupabaseServerClient() {
       detectSessionInUrl: false,
     },
     global: {
-      headers: accessToken ? { Authorization: `Bearer ${accessToken}` } : undefined
+      headers: accessToken ? { Authorization: `Bearer ${accessToken}` } : {}
     }
   })
 
@@ -51,7 +51,7 @@ export function createSupabaseServerClient() {
 export async function getServerUser() {
   const supabase = createSupabaseServerClient()
   const { data: { user }, error } = await supabase.auth.getUser()
-  
+
   if (error) {
     // 토큰이 만료되었거나 유효하지 않은 경우
     if (error.message.includes('expired') || error.message.includes('invalid')) {
@@ -59,6 +59,6 @@ export async function getServerUser() {
     }
     return { user: null, error: error.message }
   }
-  
+
   return { user, error: null }
 }

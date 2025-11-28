@@ -38,7 +38,7 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
       } else {
         newResolvedTheme = theme
       }
-      
+
       setResolvedTheme(newResolvedTheme)
 
       const root = document.documentElement
@@ -54,6 +54,7 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
       mediaQuery.addEventListener('change', handleChange)
       return () => mediaQuery.removeEventListener('change', handleChange)
     }
+    return
   }, [theme, mounted])
 
   const setTheme = (newTheme: Theme) => {
