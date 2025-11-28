@@ -42,7 +42,7 @@ describe('errorHandler utils', () => {
 
   describe('getUserFriendlyMessage', () => {
     it('네트워크 에러', () => {
-      const error = { message: 'fetch failed', status: undefined }
+      const error = { message: 'fetch failed' }
       const result = getUserFriendlyMessage(error)
       expect(result).toBe('네트워크 연결을 확인해주세요.')
     })
@@ -66,13 +66,13 @@ describe('errorHandler utils', () => {
     })
 
     it('타임아웃 에러', () => {
-      const error = { message: 'timeout occurred', status: undefined }
+      const error = { message: 'timeout occurred' }
       const result = getUserFriendlyMessage(error)
       expect(result).toBe('요청 시간이 초과되었습니다. 다시 시도해주세요.')
     })
 
     it('기본 메시지', () => {
-      const error = { message: 'Custom error message', status: undefined }
+      const error = { message: 'Custom error message' }
       const result = getUserFriendlyMessage(error)
       expect(result).toBe('Custom error message')
     })
@@ -80,14 +80,13 @@ describe('errorHandler utils', () => {
 
   describe('logError', () => {
     it('개발 환경에서 상세 로그', () => {
-      const originalEnv = process.env.NODE_ENV
-      process.env.NODE_ENV = 'development'
-      
-      const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {})
+      vi.stubEnv('NODE_ENV', 'development')
+
+      const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => { })
       const error = { message: 'Test error', code: 'ERR001' }
-      
+
       logError('TestContext', error)
-      
+
       expect(consoleSpy).toHaveBeenCalledWith(
         '[TestContext]',
         expect.objectContaining({
@@ -95,24 +94,23 @@ describe('errorHandler utils', () => {
           code: 'ERR001',
         })
       )
-      
+
       consoleSpy.mockRestore()
-      process.env.NODE_ENV = originalEnv
+      vi.unstubAllEnvs()
     })
 
     it('프로덕션 환경에서 간단한 로그', () => {
-      const originalEnv = process.env.NODE_ENV
-      process.env.NODE_ENV = 'production'
-      
-      const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {})
+      vi.stubEnv('NODE_ENV', 'production')
+
+      const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => { })
       const error = { message: 'Test error' }
-      
+
       logError('TestContext', error)
-      
+
       expect(consoleSpy).toHaveBeenCalledWith('[TestContext]', 'Test error')
-      
+
       consoleSpy.mockRestore()
-      process.env.NODE_ENV = originalEnv
+      vi.unstubAllEnvs()
     })
   })
 })

@@ -1,6 +1,12 @@
 {
     "extends": "../tsconfig.json",
     "compilerOptions": {
+        "baseUrl": "..",
+        "paths": {
+            "@/*": [
+                "./*"
+            ]
+        },
         "noEmit": true,
         "module": "CommonJS",
         "moduleResolution": "Node",
@@ -10,7 +16,8 @@
     "include": [
         "./**/*.ts",
         "./**/*.js",
-        "../next-env.d.ts"
+        "../next-env.d.ts",
+        "../app/**/*"
     ],
     "exclude": [
         "node_modules"
