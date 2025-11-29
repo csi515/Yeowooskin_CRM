@@ -15,10 +15,10 @@ export default function ExpenseDetailModal({ open, onClose, item, onSaved, onDel
   const [error, setError] = useState('')
   const [categories] = useState<string[]>(getExpenseCategories())
 
-  useEffect(() => { 
+  useEffect(() => {
     setForm(item ? { ...item, amount: item.amount } : null)
   }, [item])
-  
+
   // 메모 입력 시 자동 카테고리 추천 (별도 effect로 분리)
   useEffect(() => {
     if (!item && form?.memo && !form.category) {
@@ -84,15 +84,17 @@ export default function ExpenseDetailModal({ open, onClose, item, onSaved, onDel
                 </div>
                 <div className="min-w-0">
                   <label className="block text-xs font-medium text-neutral-700 mb-0.5">금액 <span className="text-rose-600">*</span></label>
-                  <input 
-                    className="h-9 w-full min-w-0 rounded-lg border border-neutral-300 px-1.5 sm:px-2.5 text-xs sm:text-sm outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-300 text-right placeholder:text-neutral-400" 
-                    type="number" 
-                    placeholder="예: 12,000" 
-                    value={form.amount === null || form.amount === undefined || form.amount === '' ? '' : form.amount} 
+                  <input
+                    className="h-9 w-full min-w-0 rounded-lg border border-neutral-300 px-1.5 sm:px-2.5 text-xs sm:text-sm outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-300 text-right placeholder:text-neutral-400"
+                    type="number"
+                    placeholder="예: 12,000"
+                    autoComplete="off"
+                    value={form.amount === null || form.amount === undefined || form.amount === '' ? '' : form.amount}
                     onChange={e => {
                       const val = e.target.value
                       setForm(f => f && ({ ...f, amount: val === '' ? '' : (isNaN(Number(val)) ? '' : Number(val)) }))
-                    }} 
+                    }}
+                    onFocus={e => e.target.select()}
                   />
                 </div>
                 <div className="col-span-2">
@@ -108,20 +110,20 @@ export default function ExpenseDetailModal({ open, onClose, item, onSaved, onDel
                         <option key={cat} value={cat}>{cat}</option>
                       ))}
                     </select>
-                    <input 
-                      className="h-9 flex-1 rounded-lg border border-neutral-300 px-2.5 text-sm outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-300" 
-                      placeholder="직접 입력" 
-                      value={form.category || ''} 
-                      onChange={e => setForm(f => f && ({ ...f, category: e.target.value }))} 
+                    <input
+                      className="h-9 flex-1 rounded-lg border border-neutral-300 px-2.5 text-sm outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-300"
+                      placeholder="직접 입력"
+                      value={form.category || ''}
+                      onChange={e => setForm(f => f && ({ ...f, category: e.target.value }))}
                     />
                   </div>
                 </div>
                 <div className="col-span-2">
                   <label className="block text-xs font-medium text-neutral-700 mb-0.5">메모(선택)</label>
-                  <input 
-                    className="h-9 w-full rounded-lg border border-neutral-300 px-2.5 text-sm outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-300" 
-                    placeholder="추가 설명을 입력하세요 (자동 분류 지원)" 
-                    value={form.memo || ''} 
+                  <input
+                    className="h-9 w-full rounded-lg border border-neutral-300 px-2.5 text-sm outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-300"
+                    placeholder="추가 설명을 입력하세요 (자동 분류 지원)"
+                    value={form.memo || ''}
                     onChange={e => {
                       const memoValue = e.target.value
                       setForm(f => {
@@ -136,7 +138,7 @@ export default function ExpenseDetailModal({ open, onClose, item, onSaved, onDel
                         }
                         return updated
                       })
-                    }} 
+                    }}
                   />
                   {form.memo && !form.category && suggestCategory(form.memo) && (
                     <p className="mt-1 text-xs text-blue-600">

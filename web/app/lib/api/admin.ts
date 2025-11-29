@@ -16,5 +16,16 @@ export const adminApi = {
   async approveUser(input: ApproveUserInput): Promise<{ ok: boolean }> {
     return apiClient.post<{ ok: boolean }>('/api/approve-user', input)
   },
+
+  /**
+   * 사용자 거절
+   */
+  async rejectUser(userId: string): Promise<{ ok: boolean }> {
+    return apiClient.post<{ ok: boolean }>('/api/approve-user', {
+      userId,
+      approved: false,
+    })
+  },
 }
+
 

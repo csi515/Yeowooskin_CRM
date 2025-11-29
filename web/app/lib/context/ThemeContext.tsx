@@ -54,7 +54,8 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
       mediaQuery.addEventListener('change', handleChange)
       return () => mediaQuery.removeEventListener('change', handleChange)
     }
-    return
+    // theme !== 'system'인 경우에도 명시적으로 cleanup 함수 반환
+    return () => { }
   }, [theme, mounted])
 
   const setTheme = (newTheme: Theme) => {

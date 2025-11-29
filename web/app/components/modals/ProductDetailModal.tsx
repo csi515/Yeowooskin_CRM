@@ -79,11 +79,13 @@ export default function ProductDetailModal({ open, onClose, item, onSaved, onDel
                     className="h-9 w-full rounded-lg border border-neutral-300 px-2.5 text-sm outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-300 text-right placeholder:text-neutral-400"
                     type="number"
                     placeholder="예: 12,000"
+                    autoComplete="off"
                     value={form.price === null || form.price === undefined || form.price === '' ? '' : form.price}
                     onChange={e => {
                       const val = e.target.value
                       setForm(f => f && ({ ...f, price: val === '' ? '' : (isNaN(Number(val)) ? '' : Number(val)) }))
                     }}
+                    onFocus={e => e.target.select()}
                   />
                 </div>
               </div>

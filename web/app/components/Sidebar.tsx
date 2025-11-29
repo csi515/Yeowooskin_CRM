@@ -4,18 +4,20 @@ import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import clsx from 'clsx'
 import type { ReactNode } from 'react'
-import { 
-  LayoutDashboard, 
-  Calendar, 
-  Package, 
-  Users, 
-  UserCheck, 
+import {
+  LayoutDashboard,
+  Calendar,
+  Package,
+  Users,
+  UserCheck,
   DollarSign,
-  Settings
+  Settings,
+  Shield
 } from 'lucide-react'
 import LogoutButton from './ui/LogoutButton'
+import { useIsAdmin } from '@/app/lib/hooks/useUserRole'
 
-type Item = { 
+type Item = {
   href: string
   label: string
   icon?: ReactNode
@@ -38,20 +40,21 @@ type Props = {
   onToggleCollapse?: () => void
 }
 
-export default function Sidebar({ 
-  mobile = false, 
+export default function Sidebar({
+  mobile = false,
   onNavigate,
   collapsed = false,
-  onToggleCollapse 
+  onToggleCollapse
 }: Props = {}) {
   const pathname = usePathname()
+  const isAdmin = useIsAdmin()
   const wrapCls = mobile
     ? 'flex w-72 shrink-0 bg-white border-r border-neutral-200 min-h-screen flex-col shadow-md transition-all duration-300'
     : clsx(
-        'hidden md:flex shrink-0 bg-white border-r border-neutral-200 min-h-screen flex-col shadow-md transition-all duration-300',
-        collapsed ? 'w-20' : 'w-64'
-      )
-  
+      'hidden md:flex shrink-0 bg-white border-r border-neutral-200 min-h-screen flex-col shadow-md transition-all duration-300',
+      collapsed ? 'w-20' : 'w-64'
+    )
+
   return (
     <aside className={wrapCls}>
       {/* 헤더 */}
@@ -97,7 +100,7 @@ export default function Sidebar({
           </button>
         )}
       </div>
-      
+
       {/* 네비게이션 */}
       <nav className="flex-1 overflow-y-auto px-2 py-4 space-y-1 overscroll-contain scroll-smooth">
         {items.map(it => {
@@ -122,8 +125,8 @@ export default function Sidebar({
                 <span
                   className={clsx(
                     'flex-shrink-0 transition-colors duration-300',
-                    active 
-                      ? 'text-[#F472B6]' 
+                    active
+                      ? 'text-[#F472B6]'
                       : 'text-neutral-500 group-hover:text-neutral-700'
                   )}
                 >
@@ -141,8 +144,48 @@ export default function Sidebar({
             </Link>
           )
         })}
+
+        {/* 관리자 메뉴 */}
+        {isAdmin && (
+          <>
+            <div className="border-t border-neutral-200 my-2" />
+            <Link
+              href="/admin"
+              {...(onNavigate && { onClick: onNavigate })}
+              className={clsx(
+                'group relative flex items-center gap-3 px-3 py-3 sm:py-2.5 rounded-lg text-sm sm:text-base transition-all duration-300 cursor-pointer border border-transparent touch-manipulation min-h-[48px] sm:min-h-[44px]',
+                collapsed && 'justify-center px-2',
+                pathname?.startsWith('/admin')
+                  ? 'bg-[#FDF2F8] text-[#F472B6] shadow-sm font-semibold border-neutral-200'
+                  : 'text-neutral-600 hover:bg-neutral-50 hover:text-neutral-900 hover:border-neutral-200 active:bg-neutral-100'
+              )}
+              title={collapsed ? '사용자 관리' : undefined}
+              aria-label="사용자 관리"
+              aria-current={pathname?.startsWith('/admin') ? 'page' : undefined}
+            >
+              <span
+                className={clsx(
+                  'flex-shrink-0 transition-colors duration-300',
+                  pathname?.startsWith('/admin')
+                    ? 'text-[#F472B6]'
+                    : 'text-neutral-500 group-hover:text-neutral-700'
+                )}
+              >
+                <Shield className="h-5 w-5" />
+              </span>
+              {!collapsed && (
+                <span className="transition-opacity duration-300 truncate flex-1">
+                  사용자 관리
+                </span>
+              )}
+              {pathname?.startsWith('/admin') && !collapsed && (
+                <span className="pointer-events-none absolute left-0 top-1/2 -translate-y-1/2 h-8 w-1 rounded-r-full bg-[#F472B6]" />
+              )}
+            </Link>
+          </>
+        )}
       </nav>
-      
+
       {/* 푸터 */}
       <div className="p-3 sm:p-4 border-t border-neutral-200">
         <LogoutButton collapsed={collapsed} />

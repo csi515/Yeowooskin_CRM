@@ -77,7 +77,7 @@ export default function CustomerDetailModal({
         const saved = localStorage.getItem(`memoDraft:${item.id}`) || ''
         if (saved) setNewReason(saved)
       }
-    } catch {}
+    } catch { }
   }, [item])
 
   useEffect(() => {
@@ -96,7 +96,7 @@ export default function CustomerDetailModal({
           const init: Record<string, number> = {}
           normalized.forEach((h) => { if (h?.id) init[String(h.id)] = 1 })
           setHoldingDelta(init)
-        } catch {}
+        } catch { }
         setProducts(Array.isArray(productsData) ? productsData : [])
         setPointsBalance(Number(pointsData?.balance || 0))
       } catch { /* noop */ }
@@ -111,9 +111,9 @@ export default function CustomerDetailModal({
       try {
         setAllLedgerLoading(true)
         const offset = (allLedgerPage - 1) * allLedgerPageSize
-        const data = await customerProductsApi.getCustomerLedger(form.id, { 
+        const data = await customerProductsApi.getCustomerLedger(form.id, {
           limit: allLedgerPageSize + 1, // 다음 페이지 존재 여부 확인을 위해 +1
-          offset 
+          offset
         })
         const arr = Array.isArray(data) ? data : []
         setAllLedgerTotal(arr.length > allLedgerPageSize ? allLedgerPage * allLedgerPageSize + 1 : (allLedgerPage - 1) * allLedgerPageSize + arr.length)
@@ -207,11 +207,11 @@ export default function CustomerDetailModal({
     try {
       setLoading(true); setError(''); setFieldErrors({})
       if (!form) throw new Error('잘못된 입력입니다.')
-      const body: { name: string; phone?: string | null; email?: string | null; address?: string | null; features?: string } = { 
-        name: (form.name || '').trim(), 
-        phone: form.phone || null, 
-        email: form.email || null, 
-        address: form.address || null 
+      const body: { name: string; phone?: string | null; email?: string | null; address?: string | null; features?: string } = {
+        name: (form.name || '').trim(),
+        phone: form.phone || null,
+        email: form.email || null,
+        address: form.address || null
       }
       // features는 값이 있을 때만 포함
       if (features && features.trim() !== '') {
@@ -231,7 +231,7 @@ export default function CustomerDetailModal({
       if (!form.id && initialPoints && created?.id) {
         try {
           await pointsApi.addLedgerEntry(created.id, { delta: Number(initialPoints), reason: 'initial' })
-        } catch {}
+        } catch { }
       }
       onSaved(); onClose(); toast.success('고객이 저장되었습니다.')
     } catch (e: unknown) {
@@ -331,7 +331,7 @@ export default function CustomerDetailModal({
       if (form?.id) {
         try {
           window.dispatchEvent(new CustomEvent('holdings-updated', { detail: { customerId: form.id } }))
-        } catch {}
+        } catch { }
       }
       toast.success('추가되었습니다.')
     } catch {
@@ -359,7 +359,7 @@ export default function CustomerDetailModal({
       if (form?.id) {
         try {
           window.dispatchEvent(new CustomEvent('holdings-updated', { detail: { customerId: form.id } }))
-        } catch {}
+        } catch { }
       }
       toast.success('차감되었습니다.')
     } catch {
@@ -376,7 +376,7 @@ export default function CustomerDetailModal({
       if (form?.id) {
         try {
           window.dispatchEvent(new CustomEvent('holdings-updated', { detail: { customerId: form.id } }))
-        } catch {}
+        } catch { }
       }
     } catch {
       toast.error('삭제 실패')
@@ -442,6 +442,7 @@ export default function CustomerDetailModal({
                     if (!result) return null
                     return {
                       ...f!,
+                      name: result.name || '',
                       phone: result.phone ?? null,
                       email: result.email ?? null,
                       address: result.address ?? null,

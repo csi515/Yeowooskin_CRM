@@ -1,11 +1,14 @@
 'use client'
 
-import { useState } from 'react'
-import Card from '../ui/Card'
+import { useState, memo } from 'react'
+import { Settings, Bell, Database, AlertTriangle } from 'lucide-react'
+import CollapsibleSection from '../ui/CollapsibleSection'
 import Select from '../ui/Select'
 import Button from '../ui/Button'
 import Modal from '../ui/Modal'
 import { ModalBody, ModalFooter } from '../ui/Modal'
+import ToggleSwitch from '../ui/ToggleSwitch'
+import InfoTooltip from '../ui/InfoTooltip'
 import { type SystemSettings } from '@/types/settings'
 import { useAppToast } from '@/app/lib/ui/toast'
 
@@ -14,7 +17,7 @@ type Props = {
   onChange: (data: Partial<SystemSettings>) => void
 }
 
-export default function SystemSettingsSection({ data, onChange }: Props) {
+function SystemSettingsSection({ data, onChange }: Props) {
   const [showResetModal, setShowResetModal] = useState(false)
   const toast = useAppToast()
 
@@ -50,68 +53,95 @@ export default function SystemSettingsSection({ data, onChange }: Props) {
 
   return (
     <>
-      <Card>
-        <h2 className="text-xl font-bold text-neutral-900 mb-6">시스템 및 앱 관리 설정</h2>
-
+      <CollapsibleSection
+        title="시스템 및 앱 관리 설정"
+        description="시스템 알림과 데이터 관리를 설정합니다."
+        icon={<Settings className="w-6 h-6" />}
+        iconColor="from-purple-500 to-purple-600"
+      >
         <div className="space-y-6">
           {/* 알림 설정 */}
           <div className="space-y-4">
-            <h3 className="text-lg font-semibold text-neutral-800">알림 설정</h3>
+            <div className="flex items-center gap-2">
+              <Bell className="w-5 h-5 text-neutral-700" />
+              <h3 className="text-lg font-semibold text-neutral-800">알림 설정</h3>
+              <InfoTooltip content="앱의 알림 수신 여부를 설정하세요." />
+            </div>
 
-            <label className="flex items-center gap-2 cursor-pointer">
-              <input
-                type="checkbox"
+            <div className="space-y-3">
+              <ToggleSwitch
                 checked={data.pushNotificationsEnabled}
-                onChange={(e) => onChange({ pushNotificationsEnabled: e.target.checked })}
-                className="w-4 h-4 rounded border-neutral-300 text-blue-600"
+                onChange={(checked) => onChange({ pushNotificationsEnabled: checked })}
+                label="PUSH 알림 전체"
               />
-              <span className="text-sm font-medium text-neutral-700">PUSH 알림 전체</span>
-            </label>
 
-            <label className="flex items-center gap-2 cursor-pointer">
-              <input
-                type="checkbox"
+              <ToggleSwitch
                 checked={data.customerNotificationsEnabled}
-                onChange={(e) => onChange({ customerNotificationsEnabled: e.target.checked })}
-                className="w-4 h-4 rounded border-neutral-300 text-blue-600"
+                onChange={(checked) => onChange({ customerNotificationsEnabled: checked })}
+                label="고객 알림"
               />
-              <span className="text-sm font-medium text-neutral-700">고객 알림</span>
-            </label>
 
-            <label className="flex items-center gap-2 cursor-pointer">
-              <input
-                type="checkbox"
+              <ToggleSwitch
                 checked={data.internalNotificationsEnabled}
-                onChange={(e) => onChange({ internalNotificationsEnabled: e.target.checked })}
-                className="w-4 h-4 rounded border-neutral-300 text-blue-600"
+                onChange={(checked) => onChange({ internalNotificationsEnabled: checked })}
+                label="내부 알림"
               />
-              <span className="text-sm font-medium text-neutral-700">내부 알림</span>
-            </label>
+            </div>
           </div>
 
           {/* 데이터 관리 */}
-          <div className="border-t border-neutral-200 pt-4 space-y-4">
-            <h3 className="text-lg font-semibold text-neutral-800">데이터 관리</h3>
+          <div className="border-t border-neutral-200 pt-6 space-y-4">
+            <div className="flex items-center gap-2">
+              <Database className="w-5 h-5 text-neutral-700" />
+              <h3 className="text-lg font-semibold text-neutral-800">데이터 관리</h3>
+              <InfoTooltip content="데이터 백업, 복원 및 초기화 기능입니다." />
+            </div>
 
-            <div className="flex flex-col sm:flex-row gap-2">
-              <Button variant="outline" onClick={handleBackup}>
+            <div className="flex flex-col sm:flex-row gap-3">
+              <Button
+                variant="outline"
+                onClick={handleBackup}
+                className="flex-1"
+              >
                 백업
               </Button>
-              <Button variant="outline" onClick={handleRestore}>
+              <Button
+                variant="outline"
+                onClick={handleRestore}
+                className="flex-1"
+              >
                 복원
               </Button>
               <Button
                 variant="danger"
                 onClick={() => setShowResetModal(true)}
+                className="flex-1 border-2 border-rose-600"
+                leftIcon={<AlertTriangle className="h-4 w-4" />}
               >
                 모든 데이터 초기화
               </Button>
             </div>
+
+            <div className="p-4 bg-rose-50 border border-rose-200 rounded-lg">
+              <div className="flex items-start gap-2">
+                <AlertTriangle className="w-5 h-5 text-rose-600 flex-shrink-0 mt-0.5" />
+                <div>
+                  <h4 className="font-semibold text-rose-900 text-sm">주의사항</h4>
+                  <p className="text-sm text-rose-700 mt-1">
+                    데이터 초기화는 되돌릴 수 없습니다. 신중하게 사용하세요.
+                  </p>
+                </div>
+              </div>
+            </div>
           </div>
 
           {/* 보안 설정 */}
-          <div className="border-t border-neutral-200 pt-4 space-y-4">
-            <h3 className="text-lg font-semibold text-neutral-800">보안 설정</h3>
+          <div className="border-t border-neutral-200 pt-6 space-y-4">
+            <div className="flex items-center gap-2">
+              <Settings className="w-5 h-5 text-neutral-700" />
+              <h3 className="text-lg font-semibold text-neutral-800">보안 설정</h3>
+              <InfoTooltip content="자동 로그아웃 시간을 설정하세요." />
+            </div>
 
             <Select
               label="자동 로그아웃 시간"
@@ -126,13 +156,18 @@ export default function SystemSettingsSection({ data, onChange }: Props) {
             </Select>
           </div>
         </div>
-      </Card>
+      </CollapsibleSection>
 
       {/* 데이터 초기화 확인 모달 */}
       <Modal open={showResetModal} onClose={() => setShowResetModal(false)} size="md">
         <ModalBody>
           <div className="space-y-4">
-            <h3 className="text-lg font-bold text-neutral-900">모든 데이터 초기화</h3>
+            <div className="flex items-center gap-3">
+              <div className="w-12 h-12 rounded-full bg-rose-100 flex items-center justify-center">
+                <AlertTriangle className="w-6 h-6 text-rose-600" />
+              </div>
+              <h3 className="text-lg font-bold text-neutral-900">모든 데이터 초기화</h3>
+            </div>
             <p className="text-sm text-neutral-600">
               이 작업은 되돌릴 수 없습니다. 모든 고객 정보, 예약, 거래 내역, 설정이 삭제됩니다.
             </p>
@@ -154,3 +189,5 @@ export default function SystemSettingsSection({ data, onChange }: Props) {
   )
 }
 
+// React.memo로 래핑하여 props가 변경되지 않으면 리렌더링 방지
+export default memo(SystemSettingsSection)

@@ -1,6 +1,6 @@
 'use client'
 
-import { createContext, useContext, useState, useCallback, ReactNode } from 'react'
+import { createContext, useContext, useState, useCallback, useMemo, ReactNode } from 'react'
 import { CheckCircle2, AlertCircle, Info, AlertTriangle, X } from 'lucide-react'
 import clsx from 'clsx'
 
@@ -192,7 +192,8 @@ export function useAppToast() {
     throw new Error('useAppToast must be used within ToastProvider')
   }
 
-  return {
+  // useMemo로 메모이제이션하여 매번 새로운 객체가 생성되는 것을 방지
+  return useMemo(() => ({
     success: (title: string, description?: string) =>
       context.addToast({ title, ...(description ? { description } : {}), variant: 'success', duration: 3000 }),
     error: (title: string, description?: string) =>
@@ -201,5 +202,5 @@ export function useAppToast() {
       context.addToast({ title, ...(description ? { description } : {}), variant: 'info', duration: 3000 }),
     warning: (title: string, description?: string) =>
       context.addToast({ title, ...(description ? { description } : {}), variant: 'warning', duration: 3500 }),
-  }
+  }), [context])
 }
