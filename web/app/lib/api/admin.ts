@@ -26,6 +26,16 @@ export const adminApi = {
       approved: false,
     })
   },
+
+  /**
+   * 사용자 사용 중지 (거절과 동일하게 approved: false 처리)
+   */
+  async suspendUser(userId: string): Promise<{ ok: boolean }> {
+    return apiClient.post<{ ok: boolean }>('/api/approve-user', {
+      userId,
+      approved: false,
+    })
+  },
 }
 
 

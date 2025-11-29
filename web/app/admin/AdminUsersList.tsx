@@ -85,12 +85,13 @@ export default function AdminUsersList({ initialUsers }: Props) {
                             leftIcon={<Search className="h-4 w-4 text-neutral-400" />}
                         />
                     </div>
-                    <div className="flex gap-2">
+                    <div className="flex flex-wrap gap-2">
                         <Button
                             variant={filter === 'all' ? 'primary' : 'outline'}
                             size="md"
                             onClick={() => setFilter('all')}
                             leftIcon={<Filter className="h-4 w-4" />}
+                            className="flex-1 sm:flex-none justify-center"
                         >
                             전체
                         </Button>
@@ -98,6 +99,7 @@ export default function AdminUsersList({ initialUsers }: Props) {
                             variant={filter === 'pending' ? 'primary' : 'outline'}
                             size="md"
                             onClick={() => setFilter('pending')}
+                            className="flex-1 sm:flex-none justify-center"
                         >
                             대기 중
                         </Button>
@@ -105,6 +107,7 @@ export default function AdminUsersList({ initialUsers }: Props) {
                             variant={filter === 'approved' ? 'primary' : 'outline'}
                             size="md"
                             onClick={() => setFilter('approved')}
+                            className="flex-1 sm:flex-none justify-center"
                         >
                             승인됨
                         </Button>
@@ -175,11 +178,13 @@ export default function AdminUsersList({ initialUsers }: Props) {
                                 </div>
 
                                 {/* 액션 버튼 */}
-                                {!user.approved && (
-                                    <div className="pt-4 border-t border-neutral-200">
-                                        <UserActionButtons userId={user.id} userName={user.name} />
-                                    </div>
-                                )}
+                                <div className="pt-4 border-t border-neutral-200">
+                                    <UserActionButtons
+                                        userId={user.id}
+                                        userName={user.name}
+                                        isApproved={user.approved}
+                                    />
+                                </div>
                             </div>
                         </Card>
                     ))}

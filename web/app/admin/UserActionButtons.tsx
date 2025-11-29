@@ -13,12 +13,13 @@ interface Props {
     userName?: string | null
 }
 
-export default function UserActionButtons({ userId, userName }: Props) {
+export default function UserActionButtons({ userId, userName, isApproved = false }: Props & { isApproved?: boolean }) {
     const router = useRouter()
     const toast = useAppToast()
     const [pending, startTransition] = useTransition()
     const [showRejectModal, setShowRejectModal] = useState(false)
-    const [actionType, setActionType] = useState<'approve' | 'reject' | null>(null)
+    const [showSuspendModal, setShowSuspendModal] = useState(false)
+    const [actionType, setActionType] = useState<'approve' | 'reject' | 'suspend' | null>(null)
 
     const handleApprove = () => {
         setActionType('approve')
@@ -41,6 +42,10 @@ export default function UserActionButtons({ userId, userName }: Props) {
         setShowRejectModal(true)
     }
 
+    const handleSuspend = () => {
+        setShowSuspendModal(true)
+    }
+
     const confirmReject = () => {
         setActionType('reject')
         setShowRejectModal(false)
@@ -59,8 +64,69 @@ export default function UserActionButtons({ userId, userName }: Props) {
         })
     }
 
+    const confirmSuspend = () => {
+        setActionType('suspend')
+        setShowSuspendModal(false)
+        startTransition(async () => {
+            try {
+                const { adminApi } = await import('@/app/lib/api/admin')
+                await adminApi.suspendUser(userId)
+                toast.success('사용자가 사용 중지되었습니다.')
+                router.refresh()
+            } catch (error) {
+                const errorMessage = error instanceof Error ? error.message : '사용 중지 실패'
+                toast.error('사용 중지 실패', errorMessage)
+            } finally {
+                setActionType(null)
+            }
+        })
+    }
+
     const isApproving = pending && actionType === 'approve'
     const isRejecting = pending && actionType === 'reject'
+    const isSuspending = pending && actionType === 'suspend'
+
+    if (isApproved) {
+        return (
+            <>
+                <div className="flex items-center gap-2">
+                    <Button
+                        variant="danger"
+                        size="sm"
+                        leftIcon={<XCircle className="h-4 w-4" />}
+                        loading={isSuspending}
+                        disabled={pending}
+                        onClick={handleSuspend}
+                    >
+                        사용 중지
+                    </Button>
+                </div>
+
+                {/* 사용 중지 확인 모달 */}
+                <Modal open={showSuspendModal} onClose={() => setShowSuspendModal(false)} size="md">
+                    <ModalBody>
+                        <div className="space-y-4">
+                            <h3 className="text-lg font-bold text-neutral-900">사용자 사용 중지</h3>
+                            <p className="text-sm text-neutral-600">
+                                {userName ? `${userName}` : '이 사용자'}의 계정을 사용 중지하시겠습니까?
+                            </p>
+                            <p className="text-sm font-semibold text-rose-600">
+                                사용 중지된 사용자는 로그인할 수 없으며, 승인 대기 상태로 변경됩니다.
+                            </p>
+                        </div>
+                    </ModalBody>
+                    <ModalFooter>
+                        <Button variant="secondary" onClick={() => setShowSuspendModal(false)}>
+                            취소
+                        </Button>
+                        <Button variant="danger" onClick={confirmSuspend}>
+                            사용 중지
+                        </Button>
+                    </ModalFooter>
+                </Modal>
+            </>
+        )
+    }
 
     return (
         <>
