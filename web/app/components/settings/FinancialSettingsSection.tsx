@@ -1,11 +1,10 @@
 'use client'
 
 import { useState, memo } from 'react'
-import { DollarSign, Plus, Trash2, CalendarDays, CreditCard } from 'lucide-react'
+import { DollarSign, Plus, Trash2, CreditCard } from 'lucide-react'
 import CollapsibleSection from '../ui/CollapsibleSection'
 import Input from '../ui/Input'
 import Button from '../ui/Button'
-import ToggleSwitch from '../ui/ToggleSwitch'
 import InfoTooltip from '../ui/InfoTooltip'
 import { type FinancialSettings } from '@/types/settings'
 
@@ -16,6 +15,7 @@ type Props = {
 
 function FinancialSettingsSection({ data, onChange }: Props) {
   const [newCategory, setNewCategory] = useState('')
+  const [newIncomeCategory, setNewIncomeCategory] = useState('')
 
   const addCategory = () => {
     if (newCategory.trim() && !data.expenseCategories.includes(newCategory.trim())) {
@@ -32,14 +32,81 @@ function FinancialSettingsSection({ data, onChange }: Props) {
     })
   }
 
+  const addIncomeCategory = () => {
+    if (newIncomeCategory.trim() && !data.incomeCategories.includes(newIncomeCategory.trim())) {
+      onChange({
+        incomeCategories: [...data.incomeCategories, newIncomeCategory.trim()],
+      })
+      setNewIncomeCategory('')
+    }
+  }
+
+  const removeIncomeCategory = (category: string) => {
+    onChange({
+      incomeCategories: data.incomeCategories.filter((c) => c !== category),
+    })
+  }
+
   return (
     <CollapsibleSection
       title="재무 및 정산 설정"
-      description="재무 정보와 정산 설정을 관리합니다."
+      description="수입 및 비용 항목을 관리합니다."
       icon={<DollarSign className="w-6 h-6" />}
       iconColor="from-green-500 to-green-600"
     >
       <div className="space-y-6">
+        {/* 수입 항목 관리 */}
+        <div className="space-y-4">
+          <div className="flex items-center gap-2">
+            <CreditCard className="w-5 h-5 text-neutral-700" />
+            <h3 className="text-lg font-semibold text-neutral-800">수입 항목 관리</h3>
+            <InfoTooltip content="자주 발생하는 수입 항목을 등록하여 빠르게 선택할 수 있습니다." />
+          </div>
+
+          <div className="flex gap-2">
+            <Input
+              value={newIncomeCategory}
+              onChange={(e) => setNewIncomeCategory(e.target.value)}
+              placeholder="새 수입 항목 입력"
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') {
+                  e.preventDefault()
+                  addIncomeCategory()
+                }
+              }}
+            />
+            <Button
+              variant="outline"
+              onClick={addIncomeCategory}
+              leftIcon={<Plus className="h-4 w-4" />}
+            >
+              추가
+            </Button>
+          </div>
+
+          <div className="flex flex-wrap gap-2">
+            {data.incomeCategories.map((category) => (
+              <div
+                key={category}
+                className="inline-flex items-center gap-2 px-3 py-2 rounded-lg bg-blue-50 border border-blue-200 text-blue-700"
+              >
+                <span className="text-sm font-medium">{category}</span>
+                <button
+                  type="button"
+                  onClick={() => removeIncomeCategory(category)}
+                  className="p-0.5 rounded hover:bg-blue-100 text-blue-600 hover:text-rose-600 transition-colors"
+                  aria-label={`${category} 삭제`}
+                >
+                  <Trash2 className="h-3.5 w-3.5" />
+                </button>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        {/* 구분선 */}
+        <div className="border-t border-neutral-200" />
+
         {/* 비용 항목 관리 */}
         <div className="space-y-4">
           <div className="flex items-center gap-2">
@@ -87,85 +154,6 @@ function FinancialSettingsSection({ data, onChange }: Props) {
               </div>
             ))}
           </div>
-        </div>
-
-        {/* 주거래 계좌 설정 */}
-        <div className="border-t border-neutral-200 pt-6 space-y-4">
-          <div className="flex items-center gap-2">
-            <CreditCard className="w-5 h-5 text-neutral-700" />
-            <h3 className="text-lg font-semibold text-neutral-800">주거래 계좌 설정</h3>
-            <InfoTooltip content="주로 사용하는 계좌 정보를 등록하세요." />
-          </div>
-
-          <div className="p-4 bg-neutral-50 rounded-lg border border-neutral-200 space-y-4">
-            <Input
-              label="은행명"
-              value={data.bankName || ''}
-              onChange={(e) => onChange({ bankName: e.target.value })}
-              placeholder="예) 국민은행"
-            />
-
-            <Input
-              label="계좌번호"
-              value={data.accountNumber || ''}
-              onChange={(e) => onChange({ accountNumber: e.target.value })}
-              placeholder="예) 123456-78-901234"
-            />
-
-            <Input
-              label="예금주명"
-              value={data.accountHolder || ''}
-              onChange={(e) => onChange({ accountHolder: e.target.value })}
-              placeholder="예) 홍길동"
-            />
-          </div>
-        </div>
-
-        {/* 정산 로직 설정 */}
-        <div className="border-t border-neutral-200 pt-6 space-y-4">
-          <div className="flex items-center gap-2">
-            <CalendarDays className="w-5 h-5 text-neutral-700" />
-            <h3 className="text-lg font-semibold text-neutral-800">정산 로직 설정</h3>
-            <InfoTooltip content="매월 정산일을 설정하세요." />
-          </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <Input
-              label="현금 정산일 (매월 N일)"
-              type="number"
-              min="1"
-              max="31"
-              value={data.cashSettlementDay}
-              onChange={(e) => onChange({ cashSettlementDay: Number(e.target.value) })}
-              helpText="1~31일 사이"
-            />
-
-            <Input
-              label="카드 정산일 (매월 N일)"
-              type="number"
-              min="1"
-              max="31"
-              value={data.cardSettlementDay}
-              onChange={(e) => onChange({ cardSettlementDay: Number(e.target.value) })}
-              helpText="1~31일 사이"
-            />
-
-            <Input
-              label="플랫폼 정산일 (매월 N일)"
-              type="number"
-              min="1"
-              max="31"
-              value={data.platformSettlementDay}
-              onChange={(e) => onChange({ platformSettlementDay: Number(e.target.value) })}
-              helpText="1~31일 사이"
-            />
-          </div>
-
-          <ToggleSwitch
-            checked={data.autoCreateTransactionOnComplete}
-            onChange={(checked) => onChange({ autoCreateTransactionOnComplete: checked })}
-            label="예약 완료 시 자동 매출 생성"
-          />
         </div>
       </div>
     </CollapsibleSection>

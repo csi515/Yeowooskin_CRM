@@ -28,7 +28,7 @@ export interface CustomerCreateInput {
   features?: string | null
 }
 
-export interface CustomerUpdateInput extends Partial<CustomerCreateInput> {}
+export interface CustomerUpdateInput extends Partial<CustomerCreateInput> { }
 
 /**
  * 상품/서비스 엔티티
@@ -54,7 +54,7 @@ export interface ProductCreateInput {
   active?: boolean
 }
 
-export interface ProductUpdateInput extends Partial<ProductCreateInput> {}
+export interface ProductUpdateInput extends Partial<ProductCreateInput> { }
 
 /**
  * 직원 엔티티
@@ -84,7 +84,7 @@ export interface StaffCreateInput {
   active?: boolean
 }
 
-export interface StaffUpdateInput extends Partial<StaffCreateInput> {}
+export interface StaffUpdateInput extends Partial<StaffCreateInput> { }
 
 /**
  * 예약 엔티티
@@ -119,7 +119,7 @@ export interface AppointmentCreateInputExtended extends AppointmentCreateInput {
   service_id?: string | null
 }
 
-export interface AppointmentUpdateInput extends Partial<AppointmentCreateInput> {}
+export interface AppointmentUpdateInput extends Partial<AppointmentCreateInput> { }
 
 /**
  * 거래 엔티티
@@ -131,6 +131,7 @@ export interface Transaction {
   customer_id?: string | null
   type?: string
   amount: number
+  category?: string
   payment_method?: string | null
   transaction_date?: string
   notes?: string | null
@@ -145,12 +146,13 @@ export interface TransactionCreateInput {
   customer_id?: string | null
   type?: string
   amount: number
+  category?: string
   payment_method?: string | null
   transaction_date?: string
   notes?: string | null
 }
 
-export interface TransactionUpdateInput extends Partial<TransactionCreateInput> {}
+export interface TransactionUpdateInput extends Partial<TransactionCreateInput> { }
 
 /**
  * 지출 엔티티
@@ -176,7 +178,7 @@ export interface ExpenseCreateInput {
   memo?: string | null
 }
 
-export interface ExpenseUpdateInput extends Partial<ExpenseCreateInput> {}
+export interface ExpenseUpdateInput extends Partial<ExpenseCreateInput> { }
 
 /**
  * 고객 상품 보유 내역
