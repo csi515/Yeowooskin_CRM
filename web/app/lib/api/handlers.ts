@@ -87,6 +87,7 @@ export interface ApiResponse<T = unknown> {
   success: boolean
   data?: T
   error?: string
+  errors?: Record<string, string[]>
 }
 
 /**
@@ -94,6 +95,14 @@ export interface ApiResponse<T = unknown> {
  */
 export function createErrorResponse(error: unknown): NextResponse {
   const response: ApiResponse = { success: false }
+
+  if (error instanceof ValidationError) {
+    response.error = error.message
+    if (error.errors) {
+      response.errors = error.errors
+    }
+    return NextResponse.json(response, { status: error.statusCode })
+  }
 
   if (error instanceof ApiError) {
     response.error = error.message

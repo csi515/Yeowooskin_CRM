@@ -46,8 +46,11 @@ const getCachedKpis = unstable_cache(
     })
 
     const { monthStart, monthEnd } = monthBounds()
+    // 재무 페이지와 동일한 날짜 범위 사용
+    const fromDate = monthStart.slice(0, 10) // 이번 달 1일
+    const toDate = monthEnd.slice(0, 10) // 다음 달 1일 (재무 페이지는 d <= to로 필터링)
 
-    const [apRes, trRes, cuRes, apRecent, trRecent, exRecent, exMonth, trMonth, productsRes] = await Promise.all([
+    const [apRes, trRes, cuRes, cuMonth, apRecent, trRecent, exRecent, exMonth, trMonth, productsRes] = await Promise.all([
       supabase
         .from('appointments')
         .select('id, appointment_date')
@@ -66,6 +69,13 @@ const getCachedKpis = unstable_cache(
         .eq('owner_id', userId)
         .gte('created_at', start)
         .lt('created_at', end),
+      // 이번달 신규 고객 조회
+      supabase
+        .from('customers')
+        .select('id, created_at')
+        .eq('owner_id', userId)
+        .gte('created_at', monthStart)
+        .lte('created_at', monthEnd),
       supabase
         .from('appointments')
         .select('id, appointment_date, status, notes, customer_id, service_id')
@@ -84,9 +94,11 @@ const getCachedKpis = unstable_cache(
         .eq('owner_id', userId)
         .order('expense_date', { ascending: false })
         .limit(5),
-      // 월간 집계용
-      supabase.from('expenses').select('amount, expense_date').eq('owner_id', userId).gte('expense_date', monthStart).lt('expense_date', monthEnd),
-      supabase.from('transactions').select('amount, transaction_date').eq('owner_id', userId).gte('transaction_date', monthStart).lt('transaction_date', monthEnd),
+      // 월간 집계용 (재무 페이지와 동일한 로직)
+      // 재무 페이지: expensesApi.list({ from, to }) - 날짜 필터로 지출 가져오기
+      // 재무 페이지: transactionsApi.list({ limit: 500 }) - 모든 거래 가져온 후 클라이언트에서 필터링
+      supabase.from('expenses').select('amount, expense_date').eq('owner_id', userId).gte('expense_date', fromDate).lte('expense_date', toDate),
+      supabase.from('transactions').select('amount, transaction_date, created_at').eq('owner_id', userId).limit(500),
       supabase
         .from('products')
         .select('id, name, price, active')
@@ -96,10 +108,28 @@ const getCachedKpis = unstable_cache(
     ])
 
     const todayAppointments = Array.isArray(apRes.data) ? apRes.data.length : 0
-    const todayRevenue = Array.isArray(trRes.data)
-      ? trRes.data.reduce((s: number, t: Partial<Transaction>) => s + Number(t.amount || 0), 0)
+    
+    // 월간 순이익 계산 (재무 페이지와 동일한 로직)
+    // 재무 페이지 sumIncome: transactions.filter(t => (!from || d >= from) && (!to || d <= to))
+    // 재무 페이지 sumExpense: expenses.reduce (이미 날짜 필터링됨)
+    const monthlyIncome = Array.isArray(trMonth.data)
+      ? trMonth.data
+          .filter((t: Partial<Transaction>) => {
+            const d = (t.transaction_date || t.created_at || '').slice(0, 10)
+            return (!fromDate || d >= fromDate) && (!toDate || d <= toDate)
+          })
+          .reduce((s: number, t: Partial<Transaction>) => s + Number(t.amount || 0), 0)
       : 0
-    const todayNewCustomers = Array.isArray(cuRes.data) ? cuRes.data.length : 0
+    
+    // 월간 지출 합계 (재무 페이지 sumExpense 로직과 동일 - 이미 날짜 필터링됨)
+    const monthlyExpense = Array.isArray(exMonth.data)
+      ? exMonth.data.reduce((s: number, e: Partial<Expense>) => s + Number(e.amount || 0), 0)
+      : 0
+    
+    const monthlyProfit = monthlyIncome - monthlyExpense
+    
+    // 이번달 신규 고객 수
+    const monthlyNewCustomers = Array.isArray(cuMonth.data) ? cuMonth.data.length : 0
 
     // 월간 시계열(주차별)
     const bucketByWeek = (dateIso: string): number => {
@@ -119,14 +149,21 @@ const getCachedKpis = unstable_cache(
     const trMonthData = Array.isArray(trMonth.data) ? trMonth.data : []
     const exMonthData = Array.isArray(exMonth.data) ? exMonth.data : []
 
-    trMonthData.forEach((t: Partial<Transaction>) => {
-      const dateStr = t.transaction_date || t.created_at || ''
-      const bucket = bucketByWeek(dateStr)
-      if (bucket >= 0 && bucket < incomeBuckets.length) {
-        incomeBuckets[bucket] = (incomeBuckets[bucket] || 0) + Number(t.amount || 0)
-      }
-    })
+    // 재무 페이지와 동일한 필터링 로직 적용
+    trMonthData
+      .filter((t: Partial<Transaction>) => {
+        const d = (t.transaction_date || t.created_at || '').slice(0, 10)
+        return (!fromDate || d >= fromDate) && (!toDate || d <= toDate)
+      })
+      .forEach((t: Partial<Transaction>) => {
+        const dateStr = t.transaction_date || t.created_at || ''
+        const bucket = bucketByWeek(dateStr)
+        if (bucket >= 0 && bucket < incomeBuckets.length) {
+          incomeBuckets[bucket] = (incomeBuckets[bucket] || 0) + Number(t.amount || 0)
+        }
+      })
 
+    // exMonthData는 이미 날짜 필터링되어 있음 (재무 페이지와 동일)
     exMonthData.forEach((e: Partial<Expense>) => {
       const dateStr = e.expense_date || ''
       const bucket = bucketByWeek(dateStr)
@@ -217,8 +254,8 @@ const getCachedKpis = unstable_cache(
 
     return {
       todayAppointments,
-      todayRevenue,
-      todayNewCustomers,
+      monthlyProfit,
+      monthlyNewCustomers,
       recentAppointments: apRecentData.map((a: Partial<Appointment>) => ({
         id: a.id || '',
         appointment_date: a.appointment_date || '',
@@ -247,8 +284,8 @@ async function getKpis({ start, end }: { start: string; end: string }) {
   if (!userId) {
     return {
       todayAppointments: 0,
-      todayRevenue: 0,
-      todayNewCustomers: 0,
+      monthlyProfit: 0,
+      monthlyNewCustomers: 0,
       recentAppointments: [],
       recentTransactions: [],
       monthlySeries: [],
@@ -264,8 +301,8 @@ export default async function DashboardPage() {
   const { start, end } = getTodayRange()
   const {
     todayAppointments,
-    todayRevenue,
-    todayNewCustomers,
+    monthlyProfit,
+    monthlyNewCustomers,
     recentAppointments,
     recentTransactions,
     monthlySeries,
@@ -287,14 +324,16 @@ export default async function DashboardPage() {
           colorIndex={0}
         />
         <MetricCard
-          label="오늘 매출"
-          value={`₩${Number(todayRevenue).toLocaleString()}`}
+          label="월간 순이익"
+          value={`₩${Number(monthlyProfit).toLocaleString()}`}
+          hint="이번 달 기준"
           className="h-full"
           colorIndex={1}
         />
         <MetricCard
-          label="오늘 신규 고객"
-          value={todayNewCustomers}
+          label="이번달 신규 고객"
+          value={monthlyNewCustomers}
+          hint="이번 달 기준"
           className="h-full sm:col-span-2 lg:col-span-1"
           colorIndex={2}
         />

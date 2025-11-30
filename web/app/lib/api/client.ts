@@ -215,20 +215,30 @@ export class ApiClient {
       responseData = {}
     }
 
-    // 통일된 응답 형식 처리: { success: boolean, data?: T, error?: string }
-    if (!response.ok || (responseData && typeof responseData === 'object' && 'success' in responseData && !responseData.success)) {
-      let errorMessage = '요청을 처리할 수 없습니다.'
+      // 통일된 응답 형식 처리: { success: boolean, data?: T, error?: string, errors?: Record<string, string[]> }
+      if (!response.ok || (responseData && typeof responseData === 'object' && 'success' in responseData && !responseData.success)) {
+        let errorMessage = '요청을 처리할 수 없습니다.'
 
-      if (responseData && typeof responseData === 'object') {
-        // 새로운 형식: { success: false, error: string }
-        if ('error' in responseData && typeof responseData.error === 'string') {
-          errorMessage = responseData.error
+        if (responseData && typeof responseData === 'object') {
+          // 새로운 형식: { success: false, error: string, errors?: Record<string, string[]> }
+          if ('error' in responseData && typeof responseData.error === 'string') {
+            errorMessage = responseData.error
+            // 검증 오류가 있으면 상세 정보 추가
+            if ('errors' in responseData && typeof responseData.errors === 'object' && responseData.errors !== null) {
+              const errors = responseData.errors as Record<string, string[]>
+              const errorDetails = Object.entries(errors)
+                .map(([field, messages]) => `${field}: ${messages.join(', ')}`)
+                .join('; ')
+              if (errorDetails) {
+                errorMessage = `${errorMessage} (${errorDetails})`
+              }
+            }
+          }
+          // 기존 형식: { message: string }
+          else if ('message' in responseData && typeof responseData.message === 'string') {
+            errorMessage = responseData.message
+          }
         }
-        // 기존 형식: { message: string }
-        else if ('message' in responseData && typeof responseData.message === 'string') {
-          errorMessage = responseData.message
-        }
-      }
 
       // 에러 로깅
       if (typeof window !== 'undefined') {

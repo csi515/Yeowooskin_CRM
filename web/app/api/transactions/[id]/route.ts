@@ -30,9 +30,10 @@ export const PUT = withAuth(async (req: NextRequest, { userId, supabase, params 
   if (validatedBody.customer_id !== undefined) {
     body.customer_id = validatedBody.customer_id
   }
-  if (validatedBody.notes !== undefined) {
-    body.notes = validatedBody.notes
-  }
+  // notes 필드는 데이터베이스에 컬럼이 없으므로 제외
+  // if (validatedBody.notes !== undefined) {
+  //   body.notes = validatedBody.notes
+  // }
   if (validatedBody.amount !== undefined) {
     body.amount = validatedBody.amount
   }

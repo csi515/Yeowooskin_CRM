@@ -44,6 +44,13 @@ export interface FinancialSettings {
 }
 
 /**
+ * 직원 직책 설정
+ */
+export interface StaffSettings {
+  positions: string[] // 직책 목록
+}
+
+/**
  * 시스템 및 앱 관리 설정
  */
 export interface SystemSettings {
@@ -60,6 +67,7 @@ export interface AppSettings {
   businessProfile: BusinessProfile
   bookingSettings: BookingSettings
   financialSettings: FinancialSettings
+  staffSettings: StaffSettings
   systemSettings: SystemSettings
 }
 
@@ -70,6 +78,7 @@ export interface SettingsUpdateInput {
   businessProfile?: Partial<BusinessProfile>
   bookingSettings?: Partial<BookingSettings>
   financialSettings?: Partial<FinancialSettings>
+  staffSettings?: Partial<StaffSettings>
   systemSettings?: Partial<SystemSettings>
 }
 
@@ -107,6 +116,9 @@ export const DEFAULT_SETTINGS: AppSettings = {
     expenseCategories: [],
     expenseCategoryColors: {},
     expenseCategoryIcons: {},
+  },
+  staffSettings: {
+    positions: ['관리자', '매니저', '테라피스트', '접수원'],
   },
   systemSettings: {
     pushNotificationsEnabled: true,

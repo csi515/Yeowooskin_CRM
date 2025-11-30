@@ -31,14 +31,11 @@ export class StaffRepository extends BaseRepository<Staff> {
       active: input.active !== false,
     }
 
-    // notes는 값이 있을 때만 포함 (스키마에 없을 수 있음)
-    const notesValue = input.notes
-    if (notesValue !== undefined && notesValue !== null && notesValue !== '' && String(notesValue).trim() !== '') {
-      payload['notes'] = String(notesValue).trim()
-    }
-    if (payload['notes'] === undefined || payload['notes'] === null || payload['notes'] === '' || String(payload['notes']).trim() === '') {
-      delete payload['notes']
-    }
+    // notes 필드는 데이터베이스에 컬럼이 없으므로 제외
+    // const notesValue = input.notes
+    // if (notesValue !== undefined && notesValue !== null && notesValue !== '' && String(notesValue).trim() !== '') {
+    //   payload['notes'] = String(notesValue).trim()
+    // }
 
     return this.create(payload as unknown as Staff)
   }
@@ -60,14 +57,11 @@ export class StaffRepository extends BaseRepository<Staff> {
     if (input.phone !== undefined) payload.phone = input.phone || null
     if (input.email !== undefined) payload.email = input.email || null
     if (input.role !== undefined) payload.role = input.role || null
-    // notes는 값이 있을 때만 업데이트 (스키마에 없을 수 있음)
-    const notesValue = input.notes
-    if (notesValue !== undefined && notesValue !== null && notesValue !== '' && String(notesValue).trim() !== '') {
-      payload['notes'] = String(notesValue).trim()
-    }
-    if (payload['notes'] === undefined || payload['notes'] === null || payload['notes'] === '' || String(payload['notes']).trim() === '') {
-      delete payload['notes']
-    }
+    // notes 필드는 데이터베이스에 컬럼이 없으므로 제외
+    // const notesValue = input.notes
+    // if (notesValue !== undefined && notesValue !== null && notesValue !== '' && String(notesValue).trim() !== '') {
+    //   payload['notes'] = String(notesValue).trim()
+    // }
     if (input.active !== undefined) payload.active = input.active
 
     return this.update(id, payload)

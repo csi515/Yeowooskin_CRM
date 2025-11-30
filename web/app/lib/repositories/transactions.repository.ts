@@ -59,6 +59,11 @@ export class TransactionsRepository extends BaseRepository<Transaction> {
       }
     }
 
+    // category 필드 처리
+    if (input.category !== undefined && input.category !== null && input.category !== '') {
+      payload['category'] = String(input.category).trim()
+    }
+
     // appointment_id가 명시적으로 제공된 경우에만 포함
     if (input.appointment_id !== undefined) {
       payload.appointment_id = input.appointment_id || null
@@ -75,17 +80,16 @@ export class TransactionsRepository extends BaseRepository<Transaction> {
       }
     }
 
-    // notes는 값이 있을 때만 포함 (스키마에 없을 수 있음)
-    // undefined, null, 빈 문자열, 공백만 있는 경우 제외
-    const notesValue = input.notes
-    if (notesValue !== undefined) {
-      if (notesValue === null) {
-        payload['notes'] = null
-      } else {
-        const trimmed = String(notesValue).trim()
-        payload['notes'] = trimmed ? trimmed : null
-      }
-    }
+    // notes 필드는 데이터베이스에 컬럼이 없으므로 제외
+    // const notesValue = input.notes
+    // if (notesValue !== undefined) {
+    //   if (notesValue === null) {
+    //     payload['notes'] = null
+    //   } else {
+    //     const trimmed = String(notesValue).trim()
+    //     payload['notes'] = trimmed ? trimmed : null
+    //   }
+    // }
 
     return this.create(payload)
   }
@@ -126,16 +130,16 @@ export class TransactionsRepository extends BaseRepository<Transaction> {
     if (input.transaction_date !== undefined) {
       payload.transaction_date = input.transaction_date
     }
-    // notes는 값이 있을 때만 업데이트 (스키마에 없을 수 있음)
-    const notesValue = input.notes
-    if (notesValue !== undefined) {
-      if (notesValue === null) {
-        payload['notes'] = null
-      } else {
-        const trimmed = String(notesValue).trim()
-        payload['notes'] = trimmed ? trimmed : null
-      }
-    }
+    // notes 필드는 데이터베이스에 컬럼이 없으므로 제외
+    // const notesValue = input.notes
+    // if (notesValue !== undefined) {
+    //   if (notesValue === null) {
+    //     payload['notes'] = null
+    //   } else {
+    //     const trimmed = String(notesValue).trim()
+    //     payload['notes'] = trimmed ? trimmed : null
+    //   }
+    // }
 
     return this.update(id, payload)
   }

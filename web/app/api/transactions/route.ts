@@ -29,9 +29,13 @@ export const POST = withAuth(async (req: NextRequest, { userId, supabase }) => {
   if (validatedBody.customer_id !== undefined) {
     body.customer_id = validatedBody.customer_id
   }
-  if (validatedBody.notes !== undefined) {
-    body.notes = validatedBody.notes
+  if (validatedBody.category !== undefined) {
+    body.category = validatedBody.category
   }
+  // notes 필드는 데이터베이스에 컬럼이 없으므로 제외
+  // if (validatedBody.notes !== undefined) {
+  //   body.notes = validatedBody.notes
+  // }
   const data = await repository.createTransaction(body)
   return createSuccessResponse(data, 201)
 })

@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react'
 import { useAppToast } from '@/app/lib/ui/toast'
 import { settingsApi } from '@/app/lib/api/settings'
-import { DEFAULT_SETTINGS, type AppSettings, type FinancialSettings, type BusinessProfile, type BookingSettings, type SystemSettings } from '@/types/settings'
+import { DEFAULT_SETTINGS, type AppSettings, type FinancialSettings, type StaffSettings, type BusinessProfile, type BookingSettings } from '@/types/settings'
 import Card from '@/app/components/ui/Card'
 import { Skeleton } from '@/app/components/ui/Skeleton'
 
@@ -11,13 +11,13 @@ import { Skeleton } from '@/app/components/ui/Skeleton'
 import BusinessProfileSummaryCard from '@/app/components/settings/cards/BusinessProfileSummaryCard'
 import BookingSettingsSummaryCard from '@/app/components/settings/cards/BookingSettingsSummaryCard'
 import FinancialSettingsSummaryCard from '@/app/components/settings/cards/FinancialSettingsSummaryCard'
-import SystemSettingsSummaryCard from '@/app/components/settings/cards/SystemSettingsSummaryCard'
+import StaffSettingsSummaryCard from '@/app/components/settings/cards/StaffSettingsSummaryCard'
 
 // Modals
 import BusinessProfileModal from '@/app/components/settings/modals/BusinessProfileModal'
 import BookingSettingsModal from '@/app/components/settings/modals/BookingSettingsModal'
 import FinancialSettingsModal from '@/app/components/settings/modals/FinancialSettingsModal'
-import SystemSettingsModal from '@/app/components/settings/modals/SystemSettingsModal'
+import StaffSettingsModal from '@/app/components/settings/modals/StaffSettingsModal'
 
 export default function SettingsPage() {
   const [settings, setSettings] = useState<AppSettings>(DEFAULT_SETTINGS)
@@ -27,7 +27,7 @@ export default function SettingsPage() {
   const [businessModalOpen, setBusinessModalOpen] = useState(false)
   const [bookingModalOpen, setBookingModalOpen] = useState(false)
   const [financialModalOpen, setFinancialModalOpen] = useState(false)
-  const [systemModalOpen, setSystemModalOpen] = useState(false)
+  const [staffModalOpen, setStaffModalOpen] = useState(false)
 
   const toast = useAppToast()
 
@@ -86,17 +86,19 @@ export default function SettingsPage() {
     }
   }
 
-  // 시스템 설정 저장
-  const handleSaveSystemSettings = async (data: SystemSettings) => {
+  // 직원 직책 설정 저장
+  const handleSaveStaffSettings = async (data: StaffSettings) => {
     try {
-      await settingsApi.update({ systemSettings: data })
-      setSettings((s) => ({ ...s, systemSettings: data }))
-      toast.success('시스템 설정이 저장되었습니다.')
+      await settingsApi.update({ staffSettings: data })
+      setSettings((s) => ({ ...s, staffSettings: data }))
+      toast.success('직원 직책 설정이 저장되었습니다.')
     } catch (error) {
-      console.error('시스템 설정 저장 실패:', error)
-      toast.error('시스템 설정 저장에 실패했습니다.', error instanceof Error ? error.message : '알 수 없는 오류')
+      console.error('직원 직책 설정 저장 실패:', error)
+      toast.error('직원 직책 설정 저장에 실패했습니다.', error instanceof Error ? error.message : '알 수 없는 오류')
     }
   }
+
+
 
   if (loading) {
     return (
@@ -143,9 +145,9 @@ export default function SettingsPage() {
         onEdit={() => setFinancialModalOpen(true)}
       />
 
-      <SystemSettingsSummaryCard
-        data={settings.systemSettings}
-        onEdit={() => setSystemModalOpen(true)}
+      <StaffSettingsSummaryCard
+        data={settings.staffSettings}
+        onEdit={() => setStaffModalOpen(true)}
       />
 
       {/* 모달들 */}
@@ -170,11 +172,11 @@ export default function SettingsPage() {
         onSave={handleSaveFinancialSettings}
       />
 
-      <SystemSettingsModal
-        open={systemModalOpen}
-        data={settings.systemSettings}
-        onClose={() => setSystemModalOpen(false)}
-        onSave={handleSaveSystemSettings}
+      <StaffSettingsModal
+        open={staffModalOpen}
+        data={settings.staffSettings}
+        onClose={() => setStaffModalOpen(false)}
+        onSave={handleSaveStaffSettings}
       />
     </main>
   )

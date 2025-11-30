@@ -17,7 +17,7 @@ export async function GET(_req: NextRequest) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
-    // settings 테이블에서 조회
+    // settings 테이블에서 조회 (owner_id로 명시적 필터링)
     const { data, error } = await supabase
       .from('settings')
       .select('*')
@@ -32,6 +32,15 @@ export async function GET(_req: NextRequest) {
     // 데이터가 없으면 기본값 반환
     if (!data) {
       return NextResponse.json(DEFAULT_SETTINGS)
+    }
+
+    // 추가 보안 검증: owner_id가 현재 사용자와 일치하는지 확인
+    if (data.owner_id !== user.id) {
+      console.error('Security violation: settings owner_id mismatch', { 
+        dataOwnerId: data.owner_id, 
+        currentUserId: user.id 
+      })
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 403 })
     }
 
     // JSON 파싱 (settings는 JSONB 컬럼)
@@ -69,12 +78,26 @@ export async function PUT(req: NextRequest) {
 
     const body: SettingsUpdateInput = await req.json()
 
-    // 기존 설정 조회
-    const { data: existing } = await supabase
+    // 기존 설정 조회 (owner_id로 명시적 필터링)
+    const { data: existing, error: fetchError } = await supabase
       .from('settings')
-      .select('settings')
+      .select('settings, owner_id')
       .eq('owner_id', user.id)
       .maybeSingle()
+
+    if (fetchError && fetchError.code !== 'PGRST116') {
+      console.error('Settings fetch error:', fetchError)
+      return NextResponse.json({ error: 'Failed to fetch settings' }, { status: 500 })
+    }
+
+    // 추가 보안 검증: owner_id가 현재 사용자와 일치하는지 확인
+    if (existing && existing.owner_id !== user.id) {
+      console.error('Security violation: settings owner_id mismatch', { 
+        existingOwnerId: existing.owner_id, 
+        currentUserId: user.id 
+      })
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 403 })
+    }
 
     let currentSettings: AppSettings = DEFAULT_SETTINGS
     if (existing?.settings) {
@@ -101,14 +124,18 @@ export async function PUT(req: NextRequest) {
         ...currentSettings.financialSettings,
         ...body.financialSettings,
       },
+      staffSettings: {
+        ...currentSettings.staffSettings,
+        ...body.staffSettings,
+      },
       systemSettings: {
         ...currentSettings.systemSettings,
         ...body.systemSettings,
       },
     }
 
-    // upsert
-    const { error } = await supabase
+    // upsert (owner_id는 항상 현재 사용자로 설정)
+    const { data: upserted, error } = await supabase
       .from('settings')
       .upsert({
         owner_id: user.id,
@@ -117,12 +144,21 @@ export async function PUT(req: NextRequest) {
       }, {
         onConflict: 'owner_id',
       })
-      .select()
+      .select('owner_id')
       .single()
 
     if (error) {
       console.error('Settings update error:', error)
       return NextResponse.json({ error: 'Failed to update settings' }, { status: 500 })
+    }
+
+    // 추가 보안 검증: 저장된 데이터의 owner_id 확인
+    if (upserted && upserted.owner_id !== user.id) {
+      console.error('Security violation: upserted settings owner_id mismatch', { 
+        upsertedOwnerId: upserted.owner_id, 
+        currentUserId: user.id 
+      })
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 403 })
     }
 
     return NextResponse.json(updatedSettings)

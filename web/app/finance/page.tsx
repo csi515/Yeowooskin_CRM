@@ -87,7 +87,7 @@ export default function FinancePage() {
   const sumIncome = useMemo(() => transactions
     .filter(t => {
       const d = (t.transaction_date || t.created_at || '').slice(0, 10)
-      return (!from || d >= from) && (!to || d < to)
+      return (!from || d >= from) && (!to || d <= to)
     })
     .reduce((s, t) => s + Number(t.amount || 0), 0), [transactions, from, to])
   const sumExpense = useMemo(() => expenses.reduce((s, e) => s + Number(e.amount || 0), 0), [expenses])
@@ -137,7 +137,7 @@ export default function FinancePage() {
   const combined = useMemo(() => {
     const inRange = (iso: string) => {
       const d = (iso || '').slice(0, 10)
-      return (!from || d >= from) && (!to || d < to)
+      return (!from || d >= from) && (!to || d <= to)
     }
     const incomeRows = includeIncome ? transactions
       .filter(t => inRange(t.transaction_date || t.created_at || ''))
@@ -146,7 +146,7 @@ export default function FinancePage() {
         type: 'income' as const,
         date: (t.transaction_date || t.created_at || '').slice(0, 10),
         amount: Number(t.amount || 0),
-        note: t.notes || '',
+        note: t.category || '',
         raw: t,
       })) : []
     const expenseRows = includeExpense ? expenses
@@ -254,13 +254,13 @@ export default function FinancePage() {
       const incomeData = transactions
         .filter(t => {
           const d = (t.transaction_date || t.created_at || '').slice(0, 10)
-          return (!from || d >= from) && (!to || d < to)
+          return (!from || d >= from) && (!to || d <= to)
         })
         .map(t => ({
           date: (t.transaction_date || t.created_at || '').slice(0, 10),
           amount: Number(t.amount || 0),
           ...(t.customer_id && { customer: '고객' }),
-          ...(t.notes && { notes: t.notes }),
+          ...(t.category && { category: t.category }),
         }))
 
       const expenseData = expenses.map(e => ({
@@ -604,10 +604,11 @@ export default function FinancePage() {
                         amount: amountNumber,
                         category: selectedIncomeCategory,
                       }
-                      // notes가 있을 때만 포함
-                      if (newMemo && newMemo.trim() !== '') {
-                        createPayload.notes = newMemo.trim()
-                      }
+                      // notes 필드는 데이터베이스에 컬럼이 없으므로 제외
+                      // 메모는 category에 포함되거나 별도로 저장할 수 없음
+                      // if (newMemo && newMemo.trim() !== '') {
+                      //   createPayload.notes = newMemo.trim()
+                      // }
                       await transactionsApi.create(createPayload)
                     } else {
                       // 지출 카테고리 필수

@@ -170,6 +170,7 @@ CREATE TABLE public.appointments (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   owner_id UUID NOT NULL,
   customer_id UUID REFERENCES public.customers(id) ON DELETE CASCADE,
+  staff_id UUID REFERENCES public.staff(id) ON DELETE SET NULL,
   service_id UUID REFERENCES public.products(id) ON DELETE SET NULL,
   appointment_date TIMESTAMPTZ NOT NULL,
   status TEXT DEFAULT 'scheduled',
@@ -181,6 +182,7 @@ CREATE TABLE public.appointments (
 CREATE INDEX idx_appointments_owner ON public.appointments(owner_id);
 CREATE INDEX idx_appointments_date ON public.appointments(appointment_date);
 CREATE INDEX idx_appointments_customer ON public.appointments(customer_id);
+CREATE INDEX idx_appointments_staff ON public.appointments(staff_id);
 
 ALTER TABLE public.appointments ENABLE ROW LEVEL SECURITY;
 

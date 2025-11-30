@@ -1,11 +1,12 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import Modal, { ModalBody, ModalFooter, ModalHeader } from '../ui/Modal'
-import Button from '../ui/Button'
-import Textarea from '../ui/Textarea'
+import { Modal, ModalBody, ModalFooter, ModalHeader } from '@/app/components/ui/Modal'
+import Button from '@/app/components/ui/Button'
+import Textarea from '@/app/components/ui/Textarea'
 import { useAppToast } from '@/app/lib/ui/toast'
 import { staffApi } from '@/app/lib/api/staff'
+import { settingsApi } from '@/app/lib/api/settings'
 
 type Staff = { id?: string; name: string; phone?: string; email?: string; role?: string; notes?: string; active?: boolean }
 
@@ -13,7 +14,22 @@ export default function StaffDetailModal({ open, onClose, item, onSaved, onDelet
   const [form, setForm] = useState<Staff>({ name: '', phone: '', email: '', role: '', notes: '', active: true })
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
+  const [positions, setPositions] = useState<string[]>([])
   const toast = useAppToast()
+
+  // 설정에서 직책 목록 불러오기
+  useEffect(() => {
+    const loadPositions = async () => {
+      try {
+        const settings = await settingsApi.get()
+        setPositions(settings.staffSettings?.positions || [])
+      } catch (error) {
+        console.error('직책 목록 로드 실패:', error)
+        setPositions([])
+      }
+    }
+    loadPositions()
+  }, [])
 
   useEffect(() => {
     setForm(item || { name: '', phone: '', email: '', role: '', notes: '', active: true })
@@ -22,12 +38,12 @@ export default function StaffDetailModal({ open, onClose, item, onSaved, onDelet
   const save = async () => {
     try {
       setLoading(true); setError('')
-      const body: { name: string; phone: string | null; email: string | null; role: string | null; active: boolean; notes?: string } = { 
-        name: (form.name||'').trim(), 
-        phone: form.phone || null, 
-        email: form.email || null, 
-        role: form.role || null, 
-        active: form.active !== false 
+      const body: { name: string; phone: string | null; email: string | null; role: string | null; active: boolean; notes?: string } = {
+        name: (form.name || '').trim(),
+        phone: form.phone?.trim() ? form.phone.trim() : null,
+        email: form.email?.trim() ? form.email.trim() : null,
+        role: form.role?.trim() ? form.role.trim() : null,
+        active: form.active !== false
       }
       // notes는 값이 있을 때만 포함
       if (form.notes && form.notes.trim() !== '') {
@@ -40,12 +56,12 @@ export default function StaffDetailModal({ open, onClose, item, onSaved, onDelet
         await staffApi.create(body)
       }
       onSaved(); onClose(); toast.success('직원이 저장되었습니다.')
-    } catch (e: unknown) { 
+    } catch (e: unknown) {
       const errorMessage = e instanceof Error ? e.message : '에러가 발생했습니다.'
       setError(errorMessage)
-      toast.error('저장 실패', errorMessage) 
-    } finally { 
-      setLoading(false) 
+      toast.error('저장 실패', errorMessage)
+    } finally {
+      setLoading(false)
     }
   }
 
@@ -71,7 +87,7 @@ export default function StaffDetailModal({ open, onClose, item, onSaved, onDelet
               <p className="text-xs text-rose-600">{error}</p>
             </div>
           )}
-          
+
           {/* 기본정보 섹션 */}
           <div className="space-y-2">
             <h3 className="text-xs font-semibold text-neutral-900">기본정보</h3>
@@ -112,10 +128,11 @@ export default function StaffDetailModal({ open, onClose, item, onSaved, onDelet
                   onChange={e => setForm({ ...form, role: e.target.value })}
                 >
                   <option value="">선택</option>
-                  <option value="admin">관리자</option>
-                  <option value="manager">매니저</option>
-                  <option value="therapist">테라피스트</option>
-                  <option value="reception">접수원</option>
+                  {positions.map((position) => (
+                    <option key={position} value={position}>
+                      {position}
+                    </option>
+                  ))}
                 </select>
               </div>
             </div>
@@ -190,5 +207,3 @@ export default function StaffDetailModal({ open, onClose, item, onSaved, onDelet
     </Modal>
   )
 }
-
-

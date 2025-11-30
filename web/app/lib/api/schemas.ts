@@ -64,13 +64,14 @@ export const productUpdateSchema = productCreateSchema.partial()
 
 /**
  * 직원 생성 스키마
+ * 값이 이상하더라도 입력되도록 매우 관대한 검증
  */
 export const staffCreateSchema = z.object({
   name: z.string().min(1, '이름은 필수입니다'),
-  phone: z.string().optional().nullable(),
-  email: z.string().email('유효한 이메일을 입력하세요').optional().or(z.literal('')).nullable(),
-  role: z.string().optional().nullable(),
-  notes: z.string().optional().nullable(),
+  phone: z.union([z.string(), z.literal(''), z.null()]).optional().nullable(),
+  email: z.union([z.string(), z.literal(''), z.null()]).optional().nullable(),
+  role: z.union([z.string(), z.literal(''), z.null()]).optional().nullable(),
+  notes: z.union([z.string(), z.literal(''), z.null()]).optional().nullable(),
   active: z.boolean().optional().default(true),
 })
 
@@ -101,7 +102,7 @@ export const appointmentUpdateSchema = appointmentCreateSchema.partial()
  */
 export const expenseCreateSchema = z.object({
   amount: z.coerce.number().min(0, '금액은 0 이상이어야 합니다'),
-  expense_date: z.string().datetime('올바른 날짜 형식이 아닙니다'),
+  expense_date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, '올바른 날짜 형식이 아닙니다 (YYYY-MM-DD)'),
   category: z.string().min(1, '카테고리는 필수입니다'),
   memo: z.string().optional().nullable(),
 })
@@ -117,8 +118,10 @@ export const expenseUpdateSchema = expenseCreateSchema.partial()
 export const transactionCreateSchema = z.object({
   customer_id: z.string().uuid('올바른 고객 ID가 아닙니다').optional().nullable(),
   amount: z.coerce.number().min(0, '금액은 0 이상이어야 합니다'),
-  transaction_date: z.string().datetime('올바른 날짜 형식이 아닙니다'),
-  notes: z.string().optional().nullable(),
+  transaction_date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, '올바른 날짜 형식이 아닙니다 (YYYY-MM-DD)'),
+  category: z.string().optional().nullable(),
+  // notes 필드는 데이터베이스에 컬럼이 없으므로 제외
+  // notes: z.string().optional().nullable(),
 })
 
 /**
