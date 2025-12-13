@@ -7,6 +7,7 @@
 import { useState } from 'react'
 import Button from '@/app/components/ui/Button'
 import { ChevronDown, ChevronUp } from 'lucide-react'
+import type { CustomerProduct } from '@/app/lib/repositories/customer-products.repository'
 
 interface Product {
     id: string
@@ -22,18 +23,13 @@ interface PointLedgerEntry {
 interface ProductLedgerEntry {
     created_at: string
     delta: number
-    reason?: string | null
+    reason?: string | null | undefined
     product_id: string
 }
 
 type LedgerEntry = (PointLedgerEntry & { type: 'points' }) | (ProductLedgerEntry & { type: 'products' })
 
-interface Holding {
-    id: string
-    product_id: string
-    quantity: number
-    products?: { name: string }
-}
+type Holding = CustomerProduct
 
 interface CustomerTransactionsTabProps {
     customerId: string
@@ -52,8 +48,8 @@ interface CustomerTransactionsTabProps {
     onChangeHoldingDelta: (id: string, value: number) => void
     holdingReason: Record<string, string>
     onChangeHoldingReason: (id: string, value: string) => void
-    onIncrease: (holding: Holding) => void
-    onDecrease: (holding: Holding) => void
+    onIncrease: (holding: Holding) => void | Promise<void>
+    onDecrease: (holding: Holding) => void | Promise<void>
     newProductId: string
     onChangeNewProduct: (id: string) => void
     newQty: number

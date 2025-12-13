@@ -66,7 +66,6 @@ export default function Sidebar({
           aria-label="여우스킨 CRM 홈"
         >
           <div className="flex h-10 w-10 sm:h-11 sm:w-11 items-center justify-center rounded-lg bg-gradient-to-br from-[#F472B6] to-[#EC4899] text-white text-sm font-medium shadow-md border border-[#EC4899] flex-shrink-0">
-            여
           </div>
           {!collapsed && (
             <div className="flex flex-col truncate min-w-0">

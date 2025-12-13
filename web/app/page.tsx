@@ -2,7 +2,7 @@
 
 import { Suspense, useEffect } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
-import Landing from './components/Landing'
+import LoginForm from './components/auth/LoginForm'
 
 /**
  * 비밀번호 재설정 리디렉션 로직
@@ -40,7 +40,9 @@ function HomePage() {
       <Suspense fallback={null}>
         <PasswordResetHandler />
       </Suspense>
-      <Landing />
+      <Suspense fallback={<div className="min-h-screen flex items-center justify-center">로딩 중...</div>}>
+        <LoginForm />
+      </Suspense>
     </>
   )
 }

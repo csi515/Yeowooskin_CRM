@@ -10,11 +10,9 @@ type CustomerForm = Pick<Customer, 'id' | 'name' | 'phone' | 'email' | 'address'
 type CustomerOverviewTabProps = {
   form: CustomerForm | null
   features: string
-  initialPoints: number
   fieldErrors?: { name?: string; phone?: string; email?: string }
   onChangeForm: (updater: (prev: CustomerForm | null) => CustomerForm | null) => void
   onChangeFeatures: (value: string) => void
-  onChangeInitialPoints: (value: number) => void
   onDelete?: () => void
   isNewCustomer: boolean
 }
@@ -22,11 +20,9 @@ type CustomerOverviewTabProps = {
 export default function CustomerOverviewTab({
   form,
   features,
-  initialPoints,
   fieldErrors,
   onChangeForm,
   onChangeFeatures,
-  onChangeInitialPoints,
   onDelete,
   isNewCustomer
 }: CustomerOverviewTabProps) {
