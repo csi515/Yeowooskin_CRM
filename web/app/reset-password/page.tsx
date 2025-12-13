@@ -14,6 +14,8 @@ function ResetPasswordInner() {
   const searchParams = useSearchParams()
   const [supabase, setSupabase] = useState<SupabaseClient | null>(null)
   const [newPassword, setNewPassword] = useState('')
+  const [emailInput, setEmailInput] = useState('')
+  const [sessionUserEmail, setSessionUserEmail] = useState<string | null>(null)
   const [confirmPassword, setConfirmPassword] = useState('')
   const [error, setError] = useState('')
   const [info, setInfo] = useState('')
@@ -46,6 +48,12 @@ function ResetPasswordInner() {
             setError('유효한 재설정 링크가 필요합니다.')
           }
         }
+
+        // 세션이 준비되었다면 사용자 이메일 가져오기
+        const { data: { user } } = await client.auth.getUser()
+        if (user?.email) {
+          setSessionUserEmail(user.email)
+        }
       } catch (error) {
         console.error('Supabase 초기화 오류:', error)
         setError('환경설정 오류: Supabase 초기화에 실패했습니다.')
@@ -56,6 +64,16 @@ function ResetPasswordInner() {
 
   const changePassword = async () => {
     if (!supabase) return
+
+    if (!emailInput) {
+      setError('아이디(이메일)를 입력해주세요.')
+      return
+    }
+
+    if (sessionUserEmail && emailInput.trim() !== sessionUserEmail) {
+      setError('입력한 이메일이 현재 인증된 계정과 일치하지 않습니다.')
+      return
+    }
 
     if (newPassword.length < 6) {
       setError('비밀번호는 최소 6자 이상이어야 합니다.')
@@ -96,7 +114,7 @@ function ResetPasswordInner() {
         <div className="space-y-5">
           <div>
             <h1 className="text-2xl font-semibold">비밀번호 변경</h1>
-            <p className="text-sm text-neutral-600 mt-1">새로운 비밀번호를 입력해주세요.</p>
+            <p className="text-sm text-neutral-600 mt-1">아이디와 새로운 비밀번호를 입력해주세요.</p>
           </div>
 
           {error && (
@@ -109,6 +127,14 @@ function ResetPasswordInner() {
           {sessionReady && (
             <>
               <div className="space-y-4">
+                <Input
+                  label="아이디 (이메일)"
+                  type="email"
+                  value={emailInput}
+                  onChange={(e) => setEmailInput(e.target.value)}
+                  placeholder="가입된 이메일 주소"
+                  disabled={busy}
+                />
                 <Input
                   label="새 비밀번호"
                   type="password"
@@ -132,7 +158,7 @@ function ResetPasswordInner() {
                   variant="primary"
                   onClick={changePassword}
                   loading={busy}
-                  disabled={!supabase || newPassword.length < 6 || newPassword !== confirmPassword}
+                  disabled={!supabase || !emailInput || newPassword.length < 6 || newPassword !== confirmPassword}
                   className="w-full"
                 >
                   비밀번호 변경하기
