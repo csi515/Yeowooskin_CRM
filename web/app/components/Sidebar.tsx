@@ -59,14 +59,10 @@ export default function Sidebar({
     <aside className={wrapCls}>
       {/* 헤더 */}
       <div className="px-4 py-4 sm:py-5 border-b border-neutral-200 flex items-center justify-between">
-        <Link
-          href="/"
-          className="flex items-center gap-3 min-w-0 hover:opacity-80 transition-opacity duration-300 touch-manipulation"
-          {...(onNavigate && { onClick: onNavigate })}
-          aria-label="여우스킨 CRM 홈"
+        <div
+          className="flex items-center gap-3 min-w-0"
         >
-          <div className="flex h-10 w-10 sm:h-11 sm:w-11 items-center justify-center rounded-lg bg-gradient-to-br from-[#F472B6] to-[#EC4899] text-white text-sm font-medium shadow-md border border-[#EC4899] flex-shrink-0">
-          </div>
+
           {!collapsed && (
             <div className="flex flex-col truncate min-w-0">
               <span className="text-base sm:text-lg font-semibold text-neutral-900 tracking-tight truncate">
@@ -77,7 +73,7 @@ export default function Sidebar({
               </span>
             </div>
           )}
-        </Link>
+        </div>
         {!mobile && onToggleCollapse && (
           <button
             onClick={onToggleCollapse}

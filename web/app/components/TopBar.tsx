@@ -33,17 +33,17 @@ export default function TopBar({ onMenu }: { onMenu?: () => void }) {
     <header className="sticky top-0 z-[1021] bg-white border-b border-neutral-200 shadow-sm safe-area-inset-top">
       <div className="h-14 sm:h-16 flex items-center justify-between px-4 sm:px-6 md:px-8 gap-3 sm:gap-4">
         {/* 모바일 메뉴 버튼 */}
-        <button 
-          aria-label="메뉴 열기" 
-          onClick={onMenu} 
+        <button
+          aria-label="메뉴 열기"
+          onClick={onMenu}
           className="md:hidden p-2.5 rounded-lg border border-transparent hover:bg-neutral-50 hover:border-neutral-200 active:bg-neutral-100 focus-visible:ring-2 focus-visible:ring-pink-300 focus-visible:ring-offset-1 transition-all duration-200 touch-manipulation min-h-[44px] min-w-[44px] flex items-center justify-center"
         >
           <Bars3Icon className="h-6 w-6 text-neutral-700" />
         </button>
-        
+
         {/* 데스크톱 빈 공간 */}
         <div className="hidden md:block flex-1" />
-        
+
         {/* 사용자 정보 */}
         <div className="flex items-center gap-2 sm:gap-3 md:gap-4">
           {userName && (
@@ -51,12 +51,7 @@ export default function TopBar({ onMenu }: { onMenu?: () => void }) {
               {userName}님
             </span>
           )}
-          <div 
-            className="h-10 w-10 sm:h-11 sm:w-11 md:h-12 md:w-12 rounded-full bg-gradient-to-br from-[#FDF2F8] to-[#FCE7F3] border-2 border-neutral-200 shadow-sm flex-shrink-0 touch-manipulation" 
-            aria-label="사용자 아바타"
-            role="button"
-            tabIndex={0}
-          />
+
         </div>
       </div>
     </header>

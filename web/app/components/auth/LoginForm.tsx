@@ -214,8 +214,14 @@ export default function LoginForm() {
                 <ModalBody>
                     <div className="space-y-3">
                         <p className="text-base">1) 이름/전화번호/이메일/비밀번호/생년월일을 입력하여 회원가입</p>
-                        <p className="text-base">2) 관리자가 승인하면 로그인 가능 상태로 전환</p>
-                        <p className="text-base">3) 승인 완료 후 로그인하여 서비스를 이용하세요</p>
+                        <p className="text-base">2) 이메일로 발송된 인증 메일을 확인하여 인증 완료</p>
+                        <p className="text-base">3) 관리자가 승인하면 로그인 가능 상태로 전환</p>
+                        <p className="text-base">4) 승인 완료 후 로그인하여 서비스를 이용하세요</p>
+                        <div className="pt-2">
+                            <p className="text-sm text-neutral-500">
+                                * 신규 회원가입 문의는 <a href="mailto:csi515@naver.com" className="text-neutral-700 underline">csi515@naver.com</a>으로 메일을 보내주세요.
+                            </p>
+                        </div>
                     </div>
                 </ModalBody>
                 <ModalFooter>

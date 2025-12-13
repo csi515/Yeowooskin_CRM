@@ -8,6 +8,7 @@ import { useState, useEffect, useRef } from 'react'
 export default function AppShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname() || ''
   const isPublic =
+    pathname === '/' ||
     pathname === '/login' ||
     pathname === '/signup' ||
     pathname === '/forgot-password' ||
@@ -44,7 +45,7 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
     <div className="flex min-h-screen">
       {/* 데스크톱 사이드바 */}
       <Sidebar />
-      
+
       {/* 메인 컨텐츠 영역 */}
       <div className="flex-1 flex flex-col min-w-0">
         <TopBar onMenu={() => setNavOpen(prev => !prev)} />
@@ -59,21 +60,21 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
 
       {/* 모바일 네비게이션 드로어 */}
       {navOpen && (
-        <div 
-          className="fixed inset-0 z-[1100] md:hidden" 
-          role="dialog" 
-          aria-modal="true" 
+        <div
+          className="fixed inset-0 z-[1100] md:hidden"
+          role="dialog"
+          aria-modal="true"
           aria-label="메뉴"
         >
           {/* 오버레이 */}
-          <div 
+          <div
             className="absolute inset-0 bg-overlay-60 backdrop-blur-sm transition-opacity duration-300"
             onClick={() => setNavOpen(false)}
             aria-hidden="true"
           />
-          
+
           {/* 사이드바 - 스와이프로 닫기 지원 (개선) */}
-          <div 
+          <div
             className="absolute inset-y-0 left-0 w-72 max-w-[85vw] bg-white shadow-xl border-r border-neutral-200 transform transition-transform duration-300 ease-out"
             style={{
               transform: isDragging ? `translateX(${dragOffset}px)` : undefined,
@@ -87,7 +88,7 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
               setIsDragging(true)
               setDragOffset(0)
               dragOffsetRef.current = 0
-              
+
               const handleMove = (moveEvent: TouchEvent) => {
                 const touch = moveEvent.touches[0]
                 if (!touch) return
@@ -100,7 +101,7 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
                   moveEvent.preventDefault()
                 }
               }
-              
+
               const handleEnd = () => {
                 setIsDragging(false)
                 // 임계값(-100px) 이상 드래그 시 닫기
@@ -114,7 +115,7 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
                 document.removeEventListener('touchmove', handleMove)
                 document.removeEventListener('touchend', handleEnd)
               }
-              
+
               document.addEventListener('touchmove', handleMove, { passive: false })
               document.addEventListener('touchend', handleEnd, { once: true })
             }}
