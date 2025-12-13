@@ -28,7 +28,8 @@ export function middleware(req: NextRequest) {
   const hasSession = Boolean(
     req.cookies.get('sb-access-token') ||
     req.cookies.get('sb:token') ||
-    req.cookies.get('sb:client:session')
+    req.cookies.get('sb:client:session') ||
+    req.cookies.get('demo_mode')?.value === 'true'
   )
 
   if (!hasSession) {

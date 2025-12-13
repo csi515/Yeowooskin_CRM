@@ -9,6 +9,12 @@ function base64UrlToString(input: string): string {
 export async function getUserIdFromCookies(): Promise<string | null> {
   try {
     const cookieStore = await cookies()
+
+    // 데모 모드 확인
+    if (cookieStore.get('demo_mode')?.value === 'true') {
+      return 'demo-user'
+    }
+
     const token = cookieStore.get('sb:token')?.value || cookieStore.get('sb-access-token')?.value
     if (!token) return null
 

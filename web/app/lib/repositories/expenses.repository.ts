@@ -15,6 +15,11 @@ export class ExpensesRepository extends BaseRepository<Expense> {
    * 날짜 범위로 지출 조회
    */
   override async findAll(options: QueryOptions & { from?: string; to?: string } = {}): Promise<Expense[]> {
+    if (this.userId === 'demo-user') {
+      const { MOCK_EXPENSES } = await import('@/app/lib/mock-data')
+      return MOCK_EXPENSES as unknown as Expense[]
+    }
+
     const {
       limit = 50,
       offset = 0,

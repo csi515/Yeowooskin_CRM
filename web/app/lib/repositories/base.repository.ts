@@ -7,6 +7,9 @@ import { SupabaseClient } from '@supabase/supabase-js'
 import { ApiError, NotFoundError, UnauthorizedError } from '../api/errors'
 import type { PaginationParams, SearchParams } from '@/types/common'
 
+// Mock Data Load (Dynamic import to avoid circular dep issues if any, or just clean import)
+import { MOCK_CUSTOMERS, MOCK_PRODUCTS, MOCK_APPOINTMENTS } from '@/app/lib/mock-data'
+
 export interface QueryOptions extends PaginationParams, Partial<SearchParams> {
   orderBy?: string
   ascending?: boolean
@@ -26,9 +29,8 @@ export abstract class BaseRepository<T> {
     this.supabase = supabase
   }
 
-  /**
-   * Supabase 에러 처리
-   */
+  // ... (handleSupabaseError remains)
+
   protected handleSupabaseError(error: any): never {
     console.error(`[${this.tableName}] Supabase Error:`, error)
 
@@ -66,6 +68,14 @@ export abstract class BaseRepository<T> {
    * 모든 레코드 조회 (페이지네이션 지원)
    */
   async findAll(options: QueryOptions = {}): Promise<T[]> {
+    if (this.userId === 'demo-user') {
+      // Mock Data 반환
+      if (this.tableName === 'customers') return MOCK_CUSTOMERS as unknown as T[]
+      if (this.tableName === 'products') return MOCK_PRODUCTS as unknown as T[]
+      if (this.tableName === 'appointments') return MOCK_APPOINTMENTS as unknown as T[]
+      return []
+    }
+
     const {
       limit = 50,
       offset = 0,
@@ -119,6 +129,10 @@ export abstract class BaseRepository<T> {
    * 레코드 생성
    */
   async create(payload: Partial<T>): Promise<T> {
+    if (this.userId === 'demo-user') {
+      throw new ApiError('데모 모드에서는 데이터를 저장할 수 없습니다.', 403)
+    }
+
     const { data, error } = await this.supabase
       .from(this.tableName)
       .insert({ ...payload, owner_id: this.userId } as Record<string, unknown>)
@@ -136,6 +150,10 @@ export abstract class BaseRepository<T> {
    * 레코드 업데이트
    */
   async update(id: string, payload: Partial<T>): Promise<T> {
+    if (this.userId === 'demo-user') {
+      throw new ApiError('데모 모드에서는 데이터를 수정할 수 없습니다.', 403)
+    }
+
     const { data, error } = await this.supabase
       .from(this.tableName)
       .update(payload as Record<string, unknown>)
@@ -155,6 +173,10 @@ export abstract class BaseRepository<T> {
    * 레코드 삭제
    */
   async delete(id: string): Promise<void> {
+    if (this.userId === 'demo-user') {
+      throw new ApiError('데모 모드에서는 데이터를 삭제할 수 없습니다.', 403)
+    }
+
     const { error } = await this.supabase
       .from(this.tableName)
       .delete()

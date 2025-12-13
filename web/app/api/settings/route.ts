@@ -8,8 +8,13 @@ export const dynamic = 'force-dynamic'
  * GET /api/settings
  * 설정 조회
  */
-export async function GET(_req: NextRequest) {
+export async function GET(req: NextRequest) {
   try {
+    // 데모 모드 확인
+    if (req.cookies.get('demo_mode')?.value === 'true') {
+      return NextResponse.json(DEFAULT_SETTINGS)
+    }
+
     const supabase = await createSupabaseServerClient()
     const { data: { user }, error: authError } = await supabase.auth.getUser()
 
@@ -36,9 +41,9 @@ export async function GET(_req: NextRequest) {
 
     // 추가 보안 검증: owner_id가 현재 사용자와 일치하는지 확인
     if (data.owner_id !== user.id) {
-      console.error('Security violation: settings owner_id mismatch', { 
-        dataOwnerId: data.owner_id, 
-        currentUserId: user.id 
+      console.error('Security violation: settings owner_id mismatch', {
+        dataOwnerId: data.owner_id,
+        currentUserId: user.id
       })
       return NextResponse.json({ error: 'Unauthorized' }, { status: 403 })
     }
@@ -69,6 +74,10 @@ export async function GET(_req: NextRequest) {
  */
 export async function PUT(req: NextRequest) {
   try {
+    if (req.cookies.get('demo_mode')?.value === 'true') {
+      return NextResponse.json({ error: '데모 모드에서는 설정을 변경할 수 없습니다.' }, { status: 403 })
+    }
+
     const supabase = await createSupabaseServerClient()
     const { data: { user }, error: authError } = await supabase.auth.getUser()
 
@@ -92,9 +101,9 @@ export async function PUT(req: NextRequest) {
 
     // 추가 보안 검증: owner_id가 현재 사용자와 일치하는지 확인
     if (existing && existing.owner_id !== user.id) {
-      console.error('Security violation: settings owner_id mismatch', { 
-        existingOwnerId: existing.owner_id, 
-        currentUserId: user.id 
+      console.error('Security violation: settings owner_id mismatch', {
+        existingOwnerId: existing.owner_id,
+        currentUserId: user.id
       })
       return NextResponse.json({ error: 'Unauthorized' }, { status: 403 })
     }
@@ -154,9 +163,9 @@ export async function PUT(req: NextRequest) {
 
     // 추가 보안 검증: 저장된 데이터의 owner_id 확인
     if (upserted && upserted.owner_id !== user.id) {
-      console.error('Security violation: upserted settings owner_id mismatch', { 
-        upsertedOwnerId: upserted.owner_id, 
-        currentUserId: user.id 
+      console.error('Security violation: upserted settings owner_id mismatch', {
+        upsertedOwnerId: upserted.owner_id,
+        currentUserId: user.id
       })
       return NextResponse.json({ error: 'Unauthorized' }, { status: 403 })
     }

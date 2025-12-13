@@ -179,17 +179,30 @@ export default function LoginForm() {
                         </button>
                     </div>
 
-                    <Button
-                        variant="primary"
-                        onClick={signIn}
-                        loading={busy}
-                        disabled={!canSubmit}
-                        className="w-full"
-                    >
-                        로그인
-                    </Button>
-
                     <div className="space-y-2">
+                        <Button
+                            variant="primary"
+                            onClick={signIn}
+                            loading={busy}
+                            disabled={!canSubmit}
+                            className="w-full"
+                        >
+                            로그인
+                        </Button>
+                        <Button
+                            type="button"
+                            variant="secondary"
+                            onClick={() => {
+                                document.cookie = 'demo_mode=true; path=/; max-age=3600; SameSite=Lax'
+                                router.push('/dashboard')
+                            }}
+                            className="w-full border-dashed border-2 text-neutral-600 hover:text-neutral-800 hover:bg-neutral-50"
+                        >
+                            로그인 없이 체험하기 (데모)
+                        </Button>
+                    </div>
+
+                    <div className="space-y-2 pt-2">
                         <Button
                             variant="ghost"
                             onClick={() => router.push('/signup')}

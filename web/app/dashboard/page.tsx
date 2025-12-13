@@ -228,6 +228,13 @@ export default async function DashboardPage() {
   const { start, end } = getTodayRange()
 
   // Directly fetch data without caching
+  let dashboardData
+  if (userId === 'demo-user') {
+    dashboardData = (await import('@/app/lib/mock-data')).MOCK_DASHBOARD_DATA
+  } else {
+    dashboardData = await getDashboardData({ start, end, userId, accessToken })
+  }
+
   const {
     todayAppointments,
     monthlyProfit,
@@ -235,11 +242,18 @@ export default async function DashboardPage() {
     recentAppointments,
     recentTransactions,
     activeProducts
-  } = await getDashboardData({ start, end, userId, accessToken })
+  } = dashboardData
 
   return (
     <main className="space-y-4 sm:space-y-5 md:space-y-6">
       <DashboardInstallPrompt />
+
+      {userId === 'demo-user' && (
+        <div className="bg-amber-50 border border-amber-200 text-amber-800 px-4 py-3 rounded-xl text-sm mb-4 shadow-sm flex items-center gap-2">
+          <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+          <span>현재 <strong>체험하기(데모) 모드</strong>입니다. 표시되는 데이터는 예시이며, 실제 데이터베이스와 연동되지 않습니다.</span>
+        </div>
+      )}
 
       {/* Metrics */}
       <section className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-5 md:gap-6">

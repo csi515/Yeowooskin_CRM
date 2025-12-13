@@ -86,6 +86,13 @@ export class PointsRepository {
     customerId: string,
     options: QueryOptions & { withLedger?: boolean; from?: string; to?: string } = {}
   ): Promise<PointsBalance> {
+    if (this.userId === 'demo-user') {
+      const { MOCK_POINTS_LEDGER } = await import('@/app/lib/mock-data')
+      const ledger = MOCK_POINTS_LEDGER.filter(l => l.customer_id === customerId)
+      const balance = ledger.reduce((s, l) => s + l.delta, 0)
+      return { balance, ledger: options.withLedger !== false ? (ledger as unknown as PointsLedger[]) : [] }
+    }
+
     const { withLedger = true, limit = 50, offset = 0, from, to } = options
 
     // 전체 잔액 계산 (기간 무관)
@@ -177,6 +184,13 @@ export class PointsRepository {
     customerId: string,
     options: QueryOptions & { from?: string; to?: string } = {}
   ): Promise<Array<{ created_at: string; delta: number; reason?: string }>> {
+    if (this.userId === 'demo-user') {
+      const { MOCK_POINTS_LEDGER } = await import('@/app/lib/mock-data')
+      return MOCK_POINTS_LEDGER
+        .filter(l => l.customer_id === customerId)
+        .map(l => ({ created_at: l.created_at, delta: l.delta, reason: l.reason })) as unknown as Array<{ created_at: string; delta: number; reason?: string }>
+    }
+
     const { limit = 50, offset = 0, from, to } = options
 
     let query = this.supabase

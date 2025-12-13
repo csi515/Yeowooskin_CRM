@@ -15,6 +15,11 @@ export class TransactionsRepository extends BaseRepository<Transaction> {
    * 고객별 거래 조회
    */
   override async findAll(options: QueryOptions & { customer_id?: string } = {}): Promise<Transaction[]> {
+    if (this.userId === 'demo-user') {
+      const { MOCK_TRANSACTIONS } = await import('@/app/lib/mock-data')
+      return MOCK_TRANSACTIONS as unknown as Transaction[]
+    }
+
     const {
       limit = 50,
       offset = 0,

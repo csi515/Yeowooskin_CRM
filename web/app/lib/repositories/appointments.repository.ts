@@ -18,6 +18,11 @@ export class AppointmentsRepository extends BaseRepository<Appointment> {
    * 날짜 범위로 예약 조회
    */
   override async findAll(options: QueryOptions & { from?: string; to?: string } = {}): Promise<Appointment[]> {
+    if (this.userId === 'demo-user') {
+      const { MOCK_APPOINTMENTS } = await import('@/app/lib/mock-data')
+      return MOCK_APPOINTMENTS as unknown as Appointment[]
+    }
+
     const {
       limit = 200,
       offset = 0,

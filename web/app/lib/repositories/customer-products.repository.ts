@@ -54,6 +54,11 @@ export class CustomerProductsRepository extends BaseRepository<CustomerProduct> 
    * 고객별 상품 보유 내역 조회
    */
   async findByCustomerId(customerId: string): Promise<CustomerProduct[]> {
+    if (this.userId === 'demo-user') {
+      const { MOCK_CUSTOMER_PRODUCTS } = await import('@/app/lib/mock-data')
+      return MOCK_CUSTOMER_PRODUCTS.filter(cp => cp.customer_id === customerId) as unknown as CustomerProduct[]
+    }
+
     const { data, error } = await this.supabase
       .from(this.tableName)
       .select('*, products(name)')
