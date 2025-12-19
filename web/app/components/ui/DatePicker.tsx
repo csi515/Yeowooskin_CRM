@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, ReactNode } from 'react'
+import { useState, useEffect } from 'react'
 import { Calendar as CalendarIcon, ChevronLeft, ChevronRight } from 'lucide-react'
 import { Box, Typography, IconButton, Paper, Grid, InputAdornment } from '@mui/material'
 import { useClickOutside } from '@/app/lib/hooks/useClickOutside'
@@ -33,9 +33,9 @@ function parseDate(value: string): Date | null {
   const match = value.match(/^(\d{4})-(\d{2})-(\d{2})$/)
   if (!match) return null
 
-  const year = parseInt(match[1], 10)
-  const month = parseInt(match[2], 10) - 1
-  const day = parseInt(match[3], 10)
+  const year = parseInt(match[1] || '0', 10)
+  const month = parseInt(match[2] || '0', 10) - 1
+  const day = parseInt(match[3] || '0', 10)
 
   const date = new Date(year, month, day)
   if (
@@ -57,7 +57,6 @@ export default function DatePicker({
   onChange,
   dateFormat = defaultDateFormat,
   className,
-  ...rest
 }: Props) {
   const [isOpen, setIsOpen] = useState(false)
   const [displayValue, setDisplayValue] = useState('')
@@ -207,21 +206,19 @@ export default function DatePicker({
     )
   }
 
-  const { color, ...restProps } = rest
-
   return (
     <Box ref={containerRef} sx={{ position: 'relative', width: '100%' }} className={className}>
       <Box sx={{ position: 'relative' }}>
         <Input
-          {...restProps}
-          label={label}
-          helpText={helpText}
-          error={error}
+          {...(label ? { label } : {})}
+          {...(helpText ? { helpText } : {})}
+          {...(error ? { error } : {})}
           value={displayValue}
           onChange={handleInputChange}
           placeholder={dateFormat.toLowerCase()}
           onClick={() => setIsOpen(true)}
           autoComplete="off"
+          fullWidth
           InputProps={{
             endAdornment: (
               <InputAdornment position="end">

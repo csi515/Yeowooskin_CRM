@@ -22,8 +22,7 @@ export default function Drawer({
   children,
   placement = 'right',
   size = 'md',
-  className,
-  closeOnOverlayClick = true,
+  className = '',
 }: Props) {
   const sizeMap = {
     sm: 320,

@@ -32,8 +32,7 @@ export default function Dropdown({
   trigger,
   items,
   onSelect,
-  placement = 'bottom-left', // layout context might be different now
-  className,
+  className = '',
   disabled = false,
 }: Props) {
   const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null)
@@ -105,7 +104,7 @@ export default function Dropdown({
             <MenuItem
               key={index}
               onClick={() => handleItemClick(item)}
-              disabled={item.disabled}
+              disabled={!!item.disabled}
             >
               {item.icon && (
                 <ListItemIcon>

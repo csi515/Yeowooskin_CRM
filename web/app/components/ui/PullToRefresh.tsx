@@ -28,7 +28,7 @@ export default function PullToRefresh({ children, onRefresh, disabled = false }:
         if (refreshing) return
 
         const handleTouchStart = (e: TouchEvent) => {
-            if (window.scrollY === 0 && !disabled) {
+            if (window.scrollY === 0 && !disabled && e.touches[0]) {
                 setStartY(e.touches[0].clientY)
                 setPulling(true)
             }
@@ -37,7 +37,7 @@ export default function PullToRefresh({ children, onRefresh, disabled = false }:
         const handleTouchMove = (e: TouchEvent) => {
             if (!pulling || disabled) return
 
-            const y = e.touches[0].clientY
+            const y = e.touches[0]?.clientY ?? 0
             const diff = y - startY
 
             // Pulling down at top

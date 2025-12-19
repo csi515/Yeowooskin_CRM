@@ -1,12 +1,12 @@
 'use client'
 
-import React, { useState, useEffect } from 'react'
+import React, { useState } from 'react'
 import { usePathname } from 'next/navigation'
 import Box from '@mui/material/Box'
 import Drawer from '@mui/material/Drawer'
-import Container from '@mui/material/Container'
-import { useTheme } from '@mui/material/styles'
-import useMediaQuery from '@mui/material/useMediaQuery'
+
+import { useTheme } from '@mui/material'
+import { useMediaQuery } from '@mui/material'
 import Sidebar from './Sidebar'
 import TopBar from './TopBar'
 import MobileBottomNav from './MobileBottomNav'

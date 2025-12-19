@@ -23,7 +23,7 @@ export default function TableSort({
   onSort,
   className = '',
 }: Props) {
-  const createSortHandler = (property: string) => (event: React.MouseEvent<unknown>) => {
+  const createSortHandler = () => () => {
     if (!onSort) return
     // Cycle: null -> asc -> desc -> null
     if (direction === null) onSort('asc')
@@ -49,11 +49,11 @@ export default function TableSort({
       <TableSortLabel
         active={direction !== null}
         direction={direction === null ? 'asc' : direction}
-        onClick={createSortHandler(children)}
+        onClick={createSortHandler()}
       >
         {children}
         {direction ? (
-          <Box component="span" sx={visuallyHidden}>
+          <Box component="span" sx={{ ...visuallyHidden as any }}>
             {direction === 'desc' ? 'sorted descending' : 'sorted ascending'}
           </Box>
         ) : null}

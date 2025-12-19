@@ -1,7 +1,7 @@
 'use client'
 
 import { useState } from 'react'
-import { Card, Grid, Typography, Box, Divider } from '@mui/material'
+import { Card, Grid, Typography, Box } from '@mui/material'
 import { User, Phone, MapPin, Mail, FileText, Trash2 } from 'lucide-react'
 import Input from '../../ui/Input'
 import Textarea from '../../ui/Textarea'
@@ -125,7 +125,7 @@ export default function CustomerOverviewTab({
       <ConfirmDialog
         open={isDeleteDialogOpen}
         onClose={() => setIsDeleteDialogOpen(false)}
-        onConfirm={onDelete}
+        onConfirm={onDelete || (() => { })}
         title="고객 정보 삭제"
         description={`'${form.name}' 고객의 모든 정보와 거래 내역이 영구적으로 삭제됩니다. 계속하시겠습니까?`}
         confirmText="삭제하기"

@@ -18,9 +18,8 @@ import Typography from '@mui/material/Typography'
 import IconButton from '@mui/material/IconButton'
 import ToggleButton from '@mui/material/ToggleButton'
 import ToggleButtonGroup from '@mui/material/ToggleButtonGroup'
-import Fab from '@mui/material/Fab'
-import useMediaQuery from '@mui/material/useMediaQuery'
-import { useTheme } from '@mui/material/styles'
+
+import { useTheme } from '@mui/material'
 
 // React Big Calendar를 동적 import로 로드하여 번들 크기 감소
 const BigCalendarWrapper = lazy(async () => {
@@ -199,7 +198,7 @@ function CalendarHeader({
           <ToggleButtonGroup
             value={view}
             exclusive
-            onChange={(e, nextView) => nextView && onChangeView(nextView)}
+            onChange={(_, nextView) => nextView && onChangeView(nextView)}
             size="small"
             aria-label="달력 보기 모드"
           >
@@ -242,7 +241,7 @@ export default function AppointmentsPage() {
   const calendarRef = useRef<any>(null)
   const timelineRef = useRef<MobileTimelineViewRef>(null)
   const [mobileViewMode, setMobileViewMode] = useState<'timeline' | 'calendar'>('calendar')
-  const theme = useTheme()
+
 
   const reloadCalendar = async (opt?: { from?: string; to?: string }): Promise<void> => {
     try {
@@ -425,7 +424,7 @@ export default function AppointmentsPage() {
         <ToggleButtonGroup
           value={mobileViewMode}
           exclusive
-          onChange={(e, next) => {
+          onChange={(_, next) => {
             if (!next) return;
             setMobileViewMode(next);
             if (next === 'timeline') {

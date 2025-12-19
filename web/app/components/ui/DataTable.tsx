@@ -81,7 +81,7 @@ export function DataTable<T extends Record<string, unknown>>({
         <MuiTable sx={{ minWidth: 650 }}>
           <TableHead sx={{ bgcolor: 'action.hover' }}>
             <TableRow>
-              {columns.map((col, idx) => (
+              {columns.map((_, idx) => (
                 <TableCell key={idx} sx={{ fontWeight: 700, py: 2 }}>
                   <Skeleton width={80} height={20} />
                 </TableCell>
@@ -187,7 +187,7 @@ export function DataTable<T extends Record<string, unknown>>({
                 <TableCell
                   key={idx}
                   align={col.align || 'left'}
-                  sortDirection={sortKey === col.key ? sortDirection : false}
+                  sortDirection={sortKey === col.key && sortDirection ? sortDirection : false}
                   sx={{
                     fontWeight: 700,
                     bgcolor: 'action.hover',
@@ -200,7 +200,7 @@ export function DataTable<T extends Record<string, unknown>>({
                   {col.sortable && onSort ? (
                     <TableSortLabel
                       active={sortKey === col.key}
-                      direction={sortKey === col.key ? sortDirection : 'asc'}
+                      direction={sortKey === col.key && sortDirection ? sortDirection : 'asc'}
                       onClick={() => onSort(col.key)}
                     >
                       {col.header}

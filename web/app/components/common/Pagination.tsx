@@ -1,7 +1,7 @@
 import { ChevronLeft, ChevronRight } from 'lucide-react'
 import MuiPagination from '@mui/material/Pagination'
 import PaginationItem from '@mui/material/PaginationItem'
-import Select from '@mui/material/Select'
+import Select, { SelectChangeEvent } from '@mui/material/Select'
 import MenuItem from '@mui/material/MenuItem'
 import FormControl from '@mui/material/FormControl'
 
@@ -51,7 +51,7 @@ export default function Pagination({
           <FormControl size="small">
             <Select
               value={pageSize}
-              onChange={(e) => {
+              onChange={(e: SelectChangeEvent<number>) => {
                 onPageSizeChange(Number(e.target.value))
                 onPageChange(1)
               }}
@@ -81,7 +81,12 @@ export default function Pagination({
           renderItem={(item) => (
             <PaginationItem
               slots={{ previous: ChevronLeft, next: ChevronRight }}
-              {...item}
+              color="primary"
+              page={item.page}
+              type={item.type}
+              selected={item.selected}
+              disabled={item.disabled}
+              onClick={item.onClick}
             />
           )}
         />

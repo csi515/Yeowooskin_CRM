@@ -296,7 +296,7 @@ export default function CustomerHoldingsTab({
                               className="w-full bg-transparent border-none focus:ring-1 focus:ring-blue-500 rounded px-1 text-xs"
                               value={r.notes || ''}
                               placeholder="메모 입력"
-                              onChange={(e) => {
+                              onChange={() => {
                                 // 로컬 상태 업데이트는 상위 컴포넌트에서 처리하거나 여기서 디바운싱 처리 필요
                                 // 현재는 흐름상 onBlur에서 저장하도록 유도
                               }}

@@ -71,11 +71,11 @@ const Button = forwardRef<HTMLButtonElement, Props>(function Button(
   return (
     <MuiButton
       ref={ref as any}
-      variant={muiProps.variant || 'contained'}
-      color={muiProps.color || 'primary'}
-      size={muiSize || 'medium'}
+      variant={muiProps.variant as any}
+      color={muiProps.color as any}
+      size={muiSize as any}
       disabled={isDisabled}
-      sx={sx}
+      sx={sx || {}}
       {...rest}
       startIcon={loading ? <CircularProgress size={20} color="inherit" /> : leftIcon}
       endIcon={rightIcon}
