@@ -70,7 +70,7 @@ export default function StaffPage() {
     title: app.notes || '예약 시술',
     start: new Date(app.appointment_date),
     end: new Date(new Date(app.appointment_date).getTime() + 60 * 60 * 1000), // 기본 1시간
-    admin_id: app.staff_id,
+    admin_id: app.staff_id || '',
     color: '#6366f1'
   })), [appointments])
 

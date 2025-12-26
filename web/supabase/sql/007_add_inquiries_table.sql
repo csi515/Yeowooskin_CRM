@@ -26,6 +26,12 @@ CREATE INDEX IF NOT EXISTS idx_inquiries_email ON public.inquiries(email);
 -- RLS 활성화
 ALTER TABLE public.inquiries ENABLE ROW LEVEL SECURITY;
 
+-- 구버전 정책 삭제 (재실행 시 오류 방지)
+DROP POLICY IF EXISTS "inquiries_insert_public" ON public.inquiries;
+DROP POLICY IF EXISTS "inquiries_select_admin" ON public.inquiries;
+DROP POLICY IF EXISTS "inquiries_update_admin" ON public.inquiries;
+DROP POLICY IF EXISTS "inquiries_delete_admin" ON public.inquiries;
+
 -- RLS 정책: 누구나 문의를 등록할 수 있음 (공개 삽입)
 CREATE POLICY "inquiries_insert_public" 
 ON public.inquiries 
@@ -33,7 +39,6 @@ FOR INSERT
 WITH CHECK (true);
 
 -- RLS 정책: 인증된 관리자만 문의 조회 가능
--- 참고: 실제 운영 환경에서는 role을 체크하거나 별도 관리자 테이블 참조 필요
 CREATE POLICY "inquiries_select_admin" 
 ON public.inquiries 
 FOR SELECT 
@@ -77,6 +82,9 @@ USING (
 );
 
 -- updated_at 자동 업데이트 트리거
+-- 트리거 삭제 후 재생성 (재실행 시 오류 방지)
+DROP TRIGGER IF EXISTS update_inquiries_updated_at ON public.inquiries;
+
 CREATE TRIGGER update_inquiries_updated_at
   BEFORE UPDATE ON public.inquiries
   FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();

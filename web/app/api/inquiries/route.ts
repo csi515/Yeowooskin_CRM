@@ -79,7 +79,7 @@ export const POST = withRateLimit(
         }
 
         // 데이터베이스에 삽입
-        const { data: inquiry, error } = await supabase
+        const { error } = await supabase
             .from('inquiries')
             .insert({
                 name: data.name.trim(),
@@ -89,8 +89,6 @@ export const POST = withRateLimit(
                 message: data.message.trim(),
                 status: 'new',
             })
-            .select()
-            .single()
 
         if (error) {
             console.error('Error creating inquiry:', error)
@@ -104,7 +102,6 @@ export const POST = withRateLimit(
             {
                 success: true,
                 message: '문의가 성공적으로 등록되었습니다. 빠른 시일 내에 답변드리겠습니다.',
-                data: inquiry,
             },
             { status: 201 }
         )
