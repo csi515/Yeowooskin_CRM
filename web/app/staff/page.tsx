@@ -9,7 +9,7 @@ import EmptyState from '@/app/components/EmptyState'
 import StaffDetailModal from '@/app/components/modals/StaffDetailModal'
 import StatusChangeModal from '@/app/components/modals/StatusChangeModal'
 import StaffDataGrid from '@/app/components/staff/StaffDataGrid'
-import StaffScheduler from '@/app/components/staff/StaffScheduler'
+// import StaffScheduler from '@/app/components/staff/StaffScheduler' // 임시 비활성화: @aldabil/react-scheduler API 호환성 문제
 import StaffAttendanceTimeline from '@/app/components/staff/StaffAttendanceTimeline'
 import { staffApi } from '@/app/lib/api/staff'
 import { attendanceApi } from '@/app/lib/api/attendance'
@@ -184,7 +184,14 @@ export default function StaffPage() {
                 </Stack>
               )}
               {tabIndex === 1 && (
-                <StaffScheduler events={schedulerEvents} staffList={rows} onEventChange={loadAll} />
+                <Box sx={{ p: 4, textAlign: 'center' }}>
+                  <Typography variant="h6" color="text.secondary">
+                    스케줄러 기능은 현재 업데이트 중입니다.
+                  </Typography>
+                  <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
+                    곧 다시 제공될 예정입니다.
+                  </Typography>
+                </Box>
               )}
               {tabIndex === 2 && (
                 <StaffDataGrid rows={rows} onEdit={handleEdit} onStatusClick={handleStatusClick} />
