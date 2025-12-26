@@ -1,0 +1,67 @@
+﻿
+> build
+> next build
+
+  ??Next.js 14.2.10
+  - Environments: .env.local
+
+   Creating an optimized production build ...
+node.exe :  ??Compiled with warnings
+위치 줄:1 문자:1
++ & "C:\Program Files\nodejs/node.exe" "C
+:\Program Files\nodejs/node_mo ...
++ ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecifi 
+   ed: ( ??Compiled with warnings:Strin  
+  g) [], RemoteException
+    + FullyQualifiedErrorId : NativeComm 
+   andError
+ 
+
+./app/components/staff/StaffScheduler.tsx
+Attempted import error: '@aldabil/react-s
+cheduler' does not contain a default expo
+rt (imported as 'Scheduler').
+
+Import trace for requested module:
+./app/components/staff/StaffScheduler.tsx
+./app/staff/page.tsx
+
+./app/components/staff/StaffScheduler.tsx
+Attempted import error: '@aldabil/react-s
+cheduler' does not contain a default expo
+rt (imported as 'Scheduler').
+
+Import trace for requested module:
+./app/components/staff/StaffScheduler.tsx
+./app/staff/page.tsx
+
+   Skipping linting
+   Checking validity of types ...
+Failed to compile.
+
+./app/components/staff/StaffScheduler.tsx
+:55:37
+Type error: 'droppedOn' is declared but i
+ts value is never read.
+
+[0m [90m 53 |[39m                     
+[36mreturn[39m event[0m
+[0m [90m 54 |[39m                 }}[
+0m
+[0m[31m[1m>[22m[39m[90m 55 |[39m  
+               onEventDrop[33m=[39m{[3
+6masync[39m (droppedOn[33m:[39m any[3
+3m,[39m updatedEvent[33m:[39m [33mPro
+cessedEvent[39m[33m,[39m originalEvent
+[33m:[39m [33mProcessedEvent[39m) [3
+3m=>[39m {[0m
+[0m [90m    |[39m                     
+                [31m[1m^[22m[39m[0m
+[0m [90m 56 |[39m                     
+onEventChange(updatedEvent)[0m
+[0m [90m 57 |[39m                     
+[36mreturn[39m updatedEvent[0m
+[0m [90m 58 |[39m                 }}[
+0m

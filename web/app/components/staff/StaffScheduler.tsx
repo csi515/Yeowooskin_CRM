@@ -52,7 +52,7 @@ export default function StaffScheduler({ events, staffList, onEventChange }: Sta
                     }
                     return event
                 }}
-                onEventDrop={async (droppedOn: any, updatedEvent: ProcessedEvent, originalEvent: ProcessedEvent) => {
+                onEventDrop={async (_droppedOn: any, updatedEvent: ProcessedEvent, _originalEvent: ProcessedEvent) => {
                     onEventChange(updatedEvent)
                     return updatedEvent
                 }}
@@ -74,7 +74,7 @@ export default function StaffScheduler({ events, staffList, onEventChange }: Sta
                         config: { label: '상세 상태' }
                     }
                 ]}
-                viewerExtraComponent={(fields, event) => {
+                viewerExtraComponent={(_fields, event) => {
                     return (
                         <Box sx={{ p: 1 }}>
                             <Typography variant="caption" color="text.secondary">
@@ -83,7 +83,7 @@ export default function StaffScheduler({ events, staffList, onEventChange }: Sta
                         </Box>
                     )
                 }}
-                month={null} // 월간 뷰는 공간 효율을 위해 제외 (요청사항: 고밀도)
+                month={undefined} // 월간 뷰는 공간 효율을 위해 제외 (요청사항: 고밀도)
                 day={{
                     startHour: 9,
                     endHour: 22,
