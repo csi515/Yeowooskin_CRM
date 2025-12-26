@@ -1,6 +1,6 @@
 import { NextRequest } from 'next/server'
 import { withAuth } from '@/app/lib/api/middleware'
-import { parseQueryParams, createSuccessResponse } from '@/app/lib/api/handlers'
+import { createSuccessResponse } from '@/app/lib/api/handlers'
 import { AttendanceRepository } from '@/app/lib/repositories/attendance.repository'
 
 /**
@@ -8,12 +8,23 @@ import { AttendanceRepository } from '@/app/lib/repositories/attendance.reposito
  * staff_id, start, end 파라미터를 통한 필터링 지원
  */
 export const GET = withAuth(async (req: NextRequest, { userId, supabase }) => {
-    const params = parseQueryParams(req) as any
     const repo = new AttendanceRepository(userId, supabase)
 
-    const staffId = params['staff_id'] as string | undefined
-    const start = params['start'] as string | undefined
-    const end = params['end'] as string | undefined
+    // parseQueryParams returns PaginationParams & SearchParams & DateRangeParams
+    // where from/to map to start/end logic usually, but here we used 'start'/'end' manually in previous code.
+    // However, parseQueryParams schema expects 'from' and 'to'. 
+    // Let's check if the URL sends 'start'/'end' or 'from'/'to'. 
+    // The user logs show: api/attendance?start=...&end=...
+    // But parseQueryParams ONLY parses limit, offset, search, from, to.
+    // It DOES NOT parse 'start' and 'end' from searchParams.
+    // This is the bug! The params are being ignored.
+
+    // We need to extract start/end manually or update the utility.
+    // Since we are fixing this file:
+    const { searchParams } = new URL(req.url)
+    const start = searchParams.get('start') || undefined
+    const end = searchParams.get('end') || undefined
+    const staffId = searchParams.get('staff_id') || undefined
 
     let data
     if (staffId) {

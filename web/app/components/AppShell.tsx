@@ -85,7 +85,17 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
       )}
 
       {/* Main Content */}
-      <Box sx={{ flexGrow: 1, display: 'flex', flexDirection: 'column', minWidth: 0 }}>
+      <Box sx={{
+        flexGrow: 1,
+        display: 'flex',
+        flexDirection: 'column',
+        minWidth: 0,
+        ml: { xs: 0, md: collapsed ? '80px' : '256px' },
+        transition: theme.transitions.create('margin', {
+          easing: theme.transitions.easing.sharp,
+          duration: theme.transitions.duration.enteringScreen,
+        }),
+      }}>
         <TopBar onMenu={() => setNavOpen(true)} />
         <Box
           component="main"

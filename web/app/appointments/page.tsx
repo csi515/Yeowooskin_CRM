@@ -385,7 +385,10 @@ export default function AppointmentsPage() {
   }
 
   React.useEffect(() => {
-    updateRangeAndLabel(currentDate, view)
+    // 페이지 로드 시 항상 오늘 날짜로 초기화
+    const today = new Date()
+    setCurrentDate(today)
+    updateRangeAndLabel(today, view)
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 

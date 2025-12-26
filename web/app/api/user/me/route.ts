@@ -31,12 +31,18 @@ export async function GET() {
 			.maybeSingle()
 
 		if (error) {
-			return NextResponse.json({ error: error.message }, { status: 400 })
+			console.error('Database error in /api/user/me:', error)
+			return NextResponse.json({ error: error.message, code: error.code }, { status: 500 })
+		}
+
+		if (!data) {
+			// Auth에는 있지만 User 테이블에 없는 경우 (회원가입 미완료 등)
+			return NextResponse.json({ error: 'USER_NOT_FOUND', message: '사용자 정보를 찾을 수 없습니다.' }, { status: 404 })
 		}
 
 		return NextResponse.json({ profile: data })
 	} catch (e: unknown) {
-		console.error('API /user/me error:', e)
+		console.error('API /api/user/me error:', e)
 		const message = e instanceof Error ? e.message : 'unknown error'
 		return NextResponse.json({ error: message }, { status: 500 })
 	}

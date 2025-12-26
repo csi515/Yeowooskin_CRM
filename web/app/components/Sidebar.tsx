@@ -13,7 +13,8 @@ import {
   Settings,
   Shield,
   ChevronLeft,
-  ChevronRight
+  ChevronRight,
+  Home
 } from 'lucide-react'
 import {
   Box,
@@ -48,6 +49,7 @@ const items: Item[] = [
   { href: '/staff', label: '직원', icon: UserCheck },
   { href: '/finance', label: '재무', icon: DollarSign },
   { href: '/settings', label: '설정', icon: Settings },
+  { href: '/', label: 'BeautyHub 홈', icon: Home },
 ]
 
 type Props = {
@@ -75,6 +77,9 @@ export default function Sidebar({
       component="aside"
       elevation={0}
       sx={{
+        position: mobile ? 'relative' : 'fixed',
+        top: 0,
+        left: 0,
         width: mobile ? 288 : sidebarWidth,
         flexShrink: 0,
         display: mobile ? 'flex' : { xs: 'none', md: 'flex' },
@@ -87,6 +92,7 @@ export default function Sidebar({
           duration: theme.transitions.duration.enteringScreen,
         }),
         overflowX: 'hidden',
+        zIndex: theme.zIndex.drawer,
       }}
     >
       {/* 헤더 */}
