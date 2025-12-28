@@ -284,3 +284,130 @@ export interface UserUpdateInput {
   approved?: boolean
 }
 
+/**
+ * 재고 트랜잭션 엔티티
+ */
+export interface InventoryTransaction {
+  id: string
+  owner_id: string
+  product_id: string
+  type: 'purchase' | 'sale' | 'adjustment'
+  quantity: number
+  before_count?: number
+  after_count?: number
+  memo?: string | null
+  created_at?: string
+}
+
+/**
+ * 재고 트랜잭션 생성/수정 DTO
+ */
+export interface InventoryTransactionCreateInput {
+  product_id: string
+  type: 'purchase' | 'sale' | 'adjustment'
+  quantity: number
+  before_count?: number
+  after_count?: number
+  memo?: string | null
+}
+
+export interface InventoryTransactionUpdateInput extends Partial<InventoryTransactionCreateInput> { }
+
+/**
+ * 재고 알림 엔티티
+ */
+export interface InventoryAlert {
+  id: string
+  owner_id: string
+  product_id: string
+  alert_type: 'low_stock' | 'out_of_stock'
+  acknowledged: boolean
+  created_at?: string
+}
+
+/**
+ * 재고 알림 생성/수정 DTO
+ */
+export interface InventoryAlertCreateInput {
+  product_id: string
+  alert_type: 'low_stock' | 'out_of_stock'
+  acknowledged?: boolean
+}
+
+export interface InventoryAlertUpdateInput extends Partial<InventoryAlertCreateInput> { }
+
+/**
+ * 급여 설정 엔티티
+ */
+export interface PayrollSettings {
+  id: string
+  owner_id: string
+  staff_id: string
+  base_salary: number
+  hourly_rate: number
+  national_pension_rate: number
+  health_insurance_rate: number
+  employment_insurance_rate: number
+  income_tax_rate: number
+  created_at?: string
+  updated_at?: string
+}
+
+/**
+ * 급여 설정 생성/수정 DTO
+ */
+export interface PayrollSettingsCreateInput {
+  staff_id: string
+  base_salary?: number
+  hourly_rate?: number
+  national_pension_rate?: number
+  health_insurance_rate?: number
+  employment_insurance_rate?: number
+  income_tax_rate?: number
+}
+
+export interface PayrollSettingsUpdateInput extends Partial<PayrollSettingsCreateInput> { }
+
+/**
+ * 급여 기록 엔티티
+ */
+export interface PayrollRecord {
+  id: string
+  owner_id: string
+  staff_id: string
+  month: string
+  base_salary: number
+  overtime_pay: number
+  incentive_pay: number
+  total_gross: number
+  national_pension: number
+  health_insurance: number
+  employment_insurance: number
+  income_tax: number
+  total_deductions: number
+  net_salary: number
+  memo?: string | null
+  created_at?: string
+}
+
+/**
+ * 급여 기록 생성/수정 DTO
+ */
+export interface PayrollRecordCreateInput {
+  staff_id: string
+  month: string
+  base_salary?: number
+  overtime_pay?: number
+  incentive_pay?: number
+  total_gross?: number
+  national_pension?: number
+  health_insurance?: number
+  employment_insurance?: number
+  income_tax?: number
+  total_deductions?: number
+  net_salary?: number
+  memo?: string | null
+}
+
+export interface PayrollRecordUpdateInput extends Partial<PayrollRecordCreateInput> { }
+

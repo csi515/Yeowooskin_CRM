@@ -87,6 +87,56 @@ function StaffSettingsSection({ data, onChange }: Props) {
                         ))}
                     </div>
                 </div>
+
+                {/* 기본 근무시간 */}
+                <div className="space-y-4">
+                    <div className="flex items-center gap-2">
+                        <Users className="w-5 h-5 text-neutral-700" />
+                        <h3 className="text-lg font-semibold text-neutral-800">기본 근무시간</h3>
+                        <InfoTooltip content="스케줄 추가 시 기본값으로 사용될 근무시간을 설정합니다." />
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-4">
+                        <div>
+                            <label className="block text-sm font-medium text-neutral-700 mb-2">
+                                시작 시간
+                            </label>
+                            <input
+                                type="time"
+                                value={data?.defaultWorkHours?.startTime || '09:00'}
+                                onChange={(e) => onChange({
+                                    defaultWorkHours: {
+                                        ...data?.defaultWorkHours,
+                                        startTime: e.target.value,
+                                        endTime: data?.defaultWorkHours?.endTime || '18:00'
+                                    }
+                                })}
+                                className="w-full px-3 py-2 border border-neutral-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                            />
+                        </div>
+                        <div>
+                            <label className="block text-sm font-medium text-neutral-700 mb-2">
+                                종료 시간
+                            </label>
+                            <input
+                                type="time"
+                                value={data?.defaultWorkHours?.endTime || '18:00'}
+                                onChange={(e) => onChange({
+                                    defaultWorkHours: {
+                                        ...data?.defaultWorkHours,
+                                        startTime: data?.defaultWorkHours?.startTime || '09:00',
+                                        endTime: e.target.value
+                                    }
+                                })}
+                                className="w-full px-3 py-2 border border-neutral-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                            />
+                        </div>
+                    </div>
+
+                    <p className="text-xs text-neutral-500">
+                        스케줄 추가 시 이 시간이 기본값으로 자동 입력됩니다.
+                    </p>
+                </div>
             </div>
         </CollapsibleSection>
     )

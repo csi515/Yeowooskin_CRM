@@ -387,6 +387,7 @@ export default function AppointmentsPage() {
   React.useEffect(() => {
     // 페이지 로드 시 항상 오늘 날짜로 초기화
     const today = new Date()
+    console.log('Appointments: Initializing calendar with today:', today.toISOString())
     setCurrentDate(today)
     updateRangeAndLabel(today, view)
     // eslint-disable-next-line react-hooks/exhaustive-deps

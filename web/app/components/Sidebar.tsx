@@ -14,7 +14,10 @@ import {
   Shield,
   ChevronLeft,
   ChevronRight,
-  Home
+  Home,
+  TrendingUp,
+  Warehouse,
+  Receipt,
 } from 'lucide-react'
 import {
   Box,
@@ -45,8 +48,11 @@ const items: Item[] = [
   { href: '/dashboard', label: '대시보드', icon: LayoutDashboard },
   { href: '/appointments', label: '예약', icon: Calendar },
   { href: '/products', label: '제품', icon: Package },
+  { href: '/inventory', label: '재고', icon: Warehouse },
   { href: '/customers', label: '고객', icon: Users },
+  { href: '/analytics', label: '고객분석', icon: TrendingUp },
   { href: '/staff', label: '직원', icon: UserCheck },
+  { href: '/payroll', label: '급여', icon: Receipt },
   { href: '/finance', label: '재무', icon: DollarSign },
   { href: '/settings', label: '설정', icon: Settings },
   { href: '/', label: 'BeautyHub 홈', icon: Home },
@@ -141,11 +147,13 @@ export default function Sidebar({
           px: 1,
           py: 2,
           overflowY: 'auto',
-          '&::-webkit-scrollbar': { display: 'none' }, // 스크롤바 숨김 (선택사항)
+          '&::-webkit-scrollbar': { display: 'none' },
         }}
       >
         {items.map((item) => {
-          const active = pathname?.startsWith(item.href)
+          const active = item.href === '/'
+            ? pathname === '/'
+            : pathname?.startsWith(item.href)
           const Icon = item.icon
 
           return (
@@ -160,7 +168,7 @@ export default function Sidebar({
                   sx={{
                     minHeight: 44,
                     justifyContent: collapsed ? 'center' : 'initial',
-                    borderRadius: 2, // 8px (theme.shape.borderRadius)
+                    borderRadius: 2,
                     px: 1.5,
                     color: active ? 'primary.main' : 'text.primary',
                     bgcolor: active ? alpha(theme.palette.primary.main, 0.08) : 'transparent',

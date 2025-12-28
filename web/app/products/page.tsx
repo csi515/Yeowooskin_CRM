@@ -181,40 +181,43 @@ export default function ProductsPage() {
               autoCapitalize: 'off',
             }}
           />
-          <FormControl size="small" sx={{ minWidth: 120, width: { xs: '100%', sm: 'auto' } }}>
+          <FormControl size="small" sx={{ minWidth: 120, flexShrink: 0 }}>
             <Select
               value={statusFilter}
               onChange={e => setStatusFilter(e.target.value as 'all' | 'active' | 'inactive')}
               displayEmpty
+              sx={{
+                '& .MuiSelect-select': {
+                  whiteSpace: 'nowrap'
+                }
+              }}
             >
-              <MenuItem value="all">전체 상태</MenuItem>
+              <MenuItem value="all">전체</MenuItem>
               <MenuItem value="active">활성</MenuItem>
               <MenuItem value="inactive">비활성</MenuItem>
             </Select>
           </FormControl>
-          <Stack direction="row" spacing={1}>
-            {(query || statusFilter !== 'all') && (
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={() => {
-                  setQuery('')
-                  setStatusFilter('all')
-                }}
-              >
-                초기화
-              </Button>
-            )}
+          {(query || statusFilter !== 'all') && (
             <Button
-              variant="primary"
-              leftIcon={<Plus className="h-4 w-4" />}
-              onClick={openCreate}
-              fullWidth={false}
-              sx={{ width: { xs: '100%', sm: 'auto' } }}
+              variant="ghost"
+              size="sm"
+              onClick={() => {
+                setQuery('')
+                setStatusFilter('all')
+              }}
+              sx={{ whiteSpace: 'nowrap' }}
             >
-              제품 추가
+              초기화
             </Button>
-          </Stack>
+          )}
+          <Button
+            variant="primary"
+            leftIcon={<Plus className="h-4 w-4" />}
+            onClick={openCreate}
+            sx={{ whiteSpace: 'nowrap', flexShrink: 0 }}
+          >
+            제품 추가
+          </Button>
         </Stack>
       </Paper>
 

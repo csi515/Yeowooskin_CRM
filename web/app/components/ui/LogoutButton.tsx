@@ -41,7 +41,7 @@ export default function LogoutButton({ collapsed = false, className }: LogoutBut
           localStorage.clear()
         } catch { }
       }
-      router.push('/login')
+      router.push('/')
       router.refresh()
     } catch (error) {
       console.error('로그아웃 오류:', error)

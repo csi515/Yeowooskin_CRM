@@ -233,6 +233,14 @@ export default function LoginForm() {
                     <Stack spacing={1} sx={{ pt: 1 }}>
                         <Button
                             variant="ghost"
+                            onClick={() => router.push('/')}
+                            disabled={busy}
+                            fullWidth
+                        >
+                            홈으로
+                        </Button>
+                        <Button
+                            variant="ghost"
                             onClick={() => router.push('/signup')}
                             disabled={busy}
                             fullWidth

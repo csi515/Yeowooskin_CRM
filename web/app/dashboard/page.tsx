@@ -238,7 +238,10 @@ export default async function DashboardPage() {
 
   const { start, end } = getTodayRange()
 
+  // Fetch data in Server Component
+  const data = await getDashboardData({ start, end, userId, accessToken })
+
   return (
-    <DashboardContent start={start} end={end} userId={userId} accessToken={accessToken} fetchData={getDashboardData} />
+    <DashboardContent start={start} end={end} userId={userId} accessToken={accessToken} initialData={data} />
   )
 }

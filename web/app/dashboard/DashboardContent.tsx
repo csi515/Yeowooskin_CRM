@@ -1,6 +1,5 @@
 'use client'
 
-import { useState, useEffect } from 'react'
 import { useShopName } from '../lib/hooks/useShopName'
 import Card from '../components/ui/Card'
 import Button from '../components/ui/Button'
@@ -33,35 +32,13 @@ interface DashboardContentProps {
     end: string
     userId: string
     accessToken: string | undefined
-    fetchData: (params: { start: string; end: string; userId: string; accessToken: string | undefined }) => Promise<any>
+    initialData: any
 }
 
-export default function DashboardContent({ start, end, userId, accessToken, fetchData }: DashboardContentProps) {
-    const [data, setData] = useState<any>(null)
-    const [loading, setLoading] = useState(true)
+export default function DashboardContent({ initialData }: DashboardContentProps) {
     const shopName = useShopName()
 
-    useEffect(() => {
-        const load = async () => {
-            try {
-                setLoading(true)
-                let dashboardData
-                if (userId === 'demo-user') {
-                    dashboardData = (await import('@/app/lib/mock-data')).MOCK_DASHBOARD_DATA
-                } else {
-                    dashboardData = await fetchData({ start, end, userId, accessToken })
-                }
-                setData(dashboardData)
-            } catch (error) {
-                console.error('Failed to load dashboard data', error)
-            } finally {
-                setLoading(false)
-            }
-        }
-        load()
-    }, [start, end, userId, accessToken, fetchData])
-
-    if (loading || !data) {
+    if (!initialData) {
         return <DashboardSkeleton />
     }
 
@@ -75,7 +52,7 @@ export default function DashboardContent({ start, end, userId, accessToken, fetc
         recentTransactions,
         monthlyRevenueData, // New
         activeProducts
-    } = data
+    } = initialData
 
     return (
         <Stack spacing={3}>

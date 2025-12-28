@@ -48,6 +48,10 @@ export interface FinancialSettings {
  */
 export interface StaffSettings {
   positions: string[] // 직책 목록
+  defaultWorkHours: {
+    startTime: string // "09:00"
+    endTime: string   // "18:00"
+  }
 }
 
 /**
@@ -119,6 +123,10 @@ export const DEFAULT_SETTINGS: AppSettings = {
   },
   staffSettings: {
     positions: ['관리자', '매니저', '테라피스트', '접수원'],
+    defaultWorkHours: {
+      startTime: '09:00',
+      endTime: '18:00'
+    }
   },
   systemSettings: {
     pushNotificationsEnabled: true,

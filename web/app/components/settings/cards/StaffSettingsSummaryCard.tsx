@@ -42,6 +42,21 @@ export default function StaffSettingsSummaryCard({ data, onEdit }: Props) {
                         <p className="text-sm text-neutral-400 italic">등록된 직책이 없습니다</p>
                     )}
                 </div>
+
+                {/* 기본 근무시간 */}
+                <div>
+                    <div className="text-xs font-semibold text-neutral-500 uppercase mb-2">기본 근무시간</div>
+                    <div className="flex items-center gap-2">
+                        <span className="inline-flex items-center px-2.5 py-1 rounded-md bg-blue-50 border border-blue-200 text-blue-700 text-sm font-medium">
+                            {data?.defaultWorkHours?.startTime || '09:00'}
+                        </span>
+                        <span className="text-neutral-400">~</span>
+                        <span className="inline-flex items-center px-2.5 py-1 rounded-md bg-blue-50 border border-blue-200 text-blue-700 text-sm font-medium">
+                            {data?.defaultWorkHours?.endTime || '18:00'}
+                        </span>
+                    </div>
+                    <p className="text-xs text-neutral-500 mt-1">스케줄 추가 시 기본값</p>
+                </div>
             </div>
         </Card>
     )
