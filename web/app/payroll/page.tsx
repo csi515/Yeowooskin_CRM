@@ -116,12 +116,14 @@ export default function PayrollPage() {
             ])
 
             if (staffResponse.ok) {
-                const staffData = await staffResponse.json()
+                const staffJson = await staffResponse.json()
+                const staffData = Array.isArray(staffJson) ? staffJson : (staffJson.data || [])
                 setStaff(staffData)
             }
 
             if (recordsResponse.ok) {
-                const recordsData = await recordsResponse.json()
+                const recordsJson = await recordsResponse.json()
+                const recordsData = Array.isArray(recordsJson) ? recordsJson : (recordsJson.data || [])
                 setRecords(recordsData.map((r: any) => ({ ...r, staff_name: r.staff?.name })))
             }
         } catch (error) {
