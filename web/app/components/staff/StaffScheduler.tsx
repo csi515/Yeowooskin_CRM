@@ -157,17 +157,13 @@ export default function StaffScheduler({ staffList, schedules, onOpenSchedule }:
                                         sx={{
                                             fontWeight: 'bold',
                                             bgcolor: isToday ? 'primary.light' : (isWeekend ? 'grey.100' : 'inherit'),
-                                            color: isToday ? 'primary.contrastText' : 'inherit'
+                                            color: isToday ? 'primary.contrastText' : 'inherit',
+                                            p: 0.5 // Reduce padding for compactness
                                         }}
                                     >
-                                        <Stack spacing={0.5} alignItems="center">
-                                            <Typography variant="caption" color={isToday ? 'inherit' : 'text.secondary'}>
-                                                {format(day, 'EEE', { locale: ko })}
-                                            </Typography>
-                                            <Typography variant="body2">
-                                                {format(day, 'd')}
-                                            </Typography>
-                                        </Stack>
+                                        <Typography variant="body2" align="center" sx={{ fontSize: '0.875rem' }}>
+                                            {format(day, 'd(EEE)', { locale: ko })}
+                                        </Typography>
                                     </TableCell>
                                 )
                             })}

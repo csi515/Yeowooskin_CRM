@@ -10,6 +10,7 @@ import StaffDetailModal from '@/app/components/modals/StaffDetailModal'
 import StatusChangeModal from '@/app/components/modals/StatusChangeModal'
 import AttendanceRecordModal from '@/app/components/modals/AttendanceRecordModal'
 import ScheduleModal from '@/app/components/modals/ScheduleModal'
+import WeeklyScheduleModal from '@/app/components/modals/WeeklyScheduleModal'
 import StaffDataGrid from '@/app/components/staff/StaffDataGrid'
 import StaffScheduler from '@/app/components/staff/StaffScheduler'
 import StaffAttendanceTimeline from '@/app/components/staff/StaffAttendanceTimeline'
@@ -44,6 +45,7 @@ export default function StaffPage() {
   const [statusOpen, setStatusOpen] = useState(false)
   const [attendanceRecordOpen, setAttendanceRecordOpen] = useState(false)
   const [scheduleOpen, setScheduleOpen] = useState(false)
+  const [weeklyScheduleOpen, setWeeklyScheduleOpen] = useState(false)
 
   // 선택된 항목
   const [selected, setSelected] = useState<Staff | null>(null)
@@ -324,7 +326,9 @@ export default function StaffPage() {
               setSelected(null)
               setDetailOpen(true)
             }
-          )
+          ),
+          // 주간 스케줄 버튼은 스케줄 탭(index 1)일 때만 보이거나 항상 보이게 할 수 있음
+          ...(tabIndex === 1 ? [createActionButton('주간 반복 설정', () => { setSelected(null); setWeeklyScheduleOpen(true) }, 'primary')] : [])
         ]}
       />
 
@@ -464,6 +468,15 @@ export default function StaffPage() {
         onSave={handleSaveSchedule}
         onDelete={handleDeleteSchedule}
       />
+
+      {selected && (
+        <WeeklyScheduleModal
+          open={weeklyScheduleOpen}
+          staff={selected}
+          onClose={() => setWeeklyScheduleOpen(false)}
+          onSaved={loadAll}
+        />
+      )}
     </Stack>
   )
 }

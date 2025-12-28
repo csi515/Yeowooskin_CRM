@@ -170,7 +170,7 @@ export default function AnalyticsPage() {
                                 </Typography>
                             </Box>
                             <Typography variant="h4" fontWeight={700}>
-                                {totalCustomers.toLocaleString()}명
+                                {(totalCustomers || 0).toLocaleString()}명
                             </Typography>
                         </CardContent>
                     </Card>
@@ -185,7 +185,7 @@ export default function AnalyticsPage() {
                                 </Typography>
                             </Box>
                             <Typography variant="h4" fontWeight={700}>
-                                ₩{Math.round(avgLTV).toLocaleString()}
+                                ₩{(Math.round(avgLTV) || 0).toLocaleString()}
                             </Typography>
                         </CardContent>
                     </Card>
@@ -200,7 +200,7 @@ export default function AnalyticsPage() {
                                 </Typography>
                             </Box>
                             <Typography variant="h4" fontWeight={700}>
-                                {vipData.length.toLocaleString()}명
+                                {(vipData?.length || 0).toLocaleString()}명
                             </Typography>
                         </CardContent>
                     </Card>
@@ -221,7 +221,7 @@ export default function AnalyticsPage() {
                                 <YAxis yAxisId="left" orientation="left" stroke="#667eea" />
                                 <YAxis yAxisId="right" orientation="right" stroke="#10b981" />
                                 <Tooltip
-                                    formatter={(value: number) => value.toLocaleString()}
+                                    formatter={(value: number) => (value || 0).toLocaleString()}
                                     contentStyle={{ borderRadius: 8 }}
                                 />
                                 <Legend />
@@ -254,7 +254,7 @@ export default function AnalyticsPage() {
                                     status={{ label: 'VIP', color: 'warning' }}
                                     content={
                                         <Typography variant="body2" fontWeight={700} color="success.main" textAlign="right">
-                                            총 구매액: ₩{customer.total_revenue.toLocaleString()}
+                                            총 구매액: ₩{(customer.total_revenue || 0).toLocaleString()}
                                         </Typography>
                                     }
                                 />
@@ -291,7 +291,7 @@ export default function AnalyticsPage() {
                                             <TableCell>{customer.customer_phone || '-'}</TableCell>
                                             <TableCell align="right">
                                                 <Typography variant="body2" fontWeight={600} color="success.main">
-                                                    ₩{customer.total_revenue.toLocaleString()}
+                                                    ₩{(customer.total_revenue || 0).toLocaleString()}
                                                 </Typography>
                                             </TableCell>
                                             <TableCell align="right">{customer.transaction_count}회</TableCell>
