@@ -128,6 +128,27 @@ export abstract class BaseRepository<T> {
   }
 
   /**
+   * ID로 단일 레코드 조회 (없으면 null 반환)
+   */
+  async findByIdOrNull(id: string): Promise<T | null> {
+    const { data, error } = await this.supabase
+      .from(this.tableName)
+      .select('*')
+      .eq('id', id)
+      .eq('owner_id', this.userId)
+      .single()
+
+    if (error) {
+      if (error.code === 'PGRST116') {
+        return null
+      }
+      this.handleSupabaseError(error)
+    }
+
+    return data as T
+  }
+
+  /**
    * 레코드 생성
    */
   async create(payload: Partial<T>): Promise<T> {

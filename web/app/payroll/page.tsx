@@ -26,13 +26,25 @@ import {
     Select,
     MenuItem,
     Divider,
+    useTheme,
+    useMediaQuery,
+    Stack
 } from '@mui/material'
+import MobileDataCard from '../components/ui/MobileDataCard'
 import { TableSkeleton, CardSkeleton } from '../components/ui/SkeletonLoader'
 import EmptyState from '../components/ui/EmptyState'
-import { DollarSign, FileText, Users, FileX } from 'lucide-react'
+import { DollarSign, FileText, Users, FileX, Search, Download } from 'lucide-react'
 import PageHeader, { createActionButton } from '../components/common/PageHeader'
 import { useAppToast } from '../lib/ui/toast'
 import { format } from 'date-fns'
+import { useSearch } from '../lib/hooks/useSearch'
+import { useSort } from '../lib/hooks/useSort'
+import { usePagination } from '../lib/hooks/usePagination'
+import { exportToCSV, preparePayrollDataForExport } from '../lib/utils/export'
+import InputAdornment from '@mui/material/InputAdornment'
+import TableSortLabel from '@mui/material/TableSortLabel'
+import Pagination from '@mui/material/Pagination'
+import { useMemo } from 'react'
 
 interface Staff {
     id: string
@@ -60,6 +72,10 @@ interface PayrollRecord {
         name: string
         role?: string | null
     } | null
+    // Index signature to satisfy Record<string, unknown>
+    [key: string]: unknown;
+    // Convenience field for sorting by staff name
+    staff_name?: string;
 }
 
 export default function PayrollPage() {
@@ -71,6 +87,21 @@ export default function PayrollPage() {
     const [selectedMonth, setSelectedMonth] = useState(format(new Date(), 'yyyy-MM'))
     const [calculationResult, setCalculationResult] = useState<any>(null)
     const toast = useAppToast()
+    const theme = useTheme()
+    const isMobile = useMediaQuery(theme.breakpoints.down('sm'))
+
+    // Search, Sort, Pagination
+    const { query, debouncedQuery, setQuery } = useSearch({ debounceMs: 300 })
+    const { sortKey, sortDirection, toggleSort } = useSort<PayrollRecord>({
+        initialKey: 'total_gross',
+        initialDirection: 'desc'
+    })
+    const pagination = usePagination({
+        initialPage: 1,
+        initialPageSize: 10,
+        totalItems: 0
+    })
+    const { page, pageSize, setPage } = pagination
 
     useEffect(() => {
         fetchData()
@@ -91,7 +122,7 @@ export default function PayrollPage() {
 
             if (recordsResponse.ok) {
                 const recordsData = await recordsResponse.json()
-                setRecords(recordsData)
+                setRecords(recordsData.map((r: any) => ({ ...r, staff_name: r.staff?.name })))
             }
         } catch (error) {
             console.error('Error fetching payroll data:', error)
@@ -145,6 +176,51 @@ export default function PayrollPage() {
     const totalGrossPay = records.reduce((sum, r) => sum + r.total_gross, 0)
     const totalNetPay = records.reduce((sum, r) => sum + r.net_salary, 0)
 
+    // Processed Data
+    const filteredRecords = useMemo(() => {
+        return records.filter(record => {
+            if (!debouncedQuery.trim()) return true
+            const qLower = debouncedQuery.toLowerCase()
+            return (record.staff?.name || '').toLowerCase().includes(qLower)
+        })
+    }, [records, debouncedQuery])
+
+    const sortedRecords = useMemo(() => {
+        if (!sortKey) return filteredRecords
+
+        // Handle nested staff.name sorting manually or flatten
+        const sorted = [...filteredRecords].sort((a, b) => {
+            if ((sortKey as string) === 'staff_name') {
+                const nameA = a.staff?.name || ''
+                const nameB = b.staff?.name || ''
+                return sortDirection === 'asc'
+                    ? nameA.localeCompare(nameB)
+                    : nameB.localeCompare(nameA)
+            }
+            // Default number sorting
+            const valA = (a as any)[sortKey]
+            const valB = (b as any)[sortKey]
+            if (valA < valB) return sortDirection === 'asc' ? -1 : 1
+            if (valA > valB) return sortDirection === 'asc' ? 1 : -1
+            return 0
+        })
+        return sorted
+    }, [filteredRecords, sortKey, sortDirection])
+
+    const paginatedRecords = useMemo(() => {
+        const start = (page - 1) * pageSize
+        const end = start + pageSize
+        return sortedRecords.slice(start, end)
+    }, [sortedRecords, page, pageSize])
+
+    const totalPages = Math.max(1, Math.ceil(filteredRecords.length / pageSize))
+
+    const handleExport = () => {
+        const dataToExport = preparePayrollDataForExport(filteredRecords)
+        exportToCSV(dataToExport, `${selectedMonth}_급여내역.csv`)
+        toast.success('CSV 파일이 다운로드되었습니다')
+    }
+
 
     if (loading) {
         return (
@@ -179,23 +255,42 @@ export default function PayrollPage() {
                 description="직원 급여 자동 계산 및 관리"
                 icon={<DollarSign />}
                 actions={[
+                    createActionButton('CSV 내보내기', handleExport, 'secondary', <Download size={16} />),
                     createActionButton('급여 계산', openCalculateModal, 'primary'),
                 ]}
             />
 
-            {/* 월 선택 */}
-            <Box sx={{ mb: 3 }}>
-                <TextField
-                    type="month"
-                    label="조회 월"
-                    value={selectedMonth}
-                    onChange={(e) => {
-                        setSelectedMonth(e.target.value)
-                        fetchData()
-                    }}
-                    InputLabelProps={{ shrink: true }}
-                />
-            </Box>
+            {/* 필터 및 검색 */}
+            <Paper sx={{ p: 2, mb: 3, borderRadius: 2 }} variant="outlined">
+                <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2} alignItems="center">
+                    <TextField
+                        type="month"
+                        label="조회 월"
+                        value={selectedMonth}
+                        onChange={(e) => {
+                            setSelectedMonth(e.target.value)
+                            fetchData()
+                        }}
+                        InputLabelProps={{ shrink: true }}
+                        size="small"
+                        sx={{ width: { xs: '100%', sm: 200 } }}
+                    />
+                    <TextField
+                        placeholder="직원명 검색"
+                        value={query}
+                        onChange={(e) => setQuery(e.target.value)}
+                        size="small"
+                        sx={{ flexGrow: 1, width: { xs: '100%', sm: 'auto' } }}
+                        InputProps={{
+                            startAdornment: (
+                                <InputAdornment position="start">
+                                    <Search size={16} className="text-gray-400" />
+                                </InputAdornment>
+                            ),
+                        }}
+                    />
+                </Stack>
+            </Paper>
 
             {/* 요약 카드 */}
             <Grid container spacing={3} sx={{ mb: 4 }}>
@@ -205,11 +300,11 @@ export default function PayrollPage() {
                             <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1 }}>
                                 <Users size={20} color="#667eea" />
                                 <Typography variant="body2" color="text.secondary">
-                                    급여 지급 인원
+                                    급여 지급 인원 (검색됨)
                                 </Typography>
                             </Box>
                             <Typography variant="h4" fontWeight={700}>
-                                {records.length}명
+                                {filteredRecords.length}명
                             </Typography>
                         </CardContent>
                     </Card>
@@ -220,7 +315,7 @@ export default function PayrollPage() {
                             <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1 }}>
                                 <DollarSign size={20} color="#10b981" />
                                 <Typography variant="body2" color="text.secondary">
-                                    총 지급액 (세전)
+                                    총 지급액 (세전 - 전체)
                                 </Typography>
                             </Box>
                             <Typography variant="h4" fontWeight={700} color="success.main">
@@ -235,7 +330,7 @@ export default function PayrollPage() {
                             <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1 }}>
                                 <FileText size={20} color="#667eea" />
                                 <Typography variant="body2" color="text.secondary">
-                                    실지급액 (세후)
+                                    실지급액 (세후 - 전체)
                                 </Typography>
                             </Box>
                             <Typography variant="h4" fontWeight={700}>
@@ -258,58 +353,140 @@ export default function PayrollPage() {
             ) : (
                 <Card>
                     <CardContent>
-                        <Typography variant="h6" fontWeight={600} gutterBottom>
-                            {selectedMonth} 급여 내역
-                        </Typography>
-                        <TableContainer component={Paper} variant="outlined" sx={{ mt: 2 }}>
-                            <Table size="small">
-                                <TableHead>
-                                    <TableRow>
-                                        <TableCell>직원명</TableCell>
-                                        <TableCell align="right">기본급</TableCell>
-                                        <TableCell align="right">시급/연장</TableCell>
-                                        <TableCell align="right">인센티브</TableCell>
-                                        <TableCell align="right">총 지급액</TableCell>
-                                        <TableCell align="right">공제액</TableCell>
-                                        <TableCell align="right">실지급액</TableCell>
-                                    </TableRow>
-                                </TableHead>
-                                <TableBody>
-                                    {records.map((record) => (
-                                        <TableRow key={record.id}>
+                        <Stack direction="row" justifyContent="space-between" alignItems="center" mb={2}>
+                            <Typography variant="h6" fontWeight={600}>
+                                {selectedMonth} 급여 내역
+                            </Typography>
+                        </Stack>
+
+                        {isMobile ? (
+                            <Stack spacing={2}>
+                                {paginatedRecords.map((record) => (
+                                    <MobileDataCard
+                                        key={record.id}
+                                        title={`${record.staff?.name || '-'} (${record.staff?.role || '직원'})`}
+                                        subtitle={
+                                            <Stack component="span" spacing={0.5}>
+                                                <Typography component="span" variant="body2">
+                                                    실지급액: ₩{record.net_salary.toLocaleString()}
+                                                </Typography>
+                                                <Typography component="span" variant="caption" color="text.secondary">
+                                                    기본급: ₩{record.base_salary.toLocaleString()}
+                                                </Typography>
+                                            </Stack>
+                                        }
+                                        content={
+                                            <Grid container spacing={1} sx={{ mt: 1 }}>
+                                                <Grid item xs={6}>
+                                                    <Typography variant="caption" color="text.secondary">총 지급액</Typography>
+                                                    <Typography variant="body2" fontWeight={600}>₩{record.total_gross.toLocaleString()}</Typography>
+                                                </Grid>
+                                                <Grid item xs={6}>
+                                                    <Typography variant="caption" color="error.main">공제액</Typography>
+                                                    <Typography variant="body2" fontWeight={600} color="error.main">-₩{record.total_deductions.toLocaleString()}</Typography>
+                                                </Grid>
+                                            </Grid>
+                                        }
+                                    />
+                                ))}
+                            </Stack>
+                        ) : (
+                            <TableContainer component={Paper} variant="outlined">
+                                <Table size="small">
+                                    <TableHead>
+                                        <TableRow>
                                             <TableCell>
-                                                <Box>
-                                                    <Typography variant="body2" fontWeight={600}>
-                                                        {record.staff?.name || '-'}
-                                                    </Typography>
-                                                    {record.staff?.role && (
-                                                        <Typography variant="caption" color="text.secondary">
-                                                            {record.staff.role}
-                                                        </Typography>
-                                                    )}
-                                                </Box>
-                                            </TableCell>
-                                            <TableCell align="right">₩{record.base_salary.toLocaleString()}</TableCell>
-                                            <TableCell align="right">₩{record.overtime_pay.toLocaleString()}</TableCell>
-                                            <TableCell align="right">₩{record.incentive_pay.toLocaleString()}</TableCell>
-                                            <TableCell align="right">
-                                                <Typography variant="body2" fontWeight={600}>
-                                                    ₩{record.total_gross.toLocaleString()}
-                                                </Typography>
-                                            </TableCell>
-                                            <TableCell align="right" sx={{ color: 'error.main' }}>
-                                                -₩{record.total_deductions.toLocaleString()}
+                                                <TableSortLabel
+                                                    active={sortKey === 'staff_name'}
+                                                    direction={sortKey === 'staff_name' ? sortDirection : 'asc'}
+                                                    onClick={() => toggleSort('staff_name')}
+                                                >
+                                                    직원명
+                                                </TableSortLabel>
                                             </TableCell>
                                             <TableCell align="right">
-                                                <Typography variant="body2" fontWeight={700} color="success.main">
-                                                    ₩{record.net_salary.toLocaleString()}
-                                                </Typography>
+                                                <TableSortLabel
+                                                    active={sortKey === 'base_salary'}
+                                                    direction={sortKey === 'base_salary' ? sortDirection : 'asc'}
+                                                    onClick={() => toggleSort('base_salary')}
+                                                >
+                                                    기본급
+                                                </TableSortLabel>
+                                            </TableCell>
+                                            <TableCell align="right">시급/연장</TableCell>
+                                            <TableCell align="right">인센티브</TableCell>
+                                            <TableCell align="right">
+                                                <TableSortLabel
+                                                    active={sortKey === 'total_gross'}
+                                                    direction={sortKey === 'total_gross' ? sortDirection : 'asc'}
+                                                    onClick={() => toggleSort('total_gross')}
+                                                >
+                                                    총 지급액
+                                                </TableSortLabel>
+                                            </TableCell>
+                                            <TableCell align="right">공제액</TableCell>
+                                            <TableCell align="right">
+                                                <TableSortLabel
+                                                    active={sortKey === 'net_salary'}
+                                                    direction={sortKey === 'net_salary' ? sortDirection : 'asc'}
+                                                    onClick={() => toggleSort('net_salary')}
+                                                >
+                                                    실지급액 (세후)
+                                                </TableSortLabel>
                                             </TableCell>
                                         </TableRow>
-                                    ))}
-                                </TableBody>
-                            </Table>
-                        </TableContainer>
+                                    </TableHead>
+                                    <TableBody>
+                                        {paginatedRecords.map((record) => (
+                                            <TableRow key={record.id}>
+                                                <TableCell>
+                                                    <Box>
+                                                        <Typography variant="body2" fontWeight={600}>
+                                                            {record.staff?.name || '-'}
+                                                        </Typography>
+                                                        {record.staff?.role && (
+                                                            <Typography variant="caption" color="text.secondary">
+                                                                {record.staff.role}
+                                                            </Typography>
+                                                        )}
+                                                    </Box>
+                                                </TableCell>
+                                                <TableCell align="right">₩{record.base_salary.toLocaleString()}</TableCell>
+                                                <TableCell align="right">₩{record.overtime_pay.toLocaleString()}</TableCell>
+                                                <TableCell align="right">₩{record.incentive_pay.toLocaleString()}</TableCell>
+                                                <TableCell align="right">
+                                                    <Typography variant="body2" fontWeight={600}>
+                                                        ₩{record.total_gross.toLocaleString()}
+                                                    </Typography>
+                                                </TableCell>
+                                                <TableCell align="right" sx={{ color: 'error.main' }}>
+                                                    -₩{record.total_deductions.toLocaleString()}
+                                                </TableCell>
+                                                <TableCell align="right">
+                                                    <Typography variant="body2" fontWeight={700} color="success.main">
+                                                        ₩{record.net_salary.toLocaleString()}
+                                                    </Typography>
+                                                </TableCell>
+                                            </TableRow>
+                                        ))}
+                                    </TableBody>
+                                </Table>
+                            </TableContainer>
+                        )}
+
+                        {/* Pagination */}
+                        {filteredRecords.length > 0 && (
+                            <Stack direction="row" justifyContent="center" sx={{ mt: 3 }}>
+                                <Pagination
+                                    count={totalPages}
+                                    page={page}
+                                    onChange={(_, p) => setPage(p)}
+                                    color="primary"
+                                    showFirstButton
+                                    showLastButton
+                                />
+                            </Stack>
+                        )}
                     </CardContent>
                 </Card>
             )}

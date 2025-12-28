@@ -174,18 +174,22 @@ async function getDashboardData({ start, end, userId, accessToken }: { start: st
       ...trData.map((t: any) => ({
         id: t.id,
         type: 'income' as const,
-        date: t.transaction_date || t.created_at || '',
+        date: t.transaction_date || t.created_at || new Date().toISOString(),
         amount: Number(t.amount),
-        memo: undefined
+        memo: t.memo || '수입'
       })),
       ...exData.map((e: any) => ({
         id: e.id,
         type: 'expense' as const,
-        date: e.expense_date || e.created_at || '',
+        date: e.expense_date || e.created_at || new Date().toISOString(),
         amount: Number(e.amount),
         memo: e.memo || e.category
       }))
-    ].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()).slice(0, 10)
+    ].sort((a, b) => {
+      const dA = new Date(a.date).getTime() || 0
+      const dB = new Date(b.date).getTime() || 0
+      return dB - dA
+    }).slice(0, 10)
 
     return {
       todayAppointments,

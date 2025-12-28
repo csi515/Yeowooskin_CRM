@@ -1,6 +1,6 @@
 'use client'
 
-import { Pencil, Plus, Search, Phone, Mail, Package } from 'lucide-react'
+import { Pencil, Plus, Search, Phone, Mail, Package, Download } from 'lucide-react'
 import { useEffect, useState, useMemo, lazy, Suspense, useCallback } from 'react'
 import EmptyState from '../components/EmptyState'
 import { Skeleton } from '../components/ui/Skeleton'
@@ -10,6 +10,8 @@ import type { Customer } from '@/types/entities'
 import { useSearch } from '../lib/hooks/useSearch'
 import { usePagination } from '../lib/hooks/usePagination'
 import { useSort } from '../lib/hooks/useSort'
+import { exportToCSV, prepareCustomerDataForExport } from '../lib/utils/export'
+import { useAppToast } from '../lib/ui/toast'
 
 // MUI Imports
 import Stack from '@mui/material/Stack'
@@ -22,6 +24,12 @@ import Card from '@mui/material/Card'
 import CardContent from '@mui/material/CardContent'
 import Divider from '@mui/material/Divider'
 import Box from '@mui/material/Box'
+import useMediaQuery from '@mui/material/useMediaQuery'
+import { useTheme } from '@mui/material/styles'
+import Accordion from '@mui/material/Accordion'
+import AccordionSummary from '@mui/material/AccordionSummary'
+import AccordionDetails from '@mui/material/AccordionDetails'
+import { ChevronDown } from 'lucide-react'
 
 import TableContainer from '@mui/material/TableContainer'
 import Table from '@mui/material/Table'
@@ -37,6 +45,8 @@ import Pagination from '@mui/material/Pagination'
 import Alert from '@mui/material/Alert'
 import AlertTitle from '@mui/material/AlertTitle'
 import Fab from '@mui/material/Fab'
+import Chip from '@mui/material/Chip'
+import InputLabel from '@mui/material/InputLabel'
 
 const CustomerDetailModal = lazy(() => import('../components/modals/CustomerDetailModal'))
 
@@ -47,6 +57,14 @@ export default function CustomersPage() {
   const [error, setError] = useState('')
   const [detailOpen, setDetailOpen] = useState(false)
   const [selected, setSelected] = useState<Customer | null>(null)
+  const toast = useAppToast()
+  const theme = useTheme()
+  const isMobile = useMediaQuery(theme.breakpoints.down('md'))
+
+  // Filters
+  const [vipFilter, setVipFilter] = useState<'all' | 'vip' | 'normal'>('all')
+  const [minPoints, setMinPoints] = useState('')
+  const [maxPoints, setMaxPoints] = useState('')
 
   const { sortKey, sortDirection, toggleSort, sortFn } = useSort<Customer & Record<string, unknown>>({
     initialKey: 'name',
@@ -59,7 +77,7 @@ export default function CustomersPage() {
     totalItems: rows.length,
   })
   const { page, pageSize, setPage, setPageSize } = pagination
-  const totalPages = Math.max(1, Math.ceil(rows.length / pageSize))
+
   const [pointsByCustomer, setPointsByCustomer] = useState<Record<string, number>>({})
 
   const load = useCallback(async () => {
@@ -76,10 +94,27 @@ export default function CustomersPage() {
 
   useEffect(() => { load() }, [load])
 
+  // Filter and sort logic
+  const filteredRows = useMemo(() => {
+    return rows.filter(customer => {
+      const points = pointsByCustomer[customer.id] || 0
+
+      // VIP filter (assuming VIP = points > 1000)
+      if (vipFilter === 'vip' && points <= 1000) return false
+      if (vipFilter === 'normal' && points > 1000) return false
+
+      // Points range filter
+      if (minPoints && points < Number(minPoints)) return false
+      if (maxPoints && points > Number(maxPoints)) return false
+
+      return true
+    })
+  }, [rows, pointsByCustomer, vipFilter, minPoints, maxPoints])
+
   // 정렬된 데이터
   const sortedRows = useMemo(() => {
-    return sortFn(rows as (Customer & Record<string, unknown>)[])
-  }, [rows, sortFn])
+    return sortFn(filteredRows as (Customer & Record<string, unknown>)[])
+  }, [filteredRows, sortFn])
 
   // 페이지네이션된 데이터
   const paginatedRows = useMemo(() => {
@@ -87,6 +122,23 @@ export default function CustomersPage() {
     const end = start + pageSize
     return sortedRows.slice(start, end)
   }, [sortedRows, page, pageSize])
+
+  // Update totalPages based on filtered data
+  const filteredTotalPages = Math.max(1, Math.ceil(filteredRows.length / pageSize))
+
+  // CSV export function
+  const handleExport = () => {
+    const dataToExport = prepareCustomerDataForExport(filteredRows)
+    exportToCSV(dataToExport, `고객목록_${new Date().toISOString().slice(0, 10)}.csv`)
+    toast.success('CSV 파일이 다운로드되었습니다')
+  }
+
+  // Reset filters
+  const handleResetFilters = () => {
+    setVipFilter('all')
+    setMinPoints('')
+    setMaxPoints('')
+  }
 
   // 포인트 조회 최적화
   useEffect(() => {
@@ -140,20 +192,81 @@ export default function CustomersPage() {
               autoCapitalize: 'off',
             }}
           />
-          <Button
-            variant="primary"
-            leftIcon={<Plus className="h-4 w-4" />}
-            onClick={() => {
-              setSelected({ id: '', owner_id: '', name: '', phone: '', email: '', address: '' } as Customer)
-              setDetailOpen(true)
-            }}
-            fullWidth={false}
-            sx={{ width: { xs: '100%', sm: 'auto' } }}
-          >
-            새 고객
-          </Button>
+          <Stack direction="row" spacing={1}>
+            {!isMobile && (
+              <Button
+                variant="secondary"
+                leftIcon={<Download className="h-4 w-4" />}
+                onClick={handleExport}
+                sx={{ whiteSpace: 'nowrap' }}
+              >
+                CSV 내보내기
+              </Button>
+            )}
+            <Button
+              variant="primary"
+              leftIcon={<Plus className="h-4 w-4" />}
+              onClick={() => {
+                setSelected({ id: '', owner_id: '', name: '', phone: '', email: '', address: '' } as Customer)
+                setDetailOpen(true)
+              }}
+              fullWidth={false}
+              sx={{ width: { xs: '100%', sm: 'auto' }, whiteSpace: 'nowrap' }}
+            >
+              새 고객
+            </Button>
+          </Stack>
         </Stack>
       </Paper>
+
+      {/* 필터 패널 */}
+      <Accordion elevation={0} variant="outlined" sx={{ borderRadius: 2 }}>
+        <AccordionSummary expandIcon={<ChevronDown size={20} />}>
+          <Typography variant="subtitle2" fontWeight={600}>필터</Typography>
+          {(vipFilter !== 'all' || minPoints || maxPoints) && (
+            <Chip label="필터 적용됨" size="small" color="primary" sx={{ ml: 2 }} />
+          )}
+        </AccordionSummary>
+        <AccordionDetails>
+          <Stack spacing={2}>
+            <FormControl size="small" fullWidth>
+              <InputLabel>VIP 등급</InputLabel>
+              <Select
+                value={vipFilter}
+                onChange={(e) => setVipFilter(e.target.value as 'all' | 'vip' | 'normal')}
+                label="VIP 등급"
+              >
+                <MenuItem value="all">전체</MenuItem>
+                <MenuItem value="vip">VIP (1000P 이상)</MenuItem>
+                <MenuItem value="normal">일반</MenuItem>
+              </Select>
+            </FormControl>
+            <Stack direction="row" spacing={2}>
+              <TextField
+                label="최소 포인트"
+                type="number"
+                size="small"
+                value={minPoints}
+                onChange={(e) => setMinPoints(e.target.value)}
+                fullWidth
+              />
+              <TextField
+                label="최대 포인트"
+                type="number"
+                size="small"
+                value={maxPoints}
+                onChange={(e) => setMaxPoints(e.target.value)}
+                fullWidth
+              />
+            </Stack>
+            {(vipFilter !== 'all' || minPoints || maxPoints) && (
+              <Button variant="ghost" onClick={handleResetFilters} size="sm">
+                필터 초기화
+              </Button>
+            )}
+          </Stack>
+        </AccordionDetails>
+      </Accordion>
 
       {error && (
         <Alert severity="error" variant="filled" sx={{ borderRadius: 2 }}>
@@ -291,7 +404,7 @@ export default function CustomersPage() {
       {!loading && rows.length > 0 && (
         <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2} justifyContent="space-between" alignItems="center">
           <Typography variant="body2" color="text.secondary">
-            총 {rows.length}명 · {page} / {totalPages} 페이지
+            총 {filteredRows.length}명 · {page} / {filteredTotalPages} 페이지
           </Typography>
           <Stack direction="row" spacing={2} alignItems="center">
             <FormControl size="small">
@@ -306,7 +419,7 @@ export default function CustomersPage() {
               </Select>
             </FormControl>
             <Pagination
-              count={totalPages}
+              count={filteredTotalPages}
               page={page}
               onChange={(_, p) => setPage(p)}
               color="primary"

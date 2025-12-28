@@ -75,6 +75,7 @@ export default function ForgotPasswordPage() {
             value={email}
             onChange={(e) => setEmail(e.target.value)}
             placeholder="you@example.com"
+            fullWidth
             {...(isEmailInvalid ? { error: '유효한 이메일을 입력하세요.' } : {})}
           />
 

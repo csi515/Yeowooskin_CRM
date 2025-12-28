@@ -136,6 +136,7 @@ export default function SignupPage() {
               value={birthdate}
               onChange={(e) => setBirthdate(e.target.value)}
               required
+              InputLabelProps={{ shrink: true }}
               {...((!birthdate && !!birthdate) ? { error: '생년월일을 선택하세요.' } : {})}
             />
           </div>

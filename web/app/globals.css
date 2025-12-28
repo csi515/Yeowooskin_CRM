@@ -160,11 +160,11 @@ div {
 }
 
 /* Focus ring and smooth interactions - 부드러운 포커스 스타일 */
-*:focus-visible {
+/* *:focus-visible {
   outline: none;
   box-shadow: 0 0 0 2px rgba(66, 99, 235, 0.4);
   border-radius: var(--radius-md);
-}
+} */
 
 button,
 a,

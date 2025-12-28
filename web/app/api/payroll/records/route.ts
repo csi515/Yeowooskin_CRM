@@ -40,7 +40,7 @@ export async function GET(request: NextRequest) {
         // 직원 정보와 함께 반환
         const recordsWithStaff = await Promise.all(
             records.map(async (record) => {
-                const staff = await staffRepo.findById(record.staff_id)
+                const staff = await staffRepo.findByIdOrNull(record.staff_id)
                 return {
                     ...record,
                     staff: staff ? {

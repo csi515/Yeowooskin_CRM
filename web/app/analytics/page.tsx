@@ -1,29 +1,17 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import {
-    Box,
-    Container,
-    Typography,
-    Grid,
-    Card,
-    CardContent,
-    Alert,
-    Chip,
-    Table,
-    TableBody,
-    TableCell,
-    TableContainer,
-    TableHead,
-    TableRow,
-    Paper,
-} from '@mui/material'
+
+import { Box, Container, Typography, Grid, Card, CardContent, Alert, Chip, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Paper, useMediaQuery, Stack } from '@mui/material';
+import { useTheme } from '@mui/material/styles';
+import MobileDataCard from '../components/ui/MobileDataCard'
 import { CardSkeleton } from '../components/ui/SkeletonLoader'
 import EmptyState from '../components/ui/EmptyState'
-import { TrendingUp, Users, Star, DollarSign, BarChart2 } from 'lucide-react'
+import { TrendingUp, Users, Star, DollarSign, BarChart2, Download } from 'lucide-react'
 import PageHeader, { createActionButton } from '../components/common/PageHeader'
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts'
 import { useAppToast } from '../lib/ui/toast'
+import { exportToCSV } from '../lib/utils/export'
 
 interface CustomerLTV {
     customer_id: string
@@ -51,6 +39,8 @@ export default function AnalyticsPage() {
     const [loading, setLoading] = useState(true)
     const [error, setError] = useState<string | null>(null)
     const toast = useAppToast()
+    const theme = useTheme()
+    const isMobile = useMediaQuery(theme.breakpoints.down('sm'))
 
     useEffect(() => {
         fetchData()
@@ -95,6 +85,20 @@ export default function AnalyticsPage() {
             구매액: c.total_revenue,
             방문횟수: c.visit_count
         }))
+
+    const handleExport = () => {
+        const dataToExport = ltvData.map(item => ({
+            '고객명': item.customer_name,
+            '총 매출액': item.total_revenue,
+            '방문 횟수': item.visit_count,
+            '평균 매출액': Math.round(item.avg_revenue),
+            '첫 방문일': item.first_visit ? new Date(item.first_visit).toLocaleDateString() : '-',
+            '최근 방문일': item.last_visit ? new Date(item.last_visit).toLocaleDateString() : '-',
+            '재방문율(%)': (item.return_rate * 100).toFixed(1)
+        }))
+        exportToCSV(dataToExport, `고객LTV분석_${new Date().toISOString().slice(0, 10)}.csv`)
+        toast.success('분석 리포트가 다운로드되었습니다')
+    }
 
     if (loading) {
         return (
@@ -150,7 +154,7 @@ export default function AnalyticsPage() {
                 description="고객 생애 가치(LTV) 및 VIP 고객 분석"
                 icon={<TrendingUp />}
                 actions={[
-                    createActionButton('새로고침', fetchData, 'secondary'),
+                    ...(isMobile ? [] : [createActionButton('CSV 내보내기', handleExport, 'secondary', <Download size={16} />)])
                 ]}
             />
 
@@ -235,45 +239,68 @@ export default function AnalyticsPage() {
                     <Typography variant="h6" fontWeight={600} gutterBottom>
                         VIP 고객 목록
                     </Typography>
-                    <TableContainer component={Paper} variant="outlined" sx={{ mt: 2 }}>
-                        <Table>
-                            <TableHead>
-                                <TableRow>
-                                    <TableCell>순위</TableCell>
-                                    <TableCell>고객명</TableCell>
-                                    <TableCell>연락처</TableCell>
-                                    <TableCell align="right">총 구매액</TableCell>
-                                    <TableCell align="right">거래 횟수</TableCell>
-                                </TableRow>
-                            </TableHead>
-                            <TableBody>
-                                {vipData.slice(0, 20).map((customer, index) => (
-                                    <TableRow key={customer.customer_id}>
-                                        <TableCell>
-                                            <Chip
-                                                label={index + 1}
-                                                size="small"
-                                                color={index < 3 ? 'warning' : 'default'}
-                                            />
-                                        </TableCell>
-                                        <TableCell>
-                                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                                                <Star size={16} color="#f59e0b" fill="#f59e0b" />
-                                                {customer.customer_name}
-                                            </Box>
-                                        </TableCell>
-                                        <TableCell>{customer.customer_phone || '-'}</TableCell>
-                                        <TableCell align="right">
-                                            <Typography variant="body2" fontWeight={600} color="success.main">
-                                                ₩{customer.total_revenue.toLocaleString()}
-                                            </Typography>
-                                        </TableCell>
-                                        <TableCell align="right">{customer.transaction_count}회</TableCell>
+                    {isMobile ? (
+                        <Stack spacing={2} sx={{ mt: 2 }}>
+                            {vipData.slice(0, 10).map((customer, index) => (
+                                <MobileDataCard
+                                    key={customer.customer_id}
+                                    title={
+                                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                                            <Chip label={index + 1} size="small" color={index < 3 ? 'warning' : 'default'} sx={{ height: 20, fontSize: '0.7rem' }} />
+                                            <Typography variant="subtitle2" fontWeight="bold">{customer.customer_name}</Typography>
+                                        </Box>
+                                    }
+                                    subtitle={`거래 ${customer.transaction_count}회 | ${customer.customer_phone || '-'}`}
+                                    status={{ label: 'VIP', color: 'warning' }}
+                                    content={
+                                        <Typography variant="body2" fontWeight={700} color="success.main" textAlign="right">
+                                            총 구매액: ₩{customer.total_revenue.toLocaleString()}
+                                        </Typography>
+                                    }
+                                />
+                            ))}
+                        </Stack>
+                    ) : (
+                        <TableContainer component={Paper} variant="outlined" sx={{ mt: 2 }}>
+                            <Table>
+                                <TableHead>
+                                    <TableRow>
+                                        <TableCell>순위</TableCell>
+                                        <TableCell>고객명</TableCell>
+                                        <TableCell>연락처</TableCell>
+                                        <TableCell align="right">총 구매액</TableCell>
+                                        <TableCell align="right">거래 횟수</TableCell>
                                     </TableRow>
-                                ))}
-                            </TableBody>
-                        </Table>
-                    </TableContainer>
+                                </TableHead>
+                                <TableBody>
+                                    {vipData.slice(0, 20).map((customer, index) => (
+                                        <TableRow key={customer.customer_id}>
+                                            <TableCell>
+                                                <Chip
+                                                    label={index + 1}
+                                                    size="small"
+                                                    color={index < 3 ? 'warning' : 'default'}
+                                                />
+                                            </TableCell>
+                                            <TableCell>
+                                                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                                                    <Star size={16} color="#f59e0b" fill="#f59e0b" />
+                                                    {customer.customer_name}
+                                                </Box>
+                                            </TableCell>
+                                            <TableCell>{customer.customer_phone || '-'}</TableCell>
+                                            <TableCell align="right">
+                                                <Typography variant="body2" fontWeight={600} color="success.main">
+                                                    ₩{customer.total_revenue.toLocaleString()}
+                                                </Typography>
+                                            </TableCell>
+                                            <TableCell align="right">{customer.transaction_count}회</TableCell>
+                                        </TableRow>
+                                    ))}
+                                </TableBody>
+                            </Table>
+                        </TableContainer>
+                    )}
                 </CardContent>
             </Card>
 
@@ -283,32 +310,56 @@ export default function AnalyticsPage() {
                     <Typography variant="h6" fontWeight={600} gutterBottom>
                         전체 고객 LTV
                     </Typography>
-                    <TableContainer component={Paper} variant="outlined" sx={{ mt: 2 }}>
-                        <Table size="small">
-                            <TableHead>
-                                <TableRow>
-                                    <TableCell>고객명</TableCell>
-                                    <TableCell align="right">총 구매액</TableCell>
-                                    <TableCell align="right">평균 구매액</TableCell>
-                                    <TableCell align="right">방문 횟수</TableCell>
-                                    <TableCell align="right">재방문율</TableCell>
-                                </TableRow>
-                            </TableHead>
-                            <TableBody>
-                                {ltvData.map((customer) => (
-                                    <TableRow key={customer.customer_id}>
-                                        <TableCell>{customer.customer_name}</TableCell>
-                                        <TableCell align="right">₩{customer.total_revenue.toLocaleString()}</TableCell>
-                                        <TableCell align="right">₩{Math.round(customer.avg_revenue).toLocaleString()}</TableCell>
-                                        <TableCell align="right">{customer.visit_count}회</TableCell>
-                                        <TableCell align="right">{customer.return_rate.toFixed(1)}%</TableCell>
+                    {isMobile ? (
+                        <Stack spacing={2} sx={{ mt: 2 }}>
+                            {ltvData.slice(0, 10).map((customer) => (
+                                <MobileDataCard
+                                    key={customer.customer_id}
+                                    title={customer.customer_name}
+                                    subtitle={`방문 ${customer.visit_count}회 | 재방문율 ${customer.return_rate.toFixed(1)}%`}
+                                    content={
+                                        <Grid container spacing={1} sx={{ mt: 0.5 }}>
+                                            <Grid item xs={6}>
+                                                <Typography variant="caption" color="text.secondary">총 구매액</Typography>
+                                                <Typography variant="body2" fontWeight={600}>₩{customer.total_revenue.toLocaleString()}</Typography>
+                                            </Grid>
+                                            <Grid item xs={6}>
+                                                <Typography variant="caption" color="text.secondary">평균 객단가</Typography>
+                                                <Typography variant="body2" fontWeight={600}>₩{Math.round(customer.avg_revenue).toLocaleString()}</Typography>
+                                            </Grid>
+                                        </Grid>
+                                    }
+                                />
+                            ))}
+                        </Stack>
+                    ) : (
+                        <TableContainer component={Paper} variant="outlined" sx={{ mt: 2 }}>
+                            <Table size="small">
+                                <TableHead>
+                                    <TableRow>
+                                        <TableCell>고객명</TableCell>
+                                        <TableCell align="right">총 구매액</TableCell>
+                                        <TableCell align="right">평균 구매액</TableCell>
+                                        <TableCell align="right">방문 횟수</TableCell>
+                                        <TableCell align="right">재방문율</TableCell>
                                     </TableRow>
-                                ))}
-                            </TableBody>
-                        </Table>
-                    </TableContainer>
+                                </TableHead>
+                                <TableBody>
+                                    {ltvData.map((customer) => (
+                                        <TableRow key={customer.customer_id}>
+                                            <TableCell>{customer.customer_name}</TableCell>
+                                            <TableCell align="right">₩{customer.total_revenue.toLocaleString()}</TableCell>
+                                            <TableCell align="right">₩{Math.round(customer.avg_revenue).toLocaleString()}</TableCell>
+                                            <TableCell align="right">{customer.visit_count}회</TableCell>
+                                            <TableCell align="right">{customer.return_rate.toFixed(1)}%</TableCell>
+                                        </TableRow>
+                                    ))}
+                                </TableBody>
+                            </Table>
+                        </TableContainer>
+                    )}
                 </CardContent>
             </Card>
-        </Container>
+        </Container >
     )
 }

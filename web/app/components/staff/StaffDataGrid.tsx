@@ -4,8 +4,6 @@ import { Staff } from '@/types/entities'
 import { DataGrid, GridColDef, GridRenderCellParams } from '@mui/x-data-grid'
 import {
     Box,
-    Card,
-    CardContent,
     Typography,
     Avatar,
     Chip,
@@ -14,6 +12,7 @@ import {
     useTheme,
     Stack
 } from '@mui/material'
+import MobileDataCard from '@/app/components/ui/MobileDataCard'
 import { Edit2, Phone, Award } from 'lucide-react'
 
 interface StaffDataGridProps {
@@ -98,28 +97,17 @@ export default function StaffDataGrid({ rows, loading, onEdit, onStatusClick }: 
         return (
             <Stack spacing={2} sx={{ mb: 2 }}>
                 {rows.map((staff) => (
-                    <Card key={staff.id} variant="outlined" sx={{ borderRadius: 2 }}>
-                        <CardContent sx={{ p: 2, '&:last-child': { pb: 2 } }}>
-                            <Stack direction="row" justifyContent="space-between" alignItems="flex-start">
-                                <Stack direction="row" spacing={2} alignItems="center">
-                                    <Avatar {...(staff.profile_image_url ? { src: staff.profile_image_url } : {})} sx={{ bgcolor: theme.palette.primary.main }}>
-                                        {staff.name[0]}
-                                    </Avatar>
-                                    <Box>
-                                        <Typography variant="subtitle1" fontWeight="bold">
-                                            {staff.name}
-                                        </Typography>
-                                        <Typography variant="caption" color="text.secondary">
-                                            {staff.role || '직원'}
-                                        </Typography>
-                                    </Box>
-                                </Stack>
-                                <IconButton size="small" onClick={() => onEdit(staff)}>
-                                    <Edit2 size={18} />
-                                </IconButton>
-                            </Stack>
-
-                            <Stack spacing={1} sx={{ mt: 2 }}>
+                    <MobileDataCard
+                        key={staff.id}
+                        title={staff.name}
+                        subtitle={staff.role || '직원'}
+                        status={{
+                            label: staff.status === 'office' ? '출근' : staff.status === 'away' ? '휴무' : '퇴근',
+                            color: staff.status === 'office' ? 'success' : staff.status === 'away' ? 'warning' : 'default'
+                        }}
+                        onClick={() => onEdit(staff)}
+                        content={
+                            <Stack spacing={1} sx={{ mt: 1 }}>
                                 <Stack direction="row" alignItems="center" spacing={1}>
                                     <Phone size={14} color={theme.palette.text.secondary} />
                                     <Typography variant="body2">{staff.phone || '-'}</Typography>
@@ -129,17 +117,19 @@ export default function StaffDataGrid({ rows, loading, onEdit, onStatusClick }: 
                                     <Typography variant="body2" sx={{ fontSize: '0.8rem' }}>{staff.skills || '기술 정보 없음'}</Typography>
                                 </Stack>
                             </Stack>
-
-                            <Box sx={{ mt: 2, display: 'flex', justifyContent: 'flex-end' }}>
-                                <Chip
-                                    label={staff.status === 'office' ? '출근' : staff.status === 'away' ? '휴무' : '퇴근'}
-                                    color={(staff.status === 'office' ? 'success' : staff.status === 'away' ? 'warning' : 'default') as any}
-                                    size="small"
-                                    onClick={() => onStatusClick(staff)}
-                                />
-                            </Box>
-                        </CardContent>
-                    </Card>
+                        }
+                        action={
+                            <Chip
+                                label={staff.status === 'office' ? '출근' : staff.status === 'away' ? '휴무' : '퇴근'}
+                                color={(staff.status === 'office' ? 'success' : staff.status === 'away' ? 'warning' : 'default') as any}
+                                size="small"
+                                onClick={(e) => {
+                                    e.stopPropagation()
+                                    onStatusClick(staff)
+                                }}
+                            />
+                        }
+                    />
                 ))}
             </Stack>
         )

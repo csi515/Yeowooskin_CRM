@@ -1,7 +1,7 @@
 "use client"
 
 import { useEffect, useState, useMemo, lazy, Suspense, useCallback } from 'react'
-import { Plus, Search } from 'lucide-react'
+import { Plus, Search, Download } from 'lucide-react'
 import EmptyState from '../components/EmptyState'
 import { Skeleton } from '../components/ui/Skeleton'
 import { useAppToast } from '../lib/ui/toast'
@@ -11,6 +11,7 @@ import { useSearch } from '../lib/hooks/useSearch'
 import { useSort } from '../lib/hooks/useSort'
 import { usePagination } from '../lib/hooks/usePagination'
 import { useForm } from '../lib/hooks/useForm'
+import { exportToCSV, prepareProductDataForExport } from '../lib/utils/export'
 
 import Stack from '@mui/material/Stack'
 import Paper from '@mui/material/Paper'
@@ -31,6 +32,8 @@ import FormControl from '@mui/material/FormControl'
 import Alert from '@mui/material/Alert'
 import AlertTitle from '@mui/material/AlertTitle'
 import Fab from '@mui/material/Fab'
+import useMediaQuery from '@mui/material/useMediaQuery'
+import { useTheme } from '@mui/material/styles';
 
 const ProductDetailModal = lazy(() => import('../components/modals/ProductDetailModal'))
 
@@ -64,6 +67,12 @@ export default function ProductsPage() {
   const toast = useAppToast()
   const { query, debouncedQuery, setQuery } = useSearch({ debounceMs: 300 })
   const [statusFilter, setStatusFilter] = useState<'all' | 'active' | 'inactive'>('all')
+  const theme = useTheme()
+  const isMobile = useMediaQuery(theme.breakpoints.down('md'))
+
+  // Price range filter
+  const [minPrice, setMinPrice] = useState('')
+  const [maxPrice, setMaxPrice] = useState('')
 
   const form = useForm<ProductForm>({
     initialValues: { name: '', price: 0, description: '', active: true },
@@ -113,15 +122,25 @@ export default function ProductsPage() {
   // 필터링된 데이터
   const filteredProducts = useMemo(() => {
     return products.filter((p) => {
-      if (statusFilter === 'active' && !p.active) return false
-      if (statusFilter === 'inactive' && p.active) return false
+      // Search query
       if (debouncedQuery.trim()) {
         const qLower = debouncedQuery.trim().toLowerCase()
-        return (p.name || '').toLowerCase().includes(qLower) || (p.description || '').toLowerCase().includes(qLower)
+        const matchesName = (p.name || '').toLowerCase().includes(qLower)
+        const matchesDesc = (p.description || '').toLowerCase().includes(qLower)
+        if (!matchesName && !matchesDesc) return false
       }
+
+      // Status filter
+      if (statusFilter === 'active' && !p.active) return false
+      if (statusFilter === 'inactive' && p.active) return false
+
+      // Price range filter
+      if (minPrice && (p.price ?? 0) < Number(minPrice)) return false
+      if (maxPrice && (p.price ?? 0) > Number(maxPrice)) return false
+
       return true
     })
-  }, [products, statusFilter, debouncedQuery])
+  }, [products, debouncedQuery, statusFilter, minPrice, maxPrice])
 
   // 정렬된 데이터
   const sortedProducts = useMemo(() => {
@@ -137,6 +156,20 @@ export default function ProductsPage() {
 
   // totalPages 계산 (필터링된 데이터 기준)
   const totalPages = Math.max(1, Math.ceil(filteredProducts.length / pageSize))
+
+  // CSV export function
+  const handleExport = () => {
+    const dataToExport = prepareProductDataForExport(filteredProducts)
+    exportToCSV(dataToExport, `상품목록_${new Date().toISOString().slice(0, 10)}.csv`)
+    toast.success('CSV 파일이 다운로드되었습니다')
+  }
+
+  const handleResetFilters = () => {
+    setStatusFilter('all')
+    setMinPrice('')
+    setMaxPrice('')
+    setQuery('')
+  }
 
 
   // 페이지 변경 시 필터/검색 변경으로 인해 현재 페이지가 유효 범위를 벗어나면 첫 페이지로 이동
@@ -181,33 +214,14 @@ export default function ProductsPage() {
               autoCapitalize: 'off',
             }}
           />
-          <FormControl size="small" sx={{ minWidth: 120, flexShrink: 0 }}>
-            <Select
-              value={statusFilter}
-              onChange={e => setStatusFilter(e.target.value as 'all' | 'active' | 'inactive')}
-              displayEmpty
-              sx={{
-                '& .MuiSelect-select': {
-                  whiteSpace: 'nowrap'
-                }
-              }}
-            >
-              <MenuItem value="all">전체</MenuItem>
-              <MenuItem value="active">활성</MenuItem>
-              <MenuItem value="inactive">비활성</MenuItem>
-            </Select>
-          </FormControl>
-          {(query || statusFilter !== 'all') && (
+          {!isMobile && (
             <Button
-              variant="ghost"
-              size="sm"
-              onClick={() => {
-                setQuery('')
-                setStatusFilter('all')
-              }}
-              sx={{ whiteSpace: 'nowrap' }}
+              variant="secondary"
+              leftIcon={<Download className="h-4 w-4" />}
+              onClick={handleExport}
+              sx={{ whiteSpace: 'nowrap', flexShrink: 0 }}
             >
-              초기화
+              CSV 내보내기
             </Button>
           )}
           <Button
@@ -216,8 +230,65 @@ export default function ProductsPage() {
             onClick={openCreate}
             sx={{ whiteSpace: 'nowrap', flexShrink: 0 }}
           >
-            제품 추가
+            상품 등록
           </Button>
+        </Stack>
+      </Paper>
+
+      {/* 필터 패널 */}
+      <Paper elevation={0} variant="outlined" sx={{ p: 2, borderRadius: 2 }}>
+        <Stack spacing={2}>
+          <Typography variant="subtitle2" fontWeight={600}>필터</Typography>
+          <Grid container spacing={2} alignItems="center">
+            <Grid item xs={12} md={3}>
+              <FormControl size="small" fullWidth>
+                <Select
+                  value={statusFilter}
+                  onChange={e => setStatusFilter(e.target.value as 'all' | 'active' | 'inactive')}
+                  displayEmpty
+                >
+                  <MenuItem value="all">전체 상태</MenuItem>
+                  <MenuItem value="active">활성</MenuItem>
+                  <MenuItem value="inactive">비활성</MenuItem>
+                </Select>
+              </FormControl>
+            </Grid>
+            <Grid item xs={6} md={3}>
+              <TextField
+                placeholder="최소 가격"
+                type="number"
+                size="small"
+                value={minPrice}
+                onChange={(e) => setMinPrice(e.target.value)}
+                fullWidth
+                InputProps={{
+                  startAdornment: <InputAdornment position="start">₩</InputAdornment>,
+                }}
+              />
+            </Grid>
+            <Grid item xs={6} md={3}>
+              <TextField
+                placeholder="최대 가격"
+                type="number"
+                size="small"
+                value={maxPrice}
+                onChange={(e) => setMaxPrice(e.target.value)}
+                fullWidth
+                InputProps={{
+                  startAdornment: <InputAdornment position="start">₩</InputAdornment>,
+                }}
+              />
+            </Grid>
+            <Grid item xs={12} md={3}>
+              <Stack direction="row" spacing={1} justifyContent="flex-end">
+                {(statusFilter !== 'all' || minPrice || maxPrice || query) && (
+                  <Button variant="ghost" onClick={handleResetFilters} size="sm">
+                    필터 초기화
+                  </Button>
+                )}
+              </Stack>
+            </Grid>
+          </Grid>
         </Stack>
       </Paper>
 

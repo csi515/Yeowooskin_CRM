@@ -38,7 +38,7 @@ export async function GET(request: NextRequest) {
         // 제품 정보와 함께 반환
         const alertsWithProducts = await Promise.all(
             alerts.map(async (alert) => {
-                const product = await productsRepo.findById(alert.product_id)
+                const product = await productsRepo.findByIdOrNull(alert.product_id)
                 return {
                     ...alert,
                     product: product ? {

@@ -20,6 +20,16 @@ import ToggleButton from '@mui/material/ToggleButton'
 import ToggleButtonGroup from '@mui/material/ToggleButtonGroup'
 
 import { useTheme } from '@mui/material'
+import TextField from '@mui/material/TextField'
+import InputAdornment from '@mui/material/InputAdornment'
+import Select from '@mui/material/Select'
+import MenuItem from '@mui/material/MenuItem'
+import FormControl from '@mui/material/FormControl'
+import { Search, Download } from 'lucide-react'
+import { useSearch } from '../lib/hooks/useSearch'
+import { useMemo } from 'react'
+import { exportToCSV } from '../lib/utils/export'
+import { useAppToast } from '../lib/ui/toast'
 
 // React Big Calendar를 동적 import로 로드하여 번들 크기 감소
 const BigCalendarWrapper = lazy(async () => {
@@ -226,7 +236,7 @@ export default function AppointmentsPage() {
   const [events, setEvents] = useState<AppointmentEvent[]>([])
   const [view, setView] = useState<CalendarView>('month')
   const [range, setRange] = useState<DateRange>({})
-  const [currentDate, setCurrentDate] = useState<Date>(new Date())
+  const [currentDate, setCurrentDate] = useState<Date | null>(null)
   const [rangeLabel, setRangeLabel] = useState<string>('')
   const [createOpen, setCreateOpen] = useState(false)
   const [detailOpen, setDetailOpen] = useState(false)
@@ -241,6 +251,41 @@ export default function AppointmentsPage() {
   const calendarRef = useRef<any>(null)
   const timelineRef = useRef<MobileTimelineViewRef>(null)
   const [mobileViewMode, setMobileViewMode] = useState<'timeline' | 'calendar'>('calendar')
+  const toast = useAppToast()
+
+  // Search & Filter
+  const { query, debouncedQuery, setQuery } = useSearch({ debounceMs: 300 })
+  const [statusFilter, setStatusFilter] = useState<string>('all')
+
+  const filteredEvents = useMemo(() => {
+    return events.filter(event => {
+      // Search
+      if (debouncedQuery.trim()) {
+        const q = debouncedQuery.toLowerCase()
+        const titleMatch = event.title.toLowerCase().includes(q)
+        const noteMatch = (event.extendedProps?.notes || '').toLowerCase().includes(q)
+        const productMatch = (event.extendedProps?.product_name || '').toLowerCase().includes(q)
+        if (!titleMatch && !noteMatch && !productMatch) return false
+      }
+      // Status
+      if (statusFilter !== 'all' && event.extendedProps?.status !== statusFilter) return false
+      return true
+    })
+  }, [events, debouncedQuery, statusFilter])
+
+  const handleExport = () => {
+    const dataToExport = filteredEvents.map(event => ({
+      '예약일시': format(event.start, 'yyyy-MM-dd HH:mm'),
+      '제목': event.title.split(' · ')[0] || event.title,
+      '서비스': event.extendedProps?.product_name || '-',
+      '상태': event.extendedProps?.status === 'scheduled' ? '예약됨' :
+        event.extendedProps?.status === 'completed' ? '완료' :
+          event.extendedProps?.status === 'cancelled' ? '취소' : event.extendedProps?.status,
+      '메모': event.extendedProps?.notes || '-'
+    }))
+    exportToCSV(dataToExport, `예약목록_${new Date().toISOString().slice(0, 10)}.csv`)
+    toast.success('예약 목록이 다운로드되었습니다')
+  }
 
 
   const reloadCalendar = async (opt?: { from?: string; to?: string }): Promise<void> => {
@@ -303,6 +348,7 @@ export default function AppointmentsPage() {
   }
 
   const handlePrev = () => {
+    if (!currentDate) return
     const newDate = view === 'month'
       ? subMonths(currentDate, 1)
       : view === 'week'
@@ -312,6 +358,7 @@ export default function AppointmentsPage() {
   }
 
   const handleNext = () => {
+    if (!currentDate) return
     const newDate = view === 'month'
       ? addMonths(currentDate, 1)
       : view === 'week'
@@ -325,6 +372,7 @@ export default function AppointmentsPage() {
   }
 
   const handleChangeView = (nextView: CalendarView) => {
+    if (!currentDate) return
     setView(nextView)
     updateRangeAndLabel(currentDate, nextView)
   }
@@ -387,11 +435,14 @@ export default function AppointmentsPage() {
   React.useEffect(() => {
     // 페이지 로드 시 항상 오늘 날짜로 초기화
     const today = new Date()
-    console.log('Appointments: Initializing calendar with today:', today.toISOString())
     setCurrentDate(today)
     updateRangeAndLabel(today, view)
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
+
+  if (!currentDate) {
+    return <Skeleton className="h-[600px] w-full" />
+  }
 
   return (
     <Stack spacing={3}>
@@ -403,23 +454,55 @@ export default function AppointmentsPage() {
         onPrev={handlePrev}
         onNext={handleNext}
         actions={
-          <Button
-            variant="primary"
-            size="md"
-            leftIcon={<Plus size={16} />}
-            onClick={() => {
-              setDraft({
-                date: new Date().toISOString().slice(0, 10),
-                start: '10:00',
-                end: '11:00',
-                status: 'scheduled',
-                notes: '',
-              })
-              setCreateOpen(true)
-            }}
-          >
-            예약 추가
-          </Button>
+          <Stack direction="row" spacing={1} alignItems="center">
+            <TextField
+              placeholder="예약 검색"
+              size="small"
+              value={query}
+              onChange={e => setQuery(e.target.value)}
+              sx={{ width: 200 }}
+              InputProps={{
+                startAdornment: <InputAdornment position="start"><Search size={16} /></InputAdornment>
+              }}
+            />
+            <FormControl size="small" sx={{ width: 120 }}>
+              <Select
+                value={statusFilter}
+                onChange={e => setStatusFilter(e.target.value)}
+                displayEmpty
+              >
+                <MenuItem value="all">전체 상태</MenuItem>
+                <MenuItem value="scheduled">예약됨</MenuItem>
+                <MenuItem value="completed">완료</MenuItem>
+                <MenuItem value="cancelled">취소</MenuItem>
+              </Select>
+            </FormControl>
+            <Button
+              variant="secondary"
+              leftIcon={<Download size={16} />}
+              onClick={handleExport}
+              sx={{ whiteSpace: 'nowrap' }}
+            >
+              내보내기
+            </Button>
+            <Button
+              variant="primary"
+              size="md"
+              leftIcon={<Plus size={16} />}
+              onClick={() => {
+                setDraft({
+                  date: new Date().toISOString().slice(0, 10),
+                  start: '10:00',
+                  end: '11:00',
+                  status: 'scheduled',
+                  notes: '',
+                })
+                setCreateOpen(true)
+              }}
+            >
+              예약 추가
+            </Button>
+          </Stack>
         }
       />
 
@@ -449,7 +532,7 @@ export default function AppointmentsPage() {
           <Suspense fallback={<Skeleton className="h-40 w-full" />}>
             <MobileTimelineView
               ref={timelineRef}
-              events={events}
+              events={filteredEvents}
               selectedDate={currentDate}
               onEventClick={handleMobileEventClick}
               onDateClick={handleMobileDateClick}
@@ -465,7 +548,7 @@ export default function AppointmentsPage() {
             <Box sx={{ height: 'calc(100vh - 280px)', minHeight: 400 }} className="rbc-mobile-calendar">
               <BigCalendarWrapper
                 ref={calendarRef}
-                events={events}
+                events={filteredEvents}
                 view={view}
                 date={currentDate}
                 onNavigate={handleNavigate}
@@ -506,7 +589,7 @@ export default function AppointmentsPage() {
           <Box sx={{ height: 500, minWidth: 800 }}>
             <BigCalendarWrapper
               ref={calendarRef}
-              events={events}
+              events={filteredEvents}
               view={view}
               date={currentDate}
               onNavigate={handleNavigate}

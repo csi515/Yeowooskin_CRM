@@ -109,13 +109,14 @@ export default function PageHeader({
 export function createActionButton(
   label: string,
   onClick: () => void,
-  variant: 'primary' | 'secondary' = 'primary'
+  variant: 'primary' | 'secondary' = 'primary',
+  icon: ReactNode = <Plus className="h-4 w-4" />
 ) {
   return (
     <Button
       variant={variant}
       size="md"
-      leftIcon={<Plus className="h-4 w-4" />}
+      leftIcon={icon}
       onClick={onClick}
       className="w-full sm:w-auto"
     >

@@ -7,9 +7,10 @@ import { InventoryAlertsRepository } from '@/app/lib/repositories/inventory-aler
 
 /**
  * GET /api/inventory
- * ?ш퀬 議고쉶 (?ш퀬 遺議??쒗뭹 ?ы븿)
+ * 재고 조회 (재고 부족 제품 포함)
+ * Query params: page, limit, search, status, sort_by, sort_order, min_price, max_price, min_stock, max_stock
  */
-export async function GET(_request: NextRequest) {
+export async function GET(request: NextRequest) {
     try {
         const supabase = await createSupabaseServerClient()
         const userId = await getUserIdFromCookies()
@@ -18,29 +19,106 @@ export async function GET(_request: NextRequest) {
             return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
         }
 
-        const productsRepo = new ProductsRepository(userId, supabase)
-        const products = await productsRepo.findAll({ limit: 1000 })
+        // Extract query parameters
+        const { searchParams } = new URL(request.url)
+        const page = parseInt(searchParams.get('page') || '1')
+        const limit = parseInt(searchParams.get('limit') || '25')
+        const search = searchParams.get('search') || ''
+        const status = searchParams.get('status') || '' // 'normal', 'low_stock', 'out_of_stock'
+        const sortBy = searchParams.get('sort_by') || 'name' // 'name', 'stock_count', 'price', 'updated_at'
+        const sortOrder = searchParams.get('sort_order') || 'asc' // 'asc', 'desc'
+        const minPrice = searchParams.get('min_price') ? parseFloat(searchParams.get('min_price')!) : null
+        const maxPrice = searchParams.get('max_price') ? parseFloat(searchParams.get('max_price')!) : null
+        const minStock = searchParams.get('min_stock') ? parseInt(searchParams.get('min_stock')!) : null
+        const maxStock = searchParams.get('max_stock') ? parseInt(searchParams.get('max_stock')!) : null
 
-        // ?ш퀬 遺議??쒗뭹 媛먯?
-        const inventoryStatus = products.map(product => {
+        const productsRepo = new ProductsRepository(userId, supabase)
+
+        // Fetch all products first (we'll filter and paginate in memory for now)
+        const allProducts = await productsRepo.findAll({ limit: 10000 })
+
+        // Calculate inventory status for all products
+        let inventoryData = allProducts.map(product => {
             const stockCount = product.stock_count ?? 0
             const safetyStock = product.safety_stock ?? 5
 
-            let status = 'normal'
+            let inventoryStatus = 'normal'
             if (stockCount === 0) {
-                status = 'out_of_stock'
+                inventoryStatus = 'out_of_stock'
             } else if (stockCount <= safetyStock) {
-                status = 'low_stock'
+                inventoryStatus = 'low_stock'
             }
 
             return {
                 ...product,
-                inventory_status: status,
-                needs_restock: status !== 'normal',
+                inventory_status: inventoryStatus,
+                needs_restock: inventoryStatus !== 'normal',
             }
         })
 
-        return NextResponse.json(inventoryStatus)
+        // Apply search filter
+        if (search) {
+            const searchLower = search.toLowerCase()
+            inventoryData = inventoryData.filter(product =>
+                product.name?.toLowerCase().includes(searchLower)
+            )
+        }
+
+        // Apply status filter
+        if (status) {
+            inventoryData = inventoryData.filter(product => product.inventory_status === status)
+        }
+
+        // Apply price range filter
+        if (minPrice !== null) {
+            inventoryData = inventoryData.filter(product => (product.price ?? 0) >= minPrice)
+        }
+        if (maxPrice !== null) {
+            inventoryData = inventoryData.filter(product => (product.price ?? 0) <= maxPrice)
+        }
+
+        // Apply stock range filter
+        if (minStock !== null) {
+            inventoryData = inventoryData.filter(product => (product.stock_count ?? 0) >= minStock)
+        }
+        if (maxStock !== null) {
+            inventoryData = inventoryData.filter(product => (product.stock_count ?? 0) <= maxStock)
+        }
+
+        // Apply sorting
+        inventoryData.sort((a, b) => {
+            let aVal: any = a[sortBy as keyof typeof a]
+            let bVal: any = b[sortBy as keyof typeof b]
+
+            // Handle null/undefined values
+            if (aVal === null || aVal === undefined) aVal = ''
+            if (bVal === null || bVal === undefined) bVal = ''
+
+            // String comparison for name, number comparison for others
+            if (typeof aVal === 'string' && typeof bVal === 'string') {
+                return sortOrder === 'asc'
+                    ? aVal.localeCompare(bVal)
+                    : bVal.localeCompare(aVal)
+            } else {
+                return sortOrder === 'asc' ? aVal - bVal : bVal - aVal
+            }
+        })
+
+        // Calculate pagination
+        const total = inventoryData.length
+        const totalPages = Math.ceil(total / limit)
+        const offset = (page - 1) * limit
+        const paginatedData = inventoryData.slice(offset, offset + limit)
+
+        return NextResponse.json({
+            data: paginatedData,
+            pagination: {
+                total,
+                page,
+                limit,
+                total_pages: totalPages,
+            }
+        })
     } catch (error) {
         console.error('Error fetching inventory:', error)
         return NextResponse.json(

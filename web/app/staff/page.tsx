@@ -22,6 +22,9 @@ import { AppSettings } from '@/types/settings'
 import { Box, Paper, Grid, Typography, Stack, Tabs, Tab, Avatar, Tooltip } from '@mui/material'
 import { startOfMonth, endOfMonth, format, addWeeks, getDay, addDays } from 'date-fns'
 import { useAppToast } from '@/app/lib/ui/toast'
+import { Download } from 'lucide-react'
+import { exportToCSV } from '@/app/lib/utils/export'
+import { useTheme, useMediaQuery } from '@mui/material'
 
 /**
  * 직원 통합 관리 대시보드
@@ -90,6 +93,43 @@ export default function StaffPage() {
 
   // 스케줄만 필터링 (스케줄 표용)
   const schedules = (Array.isArray(attendance) ? attendance : []).filter(a => a.type === 'scheduled')
+
+  const theme = useTheme()
+  const isMobile = useMediaQuery(theme.breakpoints.down('md'))
+
+  const handleExport = () => {
+    if (tabIndex === 2) {
+      // Export Staff List
+      const data = rows.map(r => ({
+        '이름': r.name,
+        '직급': r.role || '-',
+        '전화번호': r.phone || '-',
+        '이메일': r.email || '-',
+        '상태': r.active !== false ? '재직' : '퇴사',
+        '현재상태': r.status === 'office' ? '근무중' : r.status === 'away' ? '자리비움' : '퇴근'
+      }))
+      exportToCSV(data, `직원명부_${format(new Date(), 'yyyyMMdd')}.csv`)
+    } else {
+      // Export Attendance/Schedule
+      // Create staff map for name lookup
+      const staffMap = rows.reduce((acc, staff) => {
+        acc[staff.id] = staff.name
+        return acc
+      }, {} as Record<string, string>)
+
+      const data = attendance.map(a => ({
+        '직원명': staffMap[a.staff_id] || '-',
+        '유형': a.type === 'actual' ? '실근무' : '스케줄',
+        '날짜': format(new Date(a.start_time), 'yyyy-MM-dd'),
+        '시작시간': format(new Date(a.start_time), 'HH:mm'),
+        '종료시간': format(new Date(a.end_time), 'HH:mm'),
+        '상태': a.status,
+        '메모': a.memo || '-'
+      }))
+      exportToCSV(data, `근태기록_${format(new Date(), 'yyyyMM')}.csv`)
+    }
+    toast.success('CSV 파일이 다운로드되었습니다')
+  }
 
   // === 출퇴근 기록 핸들러 ===
   const handleCheckIn = async (staffId: string) => {
@@ -276,13 +316,16 @@ export default function StaffPage() {
         title="직원 통합 관리"
         icon={<Users className="h-5 w-5" />}
         description="출결 확인부터 상세 일정 구성까지 한 곳에서 관리하세요"
-        actions={createActionButton(
-          '직원 추가',
-          () => {
-            setSelected(null)
-            setDetailOpen(true)
-          }
-        )}
+        actions={[
+          ...(isMobile ? [] : [createActionButton('CSV 내보내기', handleExport, 'secondary', <Download size={16} />)]),
+          createActionButton(
+            '직원 추가',
+            () => {
+              setSelected(null)
+              setDetailOpen(true)
+            }
+          )
+        ]}
       />
 
       {/* 실시간 대시보드 요약 카드 */}

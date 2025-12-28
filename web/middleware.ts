@@ -32,10 +32,10 @@ export function middleware(req: NextRequest) {
     req.cookies.get('demo_mode')?.value === 'true'
   )
 
-  // 1. 이미 로그인한 사용자가 루트('/') 접근 시 대시보드로 이동
-  if (hasSession && pathname === '/') {
-    return NextResponse.redirect(new URL('/dashboard', req.url))
-  }
+  // 1. 이미 로그인한 사용자가 루트('/') 접근 시 대시보드로 이동 - 사용자 요청으로 비활성화
+  // if (hasSession && pathname === '/') {
+  //   return NextResponse.redirect(new URL('/dashboard', req.url))
+  // }
 
   // 2. 로그인하지 않은 사용자는 루트('/') 접근 허용 (랜딩 페이지)
   if (!hasSession && pathname === '/') {

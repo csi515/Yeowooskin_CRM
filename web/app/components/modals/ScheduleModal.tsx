@@ -17,7 +17,9 @@ import {
     Typography,
     Checkbox,
     FormControlLabel,
-    Box
+    Box,
+    useTheme,
+    useMediaQuery
 } from '@mui/material'
 import { format } from 'date-fns'
 import { ko } from 'date-fns/locale'
@@ -150,8 +152,17 @@ export default function ScheduleModal({
         { value: 0, label: '일' }
     ]
 
+    const theme = useTheme()
+    const isMobile = useMediaQuery(theme.breakpoints.down('sm'))
+
     return (
-        <Dialog open={open} onClose={onClose} maxWidth="sm" fullWidth>
+        <Dialog
+            open={open}
+            onClose={onClose}
+            maxWidth="sm"
+            fullWidth
+            fullScreen={isMobile}
+        >
             <DialogTitle>
                 {schedule ? '스케줄 수정' : '스케줄 추가'}
             </DialogTitle>
