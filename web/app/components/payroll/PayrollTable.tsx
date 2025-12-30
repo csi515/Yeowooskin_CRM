@@ -1,6 +1,5 @@
 'use client'
 
-import { useState } from 'react'
 import {
     Card,
     CardContent,
@@ -24,7 +23,6 @@ import { type Staff, type PayrollRecord } from '@/types/payroll'
 
 interface PayrollTableProps {
     selectedMonth: string
-    staff: Staff[]
     records: PayrollRecord[]
     selectedStaffIds: string[]
     onSelectedStaffIdsChange: (ids: string[]) => void
@@ -39,7 +37,6 @@ interface PayrollTableProps {
 
 export default function PayrollTable({
     selectedMonth,
-    staff,
     records,
     selectedStaffIds,
     onSelectedStaffIdsChange,

@@ -11,7 +11,6 @@ import {
     FormControlLabel,
     Checkbox,
     Box,
-    Typography,
     InputAdornment,
 } from '@mui/material'
 import { useAppToast } from '../../lib/ui/toast'
@@ -36,8 +35,10 @@ interface FormData {
 interface FormErrors {
     name?: string
     price?: string
+    description?: string
     stock_count?: string
     safety_stock?: string
+    active?: string
 }
 
 export default function ProductAddModal({ open, onClose, onSuccess }: ProductAddModalProps) {
@@ -216,8 +217,8 @@ export default function ProductAddModal({ open, onClose, onSuccess }: ProductAdd
                         value={formData.name}
                         onChange={(e) => handleFieldChange('name', e.target.value)}
                         onBlur={() => handleFieldBlur('name')}
-                        error={Boolean(errors.name && touched.name)}
-                        helperText={errors.name && touched.name ? errors.name : undefined}
+                        error={Boolean(errors['name'] && touched['name'])}
+                        helperText={errors['name'] && touched['name'] ? errors['name'] : undefined}
                         disabled={loading}
                     />
 
@@ -228,8 +229,8 @@ export default function ProductAddModal({ open, onClose, onSuccess }: ProductAdd
                         value={formData.price}
                         onChange={(e) => handleFieldChange('price', Number(e.target.value) || 0)}
                         onBlur={() => handleFieldBlur('price')}
-                        error={Boolean(errors.price && touched.price)}
-                        helperText={errors.price && touched.price ? errors.price : "부가세 포함 여부는 별도 표시 기준을 따릅니다."}
+                        error={Boolean(errors['price'] && touched['price'])}
+                        helperText={errors['price'] && touched['price'] ? errors['price'] : "부가세 포함 여부는 별도 표시 기준을 따릅니다."}
                         InputProps={{
                             endAdornment: <InputAdornment position="end">원</InputAdornment>,
                         }}
@@ -254,8 +255,8 @@ export default function ProductAddModal({ open, onClose, onSuccess }: ProductAdd
                         value={formData.stock_count}
                         onChange={(e) => handleFieldChange('stock_count', Number(e.target.value) || 0)}
                         onBlur={() => handleFieldBlur('stock_count')}
-                        error={Boolean(errors.stock_count && touched.stock_count)}
-                        helperText={errors.stock_count && touched.stock_count ? errors.stock_count : "제품 등록 시 초기 재고 수량을 설정합니다"}
+                        error={Boolean(errors['stock_count'] && touched['stock_count'])}
+                        helperText={errors['stock_count'] && touched['stock_count'] ? errors['stock_count'] : "제품 등록 시 초기 재고 수량을 설정합니다"}
                         disabled={loading}
                     />
 
@@ -266,8 +267,8 @@ export default function ProductAddModal({ open, onClose, onSuccess }: ProductAdd
                         value={formData.safety_stock}
                         onChange={(e) => handleFieldChange('safety_stock', Number(e.target.value) || 0)}
                         onBlur={() => handleFieldBlur('safety_stock')}
-                        error={Boolean(errors.safety_stock && touched.safety_stock)}
-                        helperText={errors.safety_stock && touched.safety_stock ? errors.safety_stock : "재고가 이 수량 이하로 떨어지면 알림이 표시됩니다"}
+                        error={Boolean(errors['safety_stock'] && touched['safety_stock'])}
+                        helperText={errors['safety_stock'] && touched['safety_stock'] ? errors['safety_stock'] : "재고가 이 수량 이하로 떨어지면 알림이 표시됩니다"}
                         disabled={loading}
                     />
 

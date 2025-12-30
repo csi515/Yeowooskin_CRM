@@ -30,7 +30,7 @@ import {
     Alert
 } from '@mui/material'
 import { ChevronLeft, ChevronRight, Plus, Copy, Settings, Clock } from 'lucide-react'
-import { format, addWeeks, startOfWeek, endOfWeek, eachDayOfInterval, isSameDay, addDays } from 'date-fns'
+import { format, addWeeks, startOfWeek, endOfWeek, eachDayOfInterval, isSameDay } from 'date-fns'
 import { ko } from 'date-fns/locale'
 
 interface StaffSchedulerProps {

@@ -240,7 +240,6 @@ export default function PayrollPage() {
 
             <PayrollTable
                 selectedMonth={selectedMonth}
-                staff={staff}
                 records={records}
                 selectedStaffIds={selectedStaffIds}
                 onSelectedStaffIdsChange={setSelectedStaffIds}

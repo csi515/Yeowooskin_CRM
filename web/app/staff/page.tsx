@@ -521,15 +521,13 @@ export default function StaffPage() {
         }}
       >
         <Tabs value={tabIndex.toString()} onValueChange={(val) => setTabIndex(parseInt(val))}>
-          <TabsList sx={{
+          <Box sx={{
             px: { xs: 2, sm: 3 },
             pt: 2,
             bgcolor: '#f9fafb',
-            borderBottom: 'none',
-            '& .MuiTabs-flexContainer': {
-              gap: { xs: 0, sm: 2 }
-            }
+            borderBottom: 'none'
           }}>
+            <TabsList>
             <TabsTrigger value="0">
               <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                 <Clock size={18} />
@@ -548,7 +546,8 @@ export default function StaffPage() {
                 <Typography variant="body2" fontWeight={500}>직원 명부</Typography>
               </Box>
             </TabsTrigger>
-          </TabsList>
+            </TabsList>
+          </Box>
 
           <Box sx={{ p: { xs: 2, sm: 3 } }}>
             {loading && <LoadingState rows={5} variant="card" />}
