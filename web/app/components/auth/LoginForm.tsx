@@ -266,9 +266,8 @@ export default function LoginForm() {
                 <ModalHeader title="회원가입 절차 안내" onClose={() => setInfoModalOpen(false)} />
                 <ModalBody>
                     <Stack spacing={1.5}>
-                        <Typography>1) 이름/전화번호/이메일/비밀번호/생년월일을 입력하여 회원가입</Typography>
-                        <Typography>2) 이메일로 발송된 인증 메일을 확인하여 인증 완료</Typography>
-                        <Typography>3) 회원가입 완료 후 바로 로그인하여 서비스를 이용하세요</Typography>
+                        <Typography>1) 이름/지점명/전화번호/이메일/비밀번호/생년월일을 입력하여 회원가입</Typography>
+                        <Typography>2) 회원가입 완료 후 바로 로그인하여 서비스를 이용하세요</Typography>
                         <Box pt={1}>
                             <Typography variant="caption" color="text.secondary">
                                 * 신규 회원가입 문의는 <Link href="mailto:csi515@naver.com" color="inherit" underline="always">csi515@naver.com</Link>으로 메일을 보내주세요.

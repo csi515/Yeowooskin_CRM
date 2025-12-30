@@ -26,10 +26,7 @@ import Divider from '@mui/material/Divider'
 import Box from '@mui/material/Box'
 import useMediaQuery from '@mui/material/useMediaQuery'
 import { useTheme } from '@mui/material/styles'
-import Accordion from '@mui/material/Accordion'
-import AccordionSummary from '@mui/material/AccordionSummary'
-import AccordionDetails from '@mui/material/AccordionDetails'
-import { ChevronDown } from 'lucide-react'
+import Checkbox from '@mui/material/Checkbox'
 
 import TableContainer from '@mui/material/TableContainer'
 import Table from '@mui/material/Table'
@@ -63,6 +60,7 @@ export default function CustomersPage() {
 
   // Filters
   const [vipFilter, setVipFilter] = useState<'all' | 'vip' | 'normal'>('all')
+  const [statusFilter, setStatusFilter] = useState<'all' | 'active' | 'inactive'>('all')
   const [minPoints, setMinPoints] = useState('')
   const [maxPoints, setMaxPoints] = useState('')
 
@@ -79,6 +77,7 @@ export default function CustomersPage() {
   const { page, pageSize, setPage, setPageSize } = pagination
 
   const [pointsByCustomer, setPointsByCustomer] = useState<Record<string, number>>({})
+  const [selectedCustomerIds, setSelectedCustomerIds] = useState<string[]>([])
 
   const load = useCallback(async () => {
     try {
@@ -99,6 +98,10 @@ export default function CustomersPage() {
     return rows.filter(customer => {
       const points = pointsByCustomer[customer.id] || 0
 
+      // Status filter
+      if (statusFilter === 'active' && customer.active === false) return false
+      if (statusFilter === 'inactive' && customer.active !== false) return false
+
       // VIP filter (assuming VIP = points > 1000)
       if (vipFilter === 'vip' && points <= 1000) return false
       if (vipFilter === 'normal' && points > 1000) return false
@@ -109,7 +112,7 @@ export default function CustomersPage() {
 
       return true
     })
-  }, [rows, pointsByCustomer, vipFilter, minPoints, maxPoints])
+  }, [rows, pointsByCustomer, statusFilter, vipFilter, minPoints, maxPoints])
 
   // 정렬된 데이터
   const sortedRows = useMemo(() => {
@@ -135,101 +138,139 @@ export default function CustomersPage() {
 
   // Reset filters
   const handleResetFilters = () => {
+    setStatusFilter('all')
     setVipFilter('all')
     setMinPoints('')
     setMaxPoints('')
   }
 
-  // 포인트 조회 최적화
+  // 포인트 조회 최적화 - 전체 고객 데이터에 대해 한 번에 조회
   useEffect(() => {
     const fetchPoints = async () => {
+      if (!filteredRows.length) return
+
       try {
         const { pointsApi } = await import('@/app/lib/api/points')
-        const pairs = await Promise.all(paginatedRows.map(async (c) => {
-          try {
-            const data = await pointsApi.getBalance(c.id, { withLedger: false })
-            const balance = Number(data?.balance || 0)
-            return [c.id, balance] as [string, number]
-          } catch {
-            return [c.id, 0] as [string, number]
+
+        // 아직 조회하지 않은 고객만 조회
+        const customersToFetch = filteredRows.filter(c => !(c.id in pointsByCustomer))
+
+        if (customersToFetch.length === 0) return
+
+        // 최대 5개씩 동시에 조회하여 API 부하 감소
+        const batchSize = 5
+        const batches = []
+        for (let i = 0; i < customersToFetch.length; i += batchSize) {
+          batches.push(customersToFetch.slice(i, i + batchSize))
+        }
+
+        for (const batch of batches) {
+          const promises = batch.map(async (c) => {
+            try {
+              const data = await pointsApi.getBalance(c.id, { withLedger: false })
+              const balance = Number(data?.balance || 0)
+              return [c.id, balance] as [string, number]
+            } catch {
+              return [c.id, 0] as [string, number]
+            }
+          })
+
+          const results = await Promise.all(promises)
+          setPointsByCustomer(prev => ({ ...prev, ...Object.fromEntries(results) }))
+
+          // 배치 간 약간의 지연으로 API 부하 감소
+          if (batches.length > 1) {
+            await new Promise(resolve => setTimeout(resolve, 100))
           }
-        }))
-        setPointsByCustomer(prev => ({ ...prev, ...Object.fromEntries(pairs) }))
-      } catch { }
+        }
+      } catch (error) {
+        console.error('포인트 조회 중 오류:', error)
+      }
     }
-    if (paginatedRows.length) fetchPoints()
-  }, [paginatedRows])
+
+    fetchPoints()
+  }, [filteredRows, pointsByCustomer])
 
   return (
     <Stack spacing={3}>
-      {/* 헤더 및 검색 */}
-      <Paper sx={{ p: 2, borderRadius: 3 }} elevation={0} variant="outlined">
-        <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2} alignItems="center" justifyContent="space-between">
-          <TextField
-            placeholder="이름, 이메일 또는 전화번호로 검색"
-            value={query}
-            onChange={e => setQuery(e.target.value)}
-            size="small"
-            fullWidth
-            sx={{
-              maxWidth: { sm: 400 },
-              '& .MuiOutlinedInput-root': {
-                fontSize: { xs: '16px', md: '14px' },
-              },
-            }}
-            slotProps={{
-              input: {
-                startAdornment: (
-                  <InputAdornment position="start">
-                    <Search className="h-4 w-4 text-neutral-400" />
-                  </InputAdornment>
-                ),
-              },
-            }}
-            inputProps={{
-              autoComplete: 'off',
-              autoCorrect: 'off',
-              autoCapitalize: 'off',
-            }}
-          />
-          <Stack direction="row" spacing={1}>
-            {!isMobile && (
-              <Button
-                variant="secondary"
-                leftIcon={<Download className="h-4 w-4" />}
-                onClick={handleExport}
-                sx={{ whiteSpace: 'nowrap' }}
-              >
-                CSV 내보내기
-              </Button>
-            )}
-            <Button
-              variant="primary"
-              leftIcon={<Plus className="h-4 w-4" />}
-              onClick={() => {
-                setSelected({ id: '', owner_id: '', name: '', phone: '', email: '', address: '' } as Customer)
-                setDetailOpen(true)
+      {/* 통합 검색 및 필터 바 */}
+      <Paper sx={{ p: 3, borderRadius: 3 }} elevation={0} variant="outlined">
+        <Stack spacing={3}>
+          {/* 검색 및 기본 액션 */}
+          <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2} alignItems="center" justifyContent="space-between">
+            <TextField
+              placeholder="이름, 이메일 또는 전화번호로 검색"
+              value={query}
+              onChange={e => setQuery(e.target.value)}
+              size="small"
+              fullWidth
+              sx={{
+                maxWidth: { sm: 400 },
+                '& .MuiOutlinedInput-root': {
+                  fontSize: { xs: '16px', md: '14px' },
+                },
               }}
-              fullWidth={false}
-              sx={{ width: { xs: '100%', sm: 'auto' }, whiteSpace: 'nowrap' }}
-            >
-              새 고객
-            </Button>
+              slotProps={{
+                input: {
+                  startAdornment: (
+                    <InputAdornment position="start">
+                      <Search className="h-4 w-4 text-neutral-400" />
+                    </InputAdornment>
+                  ),
+                },
+              }}
+              inputProps={{
+                autoComplete: 'off',
+                autoCorrect: 'off',
+                autoCapitalize: 'off',
+              }}
+            />
+            <Stack direction="row" spacing={1}>
+              {!isMobile && (
+                <Button
+                  variant="secondary"
+                  leftIcon={<Download className="h-4 w-4" />}
+                  onClick={handleExport}
+                  sx={{ whiteSpace: 'nowrap' }}
+                >
+                  CSV 내보내기
+                </Button>
+              )}
+              <Button
+                variant="primary"
+                leftIcon={<Plus className="h-4 w-4" />}
+                onClick={() => {
+                  setSelected({ id: '', owner_id: '', name: '', phone: '', email: '', address: '' } as Customer)
+                  setDetailOpen(true)
+                }}
+                fullWidth={false}
+                sx={{ width: { xs: '100%', sm: 'auto' }, whiteSpace: 'nowrap' }}
+              >
+                새 고객
+              </Button>
+            </Stack>
           </Stack>
-        </Stack>
-      </Paper>
 
-      {/* 필터 패널 */}
-      <Accordion elevation={0} variant="outlined" sx={{ borderRadius: 2 }}>
-        <AccordionSummary expandIcon={<ChevronDown size={20} />}>
-          <Typography variant="subtitle2" fontWeight={600}>필터</Typography>
-          {(vipFilter !== 'all' || minPoints || maxPoints) && (
-            <Chip label="필터 적용됨" size="small" color="primary" sx={{ ml: 2 }} />
-          )}
-        </AccordionSummary>
-        <AccordionDetails>
-          <Stack spacing={2}>
-            <FormControl size="small" fullWidth>
+          {/* 인라인 필터 */}
+          <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 2, alignItems: 'center' }}>
+            <Typography variant="body2" color="text.secondary" sx={{ mr: 1 }}>
+              필터:
+            </Typography>
+
+            <FormControl size="small" sx={{ minWidth: 100 }}>
+              <InputLabel>상태</InputLabel>
+              <Select
+                value={statusFilter}
+                onChange={(e) => setStatusFilter(e.target.value as 'all' | 'active' | 'inactive')}
+                label="상태"
+              >
+                <MenuItem value="all">전체</MenuItem>
+                <MenuItem value="active">활성</MenuItem>
+                <MenuItem value="inactive">비활성</MenuItem>
+              </Select>
+            </FormControl>
+
+            <FormControl size="small" sx={{ minWidth: 120 }}>
               <InputLabel>VIP 등급</InputLabel>
               <Select
                 value={vipFilter}
@@ -241,32 +282,48 @@ export default function CustomersPage() {
                 <MenuItem value="normal">일반</MenuItem>
               </Select>
             </FormControl>
-            <Stack direction="row" spacing={2}>
-              <TextField
-                label="최소 포인트"
-                type="number"
-                size="small"
-                value={minPoints}
-                onChange={(e) => setMinPoints(e.target.value)}
-                fullWidth
-              />
-              <TextField
-                label="최대 포인트"
-                type="number"
-                size="small"
-                value={maxPoints}
-                onChange={(e) => setMaxPoints(e.target.value)}
-                fullWidth
-              />
-            </Stack>
+
+            <TextField
+              label="최소 포인트"
+              type="number"
+              size="small"
+              value={minPoints}
+              onChange={(e) => setMinPoints(e.target.value)}
+              sx={{ width: 120 }}
+            />
+
+            <TextField
+              label="최대 포인트"
+              type="number"
+              size="small"
+              value={maxPoints}
+              onChange={(e) => setMaxPoints(e.target.value)}
+              sx={{ width: 120 }}
+            />
+
             {(vipFilter !== 'all' || minPoints || maxPoints) && (
-              <Button variant="ghost" onClick={handleResetFilters} size="sm">
-                필터 초기화
+              <Button
+                variant="ghost"
+                onClick={handleResetFilters}
+                size="sm"
+                sx={{ ml: 1 }}
+              >
+                초기화
               </Button>
             )}
-          </Stack>
-        </AccordionDetails>
-      </Accordion>
+
+            {/* 필터 상태 표시 */}
+            {(vipFilter !== 'all' || minPoints || maxPoints) && (
+              <Chip
+                label={`${filteredRows.length}/${rows.length}명 표시`}
+                size="small"
+                color="info"
+                variant="outlined"
+              />
+            )}
+          </Box>
+        </Stack>
+      </Paper>
 
       {error && (
         <Alert severity="error" variant="filled" sx={{ borderRadius: 2 }}>
@@ -285,7 +342,15 @@ export default function CustomersPage() {
             <Card key={c.id} sx={{ borderRadius: 3 }} variant="outlined">
               <CardContent sx={{ pb: 1 }}>
                 <Stack direction="row" alignItems="center" justifyContent="space-between" mb={1}>
-                  <Typography variant="h6" fontWeight="bold">{c.name}</Typography>
+                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                    <Typography variant="h6" fontWeight="bold">{c.name}</Typography>
+                    <Chip
+                      label={c.active !== false ? '활성' : '비활성'}
+                      size="small"
+                      color={c.active !== false ? 'success' : 'default'}
+                      variant="outlined"
+                    />
+                  </Box>
                   <IconButton
                     size="small"
                     onClick={() => { setSelected(c); setDetailOpen(true) }}
@@ -321,11 +386,54 @@ export default function CustomersPage() {
         </Stack>
       </Box>
 
+      {/* 선택된 고객 표시 및 일괄 작업 */}
+      {selectedCustomerIds.length > 0 && (
+        <Paper sx={{ p: 2, mb: 3, borderRadius: 2, bgcolor: 'primary.light', border: '1px solid', borderColor: 'primary.main' }}>
+          <Stack direction="row" justifyContent="space-between" alignItems="center">
+            <Typography variant="body1" fontWeight={600} color="primary.dark">
+              {selectedCustomerIds.length}명의 고객이 선택되었습니다
+            </Typography>
+            <Stack direction="row" spacing={1}>
+              <Button
+                variant="primary"
+                size="sm"
+                onClick={() => {
+                  // TODO: 일괄 상태 변경 기능 구현
+                  toast.info('일괄 상태 변경 기능은 곧 추가됩니다')
+                }}
+              >
+                상태 변경
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setSelectedCustomerIds([])}
+              >
+                선택 해제
+              </Button>
+            </Stack>
+          </Stack>
+        </Paper>
+      )}
+
       {/* 데스크톱 테이블 뷰 (md 이상) */}
       <TableContainer component={Paper} elevation={0} variant="outlined" sx={{ borderRadius: 3, display: { xs: 'none', md: 'block' } }}>
-        <Table>
+        <Table role="table" aria-label="고객 목록 테이블">
           <TableHead sx={{ bgcolor: 'neutral.50' }}>
             <TableRow>
+              <TableCell padding="checkbox">
+                  <Checkbox
+                    checked={paginatedRows.length > 0 && selectedCustomerIds.length === paginatedRows.length}
+                    indeterminate={selectedCustomerIds.length > 0 && selectedCustomerIds.length < paginatedRows.length}
+                    onChange={(e: React.ChangeEvent<HTMLInputElement>) => {
+                      if (e.target.checked) {
+                        setSelectedCustomerIds(paginatedRows.map(c => c.id))
+                      } else {
+                        setSelectedCustomerIds([])
+                      }
+                    }}
+                  />
+              </TableCell>
               <TableCell>
                 <TableSortLabel
                   active={sortKey === 'name'}
@@ -345,29 +453,68 @@ export default function CustomersPage() {
                 </TableSortLabel>
               </TableCell>
               <TableCell>이메일</TableCell>
+              <TableCell>상태</TableCell>
               <TableCell>보유상품</TableCell>
               <TableCell align="right">포인트</TableCell>
               <TableCell align="center">관리</TableCell>
             </TableRow>
           </TableHead>
           <TableBody>
-            {loading && Array.from({ length: 5 }).map((_, i) => (
-              <TableRow key={i}>
-                <TableCell colSpan={6}><Skeleton className="h-10" /></TableCell>
-              </TableRow>
-            ))}
+          {loading && Array.from({ length: 5 }).map((_, i) => (
+            <TableRow key={i}>
+              <TableCell colSpan={7}>
+                <Skeleton className="h-10" aria-label="고객 데이터 로딩 중" />
+              </TableCell>
+            </TableRow>
+          ))}
             {!loading && paginatedRows.map((c) => (
               <TableRow
                 key={c.id}
                 hover
-                onClick={() => { setSelected(c); setDetailOpen(true) }}
                 sx={{ cursor: 'pointer' }}
+                tabIndex={0}
+                role="button"
+                aria-label={`${c.name} 고객 정보`}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter' || e.key === ' ') {
+                    e.preventDefault()
+                    setSelected(c)
+                    setDetailOpen(true)
+                  }
+                }}
               >
-                <TableCell title={c.name} sx={{ fontWeight: 500 }}>{c.name}</TableCell>
-                <TableCell>{c.phone || '-'}</TableCell>
-                <TableCell>{c.email || '-'}</TableCell>
-                <TableCell><CustomerHoldingsBadge customerId={c.id} /></TableCell>
-                <TableCell align="right" sx={{ fontWeight: 'bold', color: 'warning.main' }}>
+                <TableCell padding="checkbox">
+                  <Checkbox
+                    checked={selectedCustomerIds.includes(c.id)}
+                    onChange={(e: React.ChangeEvent<HTMLInputElement>) => {
+                      e.stopPropagation()
+                      if (e.target.checked) {
+                        setSelectedCustomerIds(prev => [...prev, c.id])
+                      } else {
+                        setSelectedCustomerIds(prev => prev.filter(id => id !== c.id))
+                      }
+                    }}
+                  />
+                </TableCell>
+                <TableCell
+                  title={c.name}
+                  sx={{ fontWeight: 500 }}
+                  onClick={() => { setSelected(c); setDetailOpen(true) }}
+                >
+                  {c.name}
+                </TableCell>
+                <TableCell onClick={() => { setSelected(c); setDetailOpen(true) }}>{c.phone || '-'}</TableCell>
+                <TableCell onClick={() => { setSelected(c); setDetailOpen(true) }}>{c.email || '-'}</TableCell>
+                <TableCell onClick={() => { setSelected(c); setDetailOpen(true) }}>
+                  <Chip
+                    label={c.active !== false ? '활성' : '비활성'}
+                    size="small"
+                    color={c.active !== false ? 'success' : 'default'}
+                    variant="outlined"
+                  />
+                </TableCell>
+                <TableCell onClick={() => { setSelected(c); setDetailOpen(true) }}><CustomerHoldingsBadge customerId={c.id} /></TableCell>
+                <TableCell align="right" sx={{ fontWeight: 'bold', color: 'warning.main' }} onClick={() => { setSelected(c); setDetailOpen(true) }}>
                   {Number(pointsByCustomer[c.id] ?? 0).toLocaleString()}
                 </TableCell>
                 <TableCell align="center">
@@ -384,12 +531,12 @@ export default function CustomersPage() {
             ))}
             {!loading && rows.length === 0 && (
               <TableRow>
-                <TableCell colSpan={6} align="center" sx={{ py: 8 }}>
+                <TableCell colSpan={7} align="center" sx={{ py: 8 }}>
                   <EmptyState
                     title="고객 데이터가 없습니다."
                     actionLabel="새 고객"
                     actionOnClick={() => {
-                      setSelected({ id: '', owner_id: '', name: '', phone: '', email: '', address: '' } as Customer)
+                      setSelected({ id: '', owner_id: '', name: '', phone: '', email: '', address: '', active: true } as Customer)
                       setDetailOpen(true)
                     }}
                   />

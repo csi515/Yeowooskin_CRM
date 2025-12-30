@@ -236,7 +236,7 @@ export default function AppointmentsPage() {
   const [events, setEvents] = useState<AppointmentEvent[]>([])
   const [view, setView] = useState<CalendarView>('month')
   const [range, setRange] = useState<DateRange>({})
-  const [currentDate, setCurrentDate] = useState<Date | null>(null)
+  const [currentDate, setCurrentDate] = useState<Date | null>(new Date())
   const [rangeLabel, setRangeLabel] = useState<string>('')
   const [createOpen, setCreateOpen] = useState(false)
   const [detailOpen, setDetailOpen] = useState(false)
@@ -433,14 +433,22 @@ export default function AppointmentsPage() {
   }
 
   React.useEffect(() => {
-    // 페이지 로드 시 항상 오늘 날짜로 초기화
-    const today = new Date()
-    setCurrentDate(today)
-    updateRangeAndLabel(today, view)
+    // view가 변경될 때 range와 label 업데이트
+    if (currentDate) {
+      updateRangeAndLabel(currentDate, view)
+    }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [])
+  }, [view])
 
-  if (!currentDate) {
+  React.useEffect(() => {
+    // 초기 로딩 시 오늘 날짜로 range와 label 설정
+    if (currentDate && !rangeLabel) {
+      updateRangeAndLabel(currentDate, view)
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [currentDate, rangeLabel])
+
+  if (!currentDate || !rangeLabel) {
     return <Skeleton className="h-[600px] w-full" />
   }
 

@@ -46,6 +46,7 @@ import SearchBar from '../components/inventory/SearchBar'
 import FilterPanel, { type InventoryFilters } from '../components/inventory/FilterPanel'
 import InventoryHistoryModal from '../components/inventory/InventoryHistoryModal'
 import BulkActionBar from '../components/inventory/BulkActionBar'
+import ProductAddModal from '../components/inventory/ProductAddModal'
 import { exportToCSV, prepareInventoryDataForExport } from '../lib/utils/export'
 
 interface Product {
@@ -106,6 +107,9 @@ export default function InventoryPage() {
     const [historyProductId, setHistoryProductId] = useState<string | null>(null)
     const [historyProductName, setHistoryProductName] = useState('')
     const [selectedProductIds, setSelectedProductIds] = useState<Set<string>>(new Set())
+
+    // Product add modal
+    const [productAddModalOpen, setProductAddModalOpen] = useState(false)
 
     useEffect(() => {
         fetchData()
@@ -308,8 +312,7 @@ export default function InventoryPage() {
                     description="제품 재고 현황 및 알림 관리"
                     icon={<Package />}
                     actions={[
-                        createActionButton('새로고침', fetchData, 'secondary'),
-                        createActionButton('제품 추가', () => { }, 'primary')
+                        createActionButton('제품 추가', () => setProductAddModalOpen(true), 'primary')
                     ]}
                 />
 
@@ -336,7 +339,7 @@ export default function InventoryPage() {
                     title="등록된 제품이 없습니다"
                     description="새로운 제품을 등록하고 재고를 관리해보세요."
                     actionLabel="제품 추가"
-                    onAction={() => { }}
+                    onAction={() => setProductAddModalOpen(true)}
                 />
             </Container>
         )
@@ -351,7 +354,7 @@ export default function InventoryPage() {
                 icon={<Package />}
                 actions={[
                     createActionButton('CSV 내보내기', handleExport, 'secondary', <Download size={16} />),
-                    createActionButton('새로고침', fetchData, 'secondary'),
+                    createActionButton('제품 추가', () => setProductAddModalOpen(true), 'primary'),
                 ]}
             />
 
@@ -728,6 +731,13 @@ export default function InventoryPage() {
                 onClose={() => setHistoryModalOpen(false)}
                 productId={historyProductId}
                 productName={historyProductName}
+            />
+
+            {/* Product Add Modal */}
+            <ProductAddModal
+                open={productAddModalOpen}
+                onClose={() => setProductAddModalOpen(false)}
+                onSuccess={fetchData}
             />
         </Container>
     )

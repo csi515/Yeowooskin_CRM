@@ -26,10 +26,12 @@ import {
     Select,
     MenuItem,
     Divider,
-    Stack
+    Stack,
+    Chip
 } from '@mui/material'
 import { TableSkeleton, CardSkeleton } from '../components/ui/SkeletonLoader'
-import { DollarSign, FileText, Users, Search, Download } from 'lucide-react'
+import { DollarSign, FileText, Users, Search, Download, Calculator } from 'lucide-react'
+import { Checkbox } from '@mui/material'
 import PageHeader, { createActionButton } from '../components/common/PageHeader'
 import { useAppToast } from '../lib/ui/toast'
 import { format } from 'date-fns'
@@ -40,6 +42,7 @@ import InputAdornment from '@mui/material/InputAdornment'
 import Pagination from '@mui/material/Pagination'
 import { useMemo } from 'react'
 import PayrollSettingsModal from '../components/modals/PayrollSettingsModal'
+import PayrollDetailModal from '../components/modals/PayrollDetailModal'
 
 interface Staff {
     id: string
@@ -49,6 +52,7 @@ interface Staff {
 
 interface PayrollRecord {
     id: string
+    owner_id: string
     staff_id: string
     month: string
     base_salary: number
@@ -62,6 +66,7 @@ interface PayrollRecord {
     total_deductions: number
     net_salary: number
     memo?: string | null
+    status?: 'draft' | 'calculated' | 'approved' | 'paid'
     staff?: {
         id: string
         name: string
@@ -87,6 +92,14 @@ export default function PayrollPage() {
     const [settingsStaffId, setSettingsStaffId] = useState('')
     const [settingsStaffName, setSettingsStaffName] = useState('')
 
+    // Detail Modal State
+    const [detailModalOpen, setDetailModalOpen] = useState(false)
+    const [selectedRecord, setSelectedRecord] = useState<PayrollRecord | null>(null)
+
+    // Bulk Calculation State
+    const [selectedStaffIds, setSelectedStaffIds] = useState<string[]>([])
+    const [bulkCalculating, setBulkCalculating] = useState(false)
+
     const toast = useAppToast()
 
     // Search, Sort, Pagination
@@ -96,6 +109,9 @@ export default function PayrollPage() {
         initialPageSize: 10,
         totalItems: 0
     })
+
+    // Status filter
+    const [statusFilter, setStatusFilter] = useState<string>('all')
 
     useEffect(() => {
         fetchData()
@@ -111,24 +127,42 @@ export default function PayrollPage() {
 
             if (staffResponse.ok) {
                 const staffJson = await staffResponse.json()
-                const staffData = Array.isArray(staffJson) ? staffJson : (staffJson.data || [])
-                setStaff(staffData)
+                // API 응답이 배열이거나 { data: [...] } 형식 처리
+                const staffData = Array.isArray(staffJson)
+                    ? staffJson
+                    : (staffJson.data || staffJson || [])
+                setStaff(Array.isArray(staffData) ? staffData : [])
+            } else {
+                console.error('Staff API error:', staffResponse.status, staffResponse.statusText)
+                setStaff([])
             }
 
             if (recordsResponse.ok) {
                 const recordsJson = await recordsResponse.json()
-                const recordsData = Array.isArray(recordsJson) ? recordsJson : (recordsJson.data || [])
-                setRecords(recordsData.map((r: any) => ({ ...r, staff_name: r.staff?.name })))
+                // API 응답이 배열이거나 { data: [...] } 형식 처리
+                const recordsData = Array.isArray(recordsJson)
+                    ? recordsJson
+                    : (recordsJson.data || recordsJson || [])
+                const processedRecords = Array.isArray(recordsData)
+                    ? recordsData.map((r: any) => ({ ...r, staff_name: r.staff?.name }))
+                    : []
+                setRecords(processedRecords)
+            } else {
+                console.error('Payroll records API error:', recordsResponse.status, recordsResponse.statusText)
+                setRecords([])
             }
         } catch (error) {
             console.error('Error fetching payroll data:', error)
             toast.error('데이터를 불러오는데 실패했습니다')
+            // 에러 시 빈 배열로 초기화
+            setStaff([])
+            setRecords([])
         } finally {
             setLoading(false)
         }
     }
 
-    async function calculatePayroll() {
+    async function calculatePayroll(retryCount = 0) {
         if (!selectedStaffId || !selectedMonth) {
             toast.error('직원과 월을 선택해주세요')
             return
@@ -145,7 +179,9 @@ export default function PayrollPage() {
             })
 
             if (!response.ok) {
-                throw new Error('Failed to calculate payroll')
+                const errorData = await response.json().catch(() => ({}))
+                const errorMessage = errorData.error || `HTTP ${response.status}: ${response.statusText}`
+                throw new Error(errorMessage)
             }
 
             const result = await response.json()
@@ -154,7 +190,64 @@ export default function PayrollPage() {
             fetchData()
         } catch (error) {
             console.error('Error calculating payroll:', error)
-            toast.error('급여 계산에 실패했습니다')
+            const errorMessage = error instanceof Error ? error.message : '알 수 없는 오류'
+
+            // 재시도 로직 (최대 2회)
+            if (retryCount < 2 && !errorMessage.includes('HTTP')) {
+                toast.warning(`${retryCount + 1}회 재시도 중...`)
+                setTimeout(() => calculatePayroll(retryCount + 1), 1000)
+                return
+            }
+
+            toast.error(`급여 계산 실패: ${errorMessage}`)
+        }
+    }
+
+    async function calculateBulkPayroll() {
+        if (selectedStaffIds.length === 0 || !selectedMonth) {
+            toast.error('직원을 선택하고 월을 지정해주세요')
+            return
+        }
+
+        try {
+            setBulkCalculating(true)
+            let successCount = 0
+            let failCount = 0
+
+            for (const staffId of selectedStaffIds) {
+                try {
+                    const response = await fetch('/api/payroll/calculate', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                            staff_id: staffId,
+                            month: selectedMonth,
+                        }),
+                    })
+
+                    if (response.ok) {
+                        successCount++
+                    } else {
+                        failCount++
+                    }
+                } catch (error) {
+                    failCount++
+                    console.error(`Failed to calculate payroll for staff ${staffId}:`, error)
+                }
+            }
+
+            if (successCount > 0) {
+                toast.success(`${successCount}명의 급여가 계산되었습니다${failCount > 0 ? ` (${failCount}명 실패)` : ''}`)
+                fetchData()
+                setSelectedStaffIds([])
+            } else {
+                toast.error('모든 급여 계산에 실패했습니다')
+            }
+        } catch (error) {
+            console.error('Bulk calculation error:', error)
+            toast.error('일괄 계산 중 오류가 발생했습니다')
+        } finally {
+            setBulkCalculating(false)
         }
     }
 
@@ -175,17 +268,63 @@ export default function PayrollPage() {
         setSettingsModalOpen(true)
     }
 
+    const openDetailModal = (record: PayrollRecord) => {
+        setSelectedRecord(record)
+        setDetailModalOpen(true)
+    }
+
+    const handleStatusChange = async (record: PayrollRecord, newStatus: 'approved' | 'paid') => {
+        try {
+            const response = await fetch('/api/payroll/records', {
+                method: 'PATCH',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    staff_id: record.staff_id,
+                    month: record.month,
+                    status: newStatus
+                })
+            })
+
+            if (!response.ok) {
+                throw new Error('상태 변경에 실패했습니다')
+            }
+
+            toast.success(
+                newStatus === 'approved' ? '급여가 승인되었습니다' :
+                '급여 지급이 확정되었습니다'
+            )
+            fetchData()
+        } catch (error) {
+            console.error('Status change error:', error)
+            toast.error('상태 변경에 실패했습니다')
+        }
+    }
+
     const totalGrossPay = records.reduce((sum, r) => sum + r.total_gross, 0)
     const totalNetPay = records.reduce((sum, r) => sum + r.net_salary, 0)
 
     // Processed Data based on STAFF, not Records
     const filteredStaff = useMemo(() => {
         return staff.filter(s => {
-            if (!debouncedQuery.trim()) return true
-            const qLower = debouncedQuery.toLowerCase()
-            return s.name.toLowerCase().includes(qLower)
+            // Search filter
+            if (debouncedQuery.trim()) {
+                const qLower = debouncedQuery.toLowerCase()
+                if (!s.name.toLowerCase().includes(qLower)) return false
+            }
+
+            // Status filter
+            if (statusFilter !== 'all') {
+                const record = records.find(r => r.staff_id === s.id)
+                if (statusFilter === 'not_calculated') {
+                    return !record
+                } else {
+                    return record?.status === statusFilter
+                }
+            }
+
+            return true
         })
-    }, [staff, debouncedQuery])
+    }, [staff, debouncedQuery, statusFilter, records])
 
     const sortedStaff = useMemo(() => {
         // Simple name sort for now as main view is staff list
@@ -245,7 +384,8 @@ export default function PayrollPage() {
                 icon={<DollarSign />}
                 actions={[
                     createActionButton('CSV 내보내기', handleExport, 'secondary', <Download size={16} />),
-                    createActionButton('급여 계산', openCalculateModal, 'primary'),
+                    createActionButton('일괄 계산', () => calculateBulkPayroll(), 'primary', <Calculator size={16} />, bulkCalculating || selectedStaffIds.length === 0),
+                    createActionButton('급여 계산', () => openCalculateModal(), 'primary'),
                 ]}
             />
 
@@ -279,11 +419,37 @@ export default function PayrollPage() {
                         }}
                     />
                 </Stack>
+
+                {/* 상태 필터 */}
+                <Box sx={{ mt: 2 }}>
+                    <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
+                        상태 필터
+                    </Typography>
+                    <Stack direction="row" spacing={1} flexWrap="wrap">
+                        {[
+                            { value: 'all', label: '전체', color: 'default' },
+                            { value: 'not_calculated', label: '미계산', color: 'default' },
+                            { value: 'calculated', label: '계산완료', color: 'warning' },
+                            { value: 'approved', label: '승인완료', color: 'info' },
+                            { value: 'paid', label: '지급완료', color: 'success' },
+                        ].map((filter) => (
+                            <Chip
+                                key={filter.value}
+                                label={filter.label}
+                                color={statusFilter === filter.value ? filter.color as any : 'default'}
+                                variant={statusFilter === filter.value ? 'filled' : 'outlined'}
+                                size="small"
+                                onClick={() => setStatusFilter(filter.value)}
+                                sx={{ cursor: 'pointer' }}
+                            />
+                        ))}
+                    </Stack>
+                </Box>
             </Paper>
 
             {/* 요약 카드 */}
             <Grid container spacing={3} sx={{ mb: 4 }}>
-                <Grid item xs={12} md={4}>
+                <Grid item xs={12} sm={6} md={3}>
                     <Card>
                         <CardContent>
                             <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1 }}>
@@ -295,10 +461,13 @@ export default function PayrollPage() {
                             <Typography variant="h4" fontWeight={700}>
                                 {filteredStaff.length}명
                             </Typography>
+                            <Typography variant="caption" color="text.secondary">
+                                전체 {staff.length}명 중
+                            </Typography>
                         </CardContent>
                     </Card>
                 </Grid>
-                <Grid item xs={12} md={4}>
+                <Grid item xs={12} sm={6} md={3}>
                     <Card>
                         <CardContent>
                             <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1 }}>
@@ -310,10 +479,13 @@ export default function PayrollPage() {
                             <Typography variant="h4" fontWeight={700} color="success.main">
                                 ₩{totalGrossPay.toLocaleString()}
                             </Typography>
+                            <Typography variant="caption" color="text.secondary">
+                                평균 ₩{filteredStaff.length > 0 ? Math.round(totalGrossPay / filteredStaff.length).toLocaleString() : 0}
+                            </Typography>
                         </CardContent>
                     </Card>
                 </Grid>
-                <Grid item xs={12} md={4}>
+                <Grid item xs={12} sm={6} md={3}>
                     <Card>
                         <CardContent>
                             <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1 }}>
@@ -325,10 +497,68 @@ export default function PayrollPage() {
                             <Typography variant="h4" fontWeight={700}>
                                 ₩{totalNetPay.toLocaleString()}
                             </Typography>
+                            <Typography variant="caption" color="text.secondary">
+                                공제액 ₩{(totalGrossPay - totalNetPay).toLocaleString()}
+                            </Typography>
+                        </CardContent>
+                    </Card>
+                </Grid>
+                <Grid item xs={12} sm={6} md={3}>
+                    <Card>
+                        <CardContent>
+                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1 }}>
+                                <Calculator size={20} className="text-orange-500" />
+                                <Typography variant="body2" color="text.secondary">
+                                    계산 상태
+                                </Typography>
+                            </Box>
+                            <Typography variant="h4" fontWeight={700}>
+                                {records.length}/{filteredStaff.length}
+                            </Typography>
+                            <Typography variant="caption" color="text.secondary">
+                                {Math.round((records.length / Math.max(filteredStaff.length, 1)) * 100)}% 완료
+                            </Typography>
                         </CardContent>
                     </Card>
                 </Grid>
             </Grid>
+
+            {/* 급여 상태 요약 */}
+            {records.length > 0 && (
+                <Card sx={{ mb: 4 }}>
+                    <CardContent>
+                        <Typography variant="h6" fontWeight={600} sx={{ mb: 3 }}>
+                            급여 처리 현황
+                        </Typography>
+                        <Grid container spacing={2}>
+                            {[
+                                { label: '미계산', count: filteredStaff.length - records.length, color: 'default' },
+                                { label: '계산완료', count: records.filter(r => r.status === 'calculated').length, color: 'warning' },
+                                { label: '승인완료', count: records.filter(r => r.status === 'approved').length, color: 'info' },
+                                { label: '지급완료', count: records.filter(r => r.status === 'paid').length, color: 'success' },
+                            ].map((status) => (
+                                <Grid item xs={6} sm={3} key={status.label}>
+                                    <Box sx={{
+                                        textAlign: 'center',
+                                        p: 2,
+                                        borderRadius: 2,
+                                        bgcolor: `${status.color}.light`,
+                                        border: `1px solid`,
+                                        borderColor: `${status.color}.main`
+                                    }}>
+                                        <Typography variant="h4" fontWeight={700} color={`${status.color}.dark`}>
+                                            {status.count}
+                                        </Typography>
+                                        <Typography variant="body2" color={`${status.color}.dark`}>
+                                            {status.label}
+                                        </Typography>
+                                    </Box>
+                                </Grid>
+                            ))}
+                        </Grid>
+                    </CardContent>
+                </Card>
+            )}
 
             <Card>
                 <CardContent>
@@ -336,12 +566,30 @@ export default function PayrollPage() {
                         <Typography variant="h6" fontWeight={600}>
                             {selectedMonth} 급여 관리
                         </Typography>
+                        {selectedStaffIds.length > 0 && (
+                            <Typography variant="body2" color="primary.main" fontWeight={600}>
+                                {selectedStaffIds.length}명 선택됨
+                            </Typography>
+                        )}
                     </Stack>
 
                     <TableContainer component={Paper} variant="outlined">
                         <Table size="small">
                             <TableHead>
                                 <TableRow>
+                                    <TableCell padding="checkbox">
+                                        <Checkbox
+                                            checked={paginatedStaff.length > 0 && selectedStaffIds.length === paginatedStaff.length}
+                                            indeterminate={selectedStaffIds.length > 0 && selectedStaffIds.length < paginatedStaff.length}
+                                            onChange={(e) => {
+                                                if (e.target.checked) {
+                                                    setSelectedStaffIds(paginatedStaff.map(s => s.id))
+                                                } else {
+                                                    setSelectedStaffIds([])
+                                                }
+                                            }}
+                                        />
+                                    </TableCell>
                                     <TableCell>직원명</TableCell>
                                     <TableCell align="right">기본급</TableCell>
                                     <TableCell align="right">시급/연장</TableCell>
@@ -349,6 +597,8 @@ export default function PayrollPage() {
                                     <TableCell align="right">총 지급액</TableCell>
                                     <TableCell align="right">공제액</TableCell>
                                     <TableCell align="right">실지급액</TableCell>
+                                    <TableCell align="center">상태</TableCell>
+                                    <TableCell align="center">상세보기</TableCell>
                                     <TableCell align="center">관리</TableCell>
                                 </TableRow>
                             </TableHead>
@@ -357,6 +607,18 @@ export default function PayrollPage() {
                                     const record = records.find(r => r.staff_id === s.id)
                                     return (
                                         <TableRow key={s.id}>
+                                            <TableCell padding="checkbox">
+                                                <Checkbox
+                                                    checked={selectedStaffIds.includes(s.id)}
+                                                    onChange={(e) => {
+                                                        if (e.target.checked) {
+                                                            setSelectedStaffIds(prev => [...prev, s.id])
+                                                        } else {
+                                                            setSelectedStaffIds(prev => prev.filter(id => id !== s.id))
+                                                        }
+                                                    }}
+                                                />
+                                            </TableCell>
                                             <TableCell>
                                                 <Box>
                                                     <Typography variant="body2" fontWeight={600}>
@@ -394,7 +656,59 @@ export default function PayrollPage() {
                                                 ) : '-'}
                                             </TableCell>
                                             <TableCell align="center">
+                                                {record ? (
+                                                    <Chip
+                                                        label={
+                                                            record.status === 'paid' ? '지급완료' :
+                                                            record.status === 'approved' ? '승인완료' :
+                                                            record.status === 'calculated' ? '계산완료' :
+                                                            '미계산'
+                                                        }
+                                                        color={
+                                                            record.status === 'paid' ? 'success' :
+                                                            record.status === 'approved' ? 'info' :
+                                                            record.status === 'calculated' ? 'warning' :
+                                                            'default'
+                                                        }
+                                                        size="small"
+                                                    />
+                                                ) : (
+                                                    <Chip label="미계산" color="default" size="small" />
+                                                )}
+                                            </TableCell>
+                                            <TableCell align="center">
+                                                <Button
+                                                    size="small"
+                                                    variant="outlined"
+                                                    color="primary"
+                                                    onClick={() => record && openDetailModal(record)}
+                                                    disabled={!record}
+                                                >
+                                                    보기
+                                                </Button>
+                                            </TableCell>
+                                            <TableCell align="center">
                                                 <Stack direction="row" spacing={1} justifyContent="center">
+                                                    {record && record.status === 'calculated' && (
+                                                        <Button
+                                                            size="small"
+                                                            variant="contained"
+                                                            color="success"
+                                                            onClick={() => handleStatusChange(record, 'approved')}
+                                                        >
+                                                            승인
+                                                        </Button>
+                                                    )}
+                                                    {record && record.status === 'approved' && (
+                                                        <Button
+                                                            size="small"
+                                                            variant="contained"
+                                                            color="info"
+                                                            onClick={() => handleStatusChange(record, 'paid')}
+                                                        >
+                                                            지급확정
+                                                        </Button>
+                                                    )}
                                                     <Button
                                                         size="small"
                                                         variant="outlined"
@@ -410,7 +724,7 @@ export default function PayrollPage() {
                                 })}
                                 {paginatedStaff.length === 0 && (
                                     <TableRow>
-                                        <TableCell colSpan={8} align="center" sx={{ py: 4 }}>
+                                        <TableCell colSpan={9} align="center" sx={{ py: 4 }}>
                                             <Typography color="text.secondary">
                                                 등록된 직원이 없습니다.
                                             </Typography>
@@ -446,6 +760,14 @@ export default function PayrollPage() {
                     // Refresh data or just close
                     // Maybe re-calculate if needed? For now just close.
                 }}
+            />
+
+            <PayrollDetailModal
+                open={detailModalOpen}
+                onClose={() => setDetailModalOpen(false)}
+                record={selectedRecord}
+                staffName={selectedRecord?.staff?.name || undefined}
+                onSaved={fetchData}
             />
 
             {/* 급여 계산 모달 */}
@@ -590,7 +912,7 @@ export default function PayrollPage() {
                 <DialogActions>
                     <Button onClick={closeCalculateModal}>닫기</Button>
                     {!calculationResult && (
-                        <Button onClick={calculatePayroll} variant="contained">
+                        <Button onClick={() => calculatePayroll()} variant="contained">
                             계산하기
                         </Button>
                     )}

@@ -16,6 +16,7 @@ export interface Customer {
   skin_type?: string | null
   allergy_info?: string | null
   memo?: string | null
+  active?: boolean
   created_at?: string
   updated_at?: string
 }
@@ -32,6 +33,7 @@ export interface CustomerCreateInput {
   skin_type?: string | null
   allergy_info?: string | null
   memo?: string | null
+  active?: boolean
 }
 
 export interface CustomerUpdateInput extends Partial<CustomerCreateInput> { }

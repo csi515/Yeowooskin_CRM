@@ -20,7 +20,8 @@ import { attendanceApi } from '@/app/lib/api/attendance'
 import { settingsApi } from '@/app/lib/api/settings'
 import { Staff, StaffAttendance, StaffAttendanceCreateInput } from '@/types/entities'
 import { AppSettings } from '@/types/settings'
-import { Box, Paper, Grid, Typography, Stack, Tabs, Tab, Avatar, Tooltip } from '@mui/material'
+import { Box, Paper, Grid, Typography, Stack, Avatar, Tooltip } from '@mui/material'
+import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/app/components/ui/Tabs'
 import { startOfMonth, endOfMonth, format, addWeeks, getDay, addDays } from 'date-fns'
 import { useAppToast } from '@/app/lib/ui/toast'
 import { Download } from 'lucide-react'
@@ -285,6 +286,76 @@ export default function StaffPage() {
     }
   }
 
+  // 빠른 스케줄 생성 핸들러
+  const handleQuickScheduleCreate = async (staffId: string, date: Date, startTime: string, endTime: string) => {
+    try {
+      // 해당 날짜에 이미 스케줄이 있는지 확인
+      const existingSchedule = schedules.find(s =>
+        s.staff_id === staffId &&
+        s.type === 'scheduled' &&
+        format(new Date(s.start_time), 'yyyy-MM-dd') === format(date, 'yyyy-MM-dd')
+      )
+
+      if (existingSchedule) {
+        toast.warning('해당 날짜에 이미 스케줄이 있습니다')
+        return
+      }
+
+      await attendanceApi.create({
+        staff_id: staffId,
+        type: 'scheduled',
+        start_time: `${format(date, 'yyyy-MM-dd')}T${startTime}`,
+        end_time: `${format(date, 'yyyy-MM-dd')}T${endTime}`,
+        status: 'scheduled',
+        memo: '빠른 스케줄 생성'
+      })
+
+      toast.success('스케줄이 생성되었습니다')
+      await loadAll()
+    } catch (error) {
+      console.error('빠른 스케줄 생성 실패:', error)
+      toast.error('스케줄 생성에 실패했습니다')
+      throw error
+    }
+  }
+
+  // 일괄 스케줄 적용 핸들러
+  const handleBulkScheduleApply = async (staffIds: string[], dates: Date[], startTime: string, endTime: string) => {
+    try {
+      const promises = []
+
+      for (const staffId of staffIds) {
+        for (const date of dates) {
+          // 해당 날짜에 이미 스케줄이 있는지 확인
+          const existingSchedule = schedules.find(s =>
+            s.staff_id === staffId &&
+            s.type === 'scheduled' &&
+            format(new Date(s.start_time), 'yyyy-MM-dd') === format(date, 'yyyy-MM-dd')
+          )
+
+          if (!existingSchedule) {
+            promises.push(attendanceApi.create({
+              staff_id: staffId,
+              type: 'scheduled',
+              start_time: `${format(date, 'yyyy-MM-dd')}T${startTime}`,
+              end_time: `${format(date, 'yyyy-MM-dd')}T${endTime}`,
+              status: 'scheduled',
+              memo: '일괄 스케줄 적용'
+            }))
+          }
+        }
+      }
+
+      await Promise.all(promises)
+      toast.success(`${promises.length}개의 스케줄이 생성되었습니다`)
+      await loadAll()
+    } catch (error) {
+      console.error('일괄 스케줄 적용 실패:', error)
+      toast.error('일괄 스케줄 적용에 실패했습니다')
+      throw error
+    }
+  }
+
   // === 직원 관리 핸들러 ===
   const handleEdit = (staff: Staff) => {
     setSelected(staff)
@@ -313,7 +384,7 @@ export default function StaffPage() {
   }
 
   return (
-    <Stack spacing={3}>
+    <Stack spacing={4} sx={{ minHeight: '100vh', bgcolor: '#f8fafc' }}>
       <PageHeader
         title="직원 통합 관리"
         icon={<Users className="h-5 w-5" />}
@@ -333,21 +404,104 @@ export default function StaffPage() {
       />
 
       {/* 실시간 대시보드 요약 카드 */}
-      <Grid container spacing={2}>
+      <Box sx={{ mb: 1 }}>
+        <Typography variant="h6" fontWeight={600} color="text.primary" sx={{ mb: 3 }}>
+          대시보드 개요
+        </Typography>
+      </Box>
+      <Grid container spacing={3}>
         {[
-          { label: '전체 직원', value: stats.total, color: 'primary', icon: <Users size={20} /> },
-          { label: '현재 근무 중', value: stats.atOffice, color: 'success', icon: <Clock size={20} /> },
-          { label: '현재 휴무 중', value: stats.away, color: 'warning', icon: <Calendar size={20} /> },
-          { label: '이번달 스케줄', value: schedules.length, color: 'info', icon: <TrendingUp size={20} /> },
+          {
+            label: '전체 직원',
+            value: stats.total,
+            color: 'primary',
+            bgColor: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+            icon: <Users size={24} />,
+            description: '등록된 총 직원 수'
+          },
+          {
+            label: '현재 근무 중',
+            value: stats.atOffice,
+            color: 'success',
+            bgColor: 'linear-gradient(135deg, #4facfe 0%, #00f2fe 100%)',
+            icon: <Clock size={24} />,
+            description: '실시간 근무 현황'
+          },
+          {
+            label: '현재 휴무 중',
+            value: stats.away,
+            color: 'warning',
+            bgColor: 'linear-gradient(135deg, #f093fb 0%, #f5576c 100%)',
+            icon: <Calendar size={24} />,
+            description: '휴가 및 외출 중'
+          },
+          {
+            label: '이번달 스케줄',
+            value: schedules.length,
+            color: 'info',
+            bgColor: 'linear-gradient(135deg, #4ecdc4 0%, #44a08d 100%)',
+            icon: <TrendingUp size={24} />,
+            description: '등록된 근무 스케줄'
+          },
         ].map((s) => (
-          <Grid item xs={6} md={3} key={s.label}>
-            <Paper variant="outlined" sx={{ p: 2, borderRadius: 3, bgcolor: 'white', display: 'flex', alignItems: 'center', gap: 2 }}>
-              <Box sx={{ p: 1, borderRadius: 2, bgcolor: `${s.color}.light`, color: `${s.color}.main`, display: 'flex' }}>
-                {s.icon}
-              </Box>
-              <Box>
-                <Typography variant="caption" color="text.secondary" fontWeight="bold">{s.label}</Typography>
-                <Typography variant="h5" fontWeight="900">{s.value}</Typography>
+          <Grid item xs={12} sm={6} lg={3} key={s.label}>
+            <Paper
+              variant="outlined"
+              sx={{
+                p: 3,
+                borderRadius: 3,
+                bgcolor: 'white',
+                border: 'none',
+                boxShadow: '0 4px 20px rgba(0,0,0,0.08)',
+                transition: 'all 0.3s ease',
+                '&:hover': {
+                  transform: 'translateY(-4px)',
+                  boxShadow: '0 8px 30px rgba(0,0,0,0.12)',
+                },
+                position: 'relative',
+                overflow: 'hidden'
+              }}
+            >
+              {/* 배경 그라데이션 */}
+              <Box
+                sx={{
+                  position: 'absolute',
+                  top: 0,
+                  right: 0,
+                  width: '120px',
+                  height: '120px',
+                  background: s.bgColor,
+                  borderRadius: '50%',
+                  transform: 'translate(40px, -40px)',
+                  opacity: 0.1,
+                  zIndex: 0
+                }}
+              />
+
+              <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, position: 'relative', zIndex: 1 }}>
+                <Box
+                  sx={{
+                    p: 2,
+                    borderRadius: 3,
+                    background: s.bgColor,
+                    color: 'white',
+                    display: 'flex',
+                    boxShadow: '0 4px 12px rgba(0,0,0,0.15)'
+                  }}
+                >
+                  {s.icon}
+                </Box>
+                <Box sx={{ flex: 1 }}>
+                  <Typography variant="body2" color="text.secondary" fontWeight={500} sx={{ mb: 0.5 }}>
+                    {s.label}
+                  </Typography>
+                  <Typography variant="h4" fontWeight={700} color="text.primary" sx={{ mb: 0.5 }}>
+                    {s.value}
+                  </Typography>
+                  <Typography variant="caption" color="text.secondary">
+                    {s.description}
+                  </Typography>
+                </Box>
               </Box>
             </Paper>
           </Grid>
@@ -355,73 +509,138 @@ export default function StaffPage() {
       </Grid>
 
       {/* 컨텐츠 메인 탭 영역 */}
-      <Paper variant="outlined" sx={{ borderRadius: 3, overflow: 'hidden', bgcolor: 'white' }}>
-        <Box sx={{ borderBottom: 1, borderColor: 'divider', px: 2, pt: 1, bgcolor: '#f9fafb' }}>
-          <Tabs value={tabIndex} onChange={(_, val) => setTabIndex(val)} aria-label="staff tabs">
-            <Tab label="근무 현황판" icon={<Clock size={18} />} iconPosition="start" />
-            <Tab label="스케줄 표" icon={<Calendar size={18} />} iconPosition="start" />
-            <Tab label="직원 명부" icon={<List size={18} />} iconPosition="start" />
-          </Tabs>
-        </Box>
+      <Paper
+        variant="outlined"
+        sx={{
+          borderRadius: 4,
+          overflow: 'hidden',
+          bgcolor: 'white',
+          boxShadow: '0 4px 24px rgba(0,0,0,0.06)',
+          border: '1px solid',
+          borderColor: 'divider'
+        }}
+      >
+        <Tabs value={tabIndex.toString()} onValueChange={(val) => setTabIndex(parseInt(val))}>
+          <TabsList sx={{
+            px: { xs: 2, sm: 3 },
+            pt: 2,
+            bgcolor: '#f9fafb',
+            borderBottom: 'none',
+            '& .MuiTabs-flexContainer': {
+              gap: { xs: 0, sm: 2 }
+            }
+          }}>
+            <TabsTrigger value="0">
+              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                <Clock size={18} />
+                <Typography variant="body2" fontWeight={500}>근무 현황판</Typography>
+              </Box>
+            </TabsTrigger>
+            <TabsTrigger value="1">
+              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                <Calendar size={18} />
+                <Typography variant="body2" fontWeight={500}>스케줄 표</Typography>
+              </Box>
+            </TabsTrigger>
+            <TabsTrigger value="2">
+              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                <List size={18} />
+                <Typography variant="body2" fontWeight={500}>직원 명부</Typography>
+              </Box>
+            </TabsTrigger>
+          </TabsList>
 
-        <Box sx={{ p: 2 }}>
-          {loading && <LoadingState rows={5} variant="card" />}
-          {!loading && error && <ErrorState message={error} onRetry={loadAll} />}
+          <Box sx={{ p: { xs: 2, sm: 3 } }}>
+            {loading && <LoadingState rows={5} variant="card" />}
+            {!loading && error && <ErrorState message={error} onRetry={loadAll} />}
 
-          {!loading && !error && (
-            <>
-              {tabIndex === 0 && (
-                <Stack spacing={3}>
-                  <QuickAttendancePanel
+            {!loading && !error && (
+              <>
+                <TabsContent value="0">
+                  <Stack spacing={4}>
+                    <QuickAttendancePanel
+                      staffList={rows}
+                      attendance={actualAttendance}
+                      onCheckIn={handleCheckIn}
+                      onCheckOut={handleCheckOut}
+                      onOpenRecord={handleOpenAttendanceRecord}
+                    />
+                    <StaffAttendanceTimeline staffList={rows} attendanceList={actualAttendance} />
+
+                    {/* 근무중 직원 카드 */}
+                    {rows.filter(r => r.status === 'office').length > 0 && (
+                      <Paper
+                        variant="outlined"
+                        sx={{
+                          p: 3,
+                          borderRadius: 2,
+                          bgcolor: 'success.light',
+                          border: '1px solid',
+                          borderColor: 'success.main'
+                        }}
+                      >
+                        <Typography variant="h6" fontWeight={600} color="success.dark" gutterBottom>
+                          현재 근무 중인 직원
+                        </Typography>
+                        <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 2, mt: 2 }}>
+                          {rows.filter(r => r.status === 'office').map(r => (
+                            <Tooltip key={r.id} title={`${r.name} - 근무 중`}>
+                              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                                <Avatar
+                                  {...(r.profile_image_url ? {
+                                    src: r.profile_image_url,
+                                    imgProps: {
+                                      onError: (e: React.SyntheticEvent<HTMLImageElement>) => {
+                                        e.currentTarget.style.display = 'none'
+                                      }
+                                    }
+                                  } : {})}
+                                  sx={{
+                                    width: 40,
+                                    height: 40,
+                                    border: '3px solid #10b981',
+                                    bgcolor: 'success.main'
+                                  }}
+                                >
+                                  {r.name[0]}
+                                </Avatar>
+                                <Typography variant="body2" fontWeight={500} color="success.dark">
+                                  {r.name}
+                                </Typography>
+                              </Box>
+                            </Tooltip>
+                          ))}
+                        </Box>
+                      </Paper>
+                    )}
+                  </Stack>
+                </TabsContent>
+
+                <TabsContent value="1">
+                  <StaffScheduler
                     staffList={rows}
-                    attendance={actualAttendance}
-                    onCheckIn={handleCheckIn}
-                    onCheckOut={handleCheckOut}
-                    onOpenRecord={handleOpenAttendanceRecord}
+                    schedules={schedules}
+                    onOpenSchedule={handleOpenSchedule}
+                    onBulkSchedule={handleBulkScheduleApply}
+                    onQuickSchedule={handleQuickScheduleCreate}
                   />
-                  <StaffAttendanceTimeline staffList={rows} attendanceList={actualAttendance} />
-                  <Box sx={{ display: 'flex', gap: 1, mt: 1 }}>
-                    {rows.filter(r => r.status === 'office').map(r => (
-                      <Tooltip key={r.id} title={`${r.name} - 근무 중`}>
-                        <Avatar
-                          {...(r.profile_image_url ? {
-                            src: r.profile_image_url,
-                            imgProps: {
-                              onError: (e: React.SyntheticEvent<HTMLImageElement>) => {
-                                e.currentTarget.style.display = 'none'
-                              }
-                            }
-                          } : {})}
-                          sx={{ width: 32, height: 32, border: '2px solid #10b981' }}
-                        >
-                          {r.name[0]}
-                        </Avatar>
-                      </Tooltip>
-                    ))}
-                  </Box>
-                </Stack>
-              )}
-              {tabIndex === 1 && (
-                <StaffScheduler
-                  staffList={rows}
-                  schedules={schedules}
-                  onOpenSchedule={handleOpenSchedule}
-                />
-              )}
-              {tabIndex === 2 && (
-                <StaffDataGrid rows={rows} onEdit={handleEdit} onStatusClick={handleStatusClick} />
-              )}
-            </>
-          )}
+                </TabsContent>
 
-          {rows.length === 0 && !loading && !error && (
-            <EmptyState
-              title="등록된 직원이 없습니다."
-              actionLabel="새 직원 등록"
-              actionOnClick={() => { setSelected(null); setDetailOpen(true); }}
-            />
-          )}
-        </Box>
+                <TabsContent value="2">
+                  <StaffDataGrid rows={rows} onEdit={handleEdit} onStatusClick={handleStatusClick} />
+                </TabsContent>
+              </>
+            )}
+
+            {rows.length === 0 && !loading && !error && (
+              <EmptyState
+                title="등록된 직원이 없습니다."
+                actionLabel="새 직원 등록"
+                actionOnClick={() => { setSelected(null); setDetailOpen(true); }}
+              />
+            )}
+          </Box>
+        </Tabs>
       </Paper>
 
       {/* 모달 관리 */}

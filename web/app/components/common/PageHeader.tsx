@@ -110,7 +110,8 @@ export function createActionButton(
   label: string,
   onClick: () => void,
   variant: 'primary' | 'secondary' = 'primary',
-  icon: ReactNode = <Plus className="h-4 w-4" />
+  icon: ReactNode = <Plus className="h-4 w-4" />,
+  disabled: boolean = false
 ) {
   return (
     <Button
@@ -118,6 +119,7 @@ export function createActionButton(
       size="md"
       leftIcon={icon}
       onClick={onClick}
+      disabled={disabled}
       className="w-full sm:w-auto"
     >
       {label}
