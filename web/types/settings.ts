@@ -65,6 +65,39 @@ export interface SystemSettings {
 }
 
 /**
+ * 개인 프로필 설정
+ */
+export interface UserProfile {
+  name: string
+  email: string
+  phone?: string
+  birthdate?: string
+  avatar?: string
+  bio?: string
+}
+
+/**
+ * 보안 설정
+ */
+export interface SecuritySettings {
+  twoFactorEnabled: boolean
+  sessionTimeout: number // 분 단위
+  passwordLastChanged?: string | undefined
+}
+
+/**
+ * 표시 설정
+ */
+export interface DisplaySettings {
+  theme: 'light' | 'dark' | 'auto'
+  language: string
+  timezone: string
+  dateFormat: string
+  currency: string
+  timeFormat: '12h' | '24h'
+}
+
+/**
  * 전체 설정 객체
  */
 export interface AppSettings {
