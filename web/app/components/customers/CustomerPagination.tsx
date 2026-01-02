@@ -1,6 +1,7 @@
 'use client'
 
-import { Stack, Typography, FormControl, Select, MenuItem, Pagination, Paper, Button, Box } from '@mui/material'
+import { Stack, Typography, FormControl, Select, MenuItem, Pagination, Paper } from '@mui/material'
+import Button from '../ui/Button'
 import { useAppToast } from '../../lib/ui/toast'
 
 interface CustomerPaginationProps {

@@ -1,5 +1,4 @@
 import { useState, useEffect, useCallback } from 'react'
-import { useAppToast } from '../ui/toast'
 import { type Customer } from '@/types/entities'
 import { type CustomerPageState } from '@/types/customer'
 
@@ -11,8 +10,6 @@ export function useCustomers(searchQuery: string) {
     selectedCustomerIds: [],
     pointsByCustomer: {}
   })
-
-  const toast = useAppToast()
 
   const loadCustomers = useCallback(async () => {
     try {

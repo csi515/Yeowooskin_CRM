@@ -26,7 +26,7 @@ interface CustomerTableProps {
   selectedCustomerIds: string[]
   onSelectedCustomerIdsChange: (ids: string[]) => void
   pointsByCustomer: Record<string, number>
-  sortKey: string
+  sortKey: string | null
   sortDirection: 'asc' | 'desc'
   onSortToggle: (key: string) => void
   onCustomerClick: (customer: Customer) => void
