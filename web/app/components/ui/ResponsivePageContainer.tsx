@@ -14,13 +14,15 @@ export default function ResponsivePageContainer({
 }: ResponsivePageContainerProps) {
     return (
         <Container
-            maxWidth={maxWidth}
+            maxWidth={maxWidth === 'lg' ? false : maxWidth}
             sx={{
                 py: { xs: 2, sm: 3, md: 4 },
-                px: { xs: 2, sm: 3 }, // Ensure consistent horizontal padding
+                px: { xs: 1.5, sm: 2, md: 3 },
                 minHeight: '100%',
                 display: 'flex',
-                flexDirection: 'column'
+                flexDirection: 'column',
+                width: '100%',
+                maxWidth: maxWidth === 'lg' ? { xs: '100%', md: '1200px' } : undefined
             }}
         >
             {children}

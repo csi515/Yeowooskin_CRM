@@ -32,7 +32,7 @@ export default function Container({
       className={clsx(
         'w-full mx-auto',
         sizeClasses[size],
-        padding && 'px-4 sm:px-6 lg:px-8',
+        padding && 'px-3 sm:px-4 md:px-6 lg:px-8',
         className
       )}
     >

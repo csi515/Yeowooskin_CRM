@@ -5,7 +5,7 @@ export default function DashboardLoading() {
     return (
         <Stack spacing={3}>
             {/* Metrics Skeleton */}
-            <Grid container spacing={{ xs: 2, sm: 2.5, md: 3 }}>
+            <Grid container spacing={{ xs: 0.75, sm: 1.5, md: 2.5, lg: 3 }}>
                 {[...Array(4)].map((_, i) => (
                     <Grid item xs={12} sm={6} md={3} key={i}>
                         <Skeleton variant="rounded" height={140} sx={{ borderRadius: 3 }} />
@@ -14,7 +14,7 @@ export default function DashboardLoading() {
             </Grid>
 
             {/* Main Content Areas Skeleton */}
-            <Grid container spacing={{ xs: 2, sm: 2.5, md: 3 }}>
+            <Grid container spacing={{ xs: 0.75, sm: 1.5, md: 2.5, lg: 3 }}>
                 {/* Products Section Skeleton */}
                 <Grid item xs={12} lg={8}>
                     <Card sx={{ height: 400 }}>

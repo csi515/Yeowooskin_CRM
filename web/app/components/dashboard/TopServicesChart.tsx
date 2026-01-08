@@ -39,12 +39,12 @@ export default function TopServicesChart({ recentAppointments }: TopServicesChar
     const data = processData()
 
     return (
-        <Card sx={{ height: '100%', borderRadius: 2 }}>
+        <Card sx={{ height: '100%', borderRadius: 2, width: '100%', maxWidth: '100%', overflow: 'hidden' }}>
             <CardHeader
                 title={<Typography variant="h6" fontWeight="bold">인기 시술 Top 5</Typography>}
                 subheader="최근 예약 기준"
             />
-            <CardContent sx={{ height: 300, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+            <CardContent sx={{ height: { xs: 220, sm: 260, md: 300 }, display: 'flex', alignItems: 'center', justifyContent: 'center', width: '100%', maxWidth: '100%', overflow: 'hidden', p: { xs: 1, sm: 2, md: 3 } }}>
                 {data.length > 0 ? (
                     <ResponsiveContainer width="100%" height="100%">
                         <PieChart>
@@ -52,8 +52,8 @@ export default function TopServicesChart({ recentAppointments }: TopServicesChar
                                 data={data}
                                 cx="50%"
                                 cy="50%"
-                                innerRadius={60}
-                                outerRadius={80}
+                                innerRadius="40%"
+                                outerRadius="60%"
                                 fill="#8884d8"
                                 paddingAngle={5}
                                 dataKey="value"

@@ -113,7 +113,7 @@ export default function FeaturesPage() {
                 py: { xs: 8, md: 10 },
                 textAlign: 'center'
             }}>
-                <Container maxWidth="lg">
+                <Container maxWidth={false} sx={{ maxWidth: { xs: '100%', md: '1200px' }, px: { xs: 1.5, sm: 2, md: 3 }, width: '100%' }}>
                     <Typography variant="h2" component="h1" fontWeight={800} gutterBottom sx={{ fontSize: { xs: '2rem', md: '3rem' } }}>
                         강력한 기능, 간편한 사용
                     </Typography>
@@ -125,13 +125,13 @@ export default function FeaturesPage() {
                 </Container>
             </Box>
 
-            <Container maxWidth="lg" sx={{ py: { xs: 8, md: 10 } }}>
+            <Container maxWidth={false} sx={{ py: { xs: 8, md: 10 }, px: { xs: 1.5, sm: 2, md: 3 }, maxWidth: { xs: '100%', md: '1200px' }, width: '100%' }}>
                 {/* Main Features */}
                 <Box sx={{ mb: 10 }}>
                     <Typography variant="h3" fontWeight={700} gutterBottom sx={{ mb: 4, textAlign: 'center' }}>
                         핵심 기능
                     </Typography>
-                    <Grid container spacing={4}>
+                    <Grid container spacing={{ xs: 0.75, sm: 1.5, md: 2.5, lg: 4 }}>
                         {mainFeatures.map((feature, index) => {
                             const Icon = feature.icon
                             return (

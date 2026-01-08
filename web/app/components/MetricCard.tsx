@@ -48,7 +48,7 @@ function MetricCard({
         height: '100%',
         transition: 'all 300ms ease-out',
         '&:hover': {
-          boxShadow: 3, // shadow-lg
+          boxShadow: { xs: 'none', md: 3 }, // shadow-lg
         }
       }}
       className={className}

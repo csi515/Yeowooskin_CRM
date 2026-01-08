@@ -148,7 +148,7 @@ export default function AnalyticsPage() {
     }
 
     return (
-        <Container maxWidth="lg" sx={{ py: 4 }}>
+        <Container maxWidth={false} sx={{ py: 4, px: { xs: 1.5, sm: 2, md: 3 }, maxWidth: { xs: '100%', md: '1200px' }, width: '100%' }}>
             <PageHeader
                 title="고객 분석"
                 description="고객 생애 가치(LTV) 및 VIP 고객 분석"
@@ -159,7 +159,7 @@ export default function AnalyticsPage() {
             />
 
             {/* 요약 카드 */}
-            <Grid container spacing={3} sx={{ mb: 4 }}>
+            <Grid container spacing={{ xs: 0.75, sm: 1.5, md: 2.5, lg: 3 }} sx={{ mb: 4 }}>
                 <Grid item xs={12} md={4}>
                     <Card>
                         <CardContent>

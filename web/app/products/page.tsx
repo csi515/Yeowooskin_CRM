@@ -239,7 +239,7 @@ export default function ProductsPage() {
       <Paper elevation={0} variant="outlined" sx={{ p: 2, borderRadius: 2 }}>
         <Stack spacing={2}>
           <Typography variant="subtitle2" fontWeight={600}>필터</Typography>
-          <Grid container spacing={2} alignItems="center">
+          <Grid container spacing={{ xs: 0.75, sm: 1.5, md: 2 }} alignItems="center">
             <Grid item xs={12} md={3}>
               <FormControl size="small" fullWidth>
                 <Select
@@ -253,7 +253,7 @@ export default function ProductsPage() {
                 </Select>
               </FormControl>
             </Grid>
-            <Grid item xs={6} md={3}>
+            <Grid item xs={12} sm={6} md={3}>
               <TextField
                 placeholder="최소 가격"
                 type="number"
@@ -266,7 +266,7 @@ export default function ProductsPage() {
                 }}
               />
             </Grid>
-            <Grid item xs={6} md={3}>
+            <Grid item xs={12} sm={6} md={3}>
               <TextField
                 placeholder="최대 가격"
                 type="number"
@@ -299,15 +299,15 @@ export default function ProductsPage() {
         </Alert>
       )}
 
-      <Grid container spacing={2}>
+      <Grid container spacing={{ xs: 0.75, sm: 1.5, md: 2 }}>
         {loading && Array.from({ length: 8 }).map((_, i) => (
-          <Grid item xs={6} sm={4} md={3} lg={2} key={i}>
+          <Grid item xs={12} sm={6} md={4} lg={3} key={i}>
             <Skeleton className="h-32 rounded-lg" />
           </Grid>
         ))}
         {!loading && paginatedProducts.map((p) => (
-          <Grid item xs={6} sm={4} md={3} lg={2} key={String(p.id)}>
-            <Card variant="outlined" sx={{ height: '100%', display: 'flex', flexDirection: 'column', borderRadius: 2, '&:hover': { boxShadow: 2 } }}>
+          <Grid item xs={12} sm={6} md={4} lg={3} key={String(p.id)}>
+            <Card variant="outlined" sx={{ height: '100%', display: 'flex', flexDirection: 'column', borderRadius: 2, '&:hover': { boxShadow: { xs: 'none', md: 2 } } }}>
               <CardContent sx={{ flexGrow: 1, p: 1.5, pb: 0 }}>
                 <Stack direction="row" justifyContent="space-between" alignItems="flex-start" mb={1}>
                   <Chip

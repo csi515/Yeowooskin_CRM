@@ -78,7 +78,7 @@ export function DataTable<T extends Record<string, unknown>>({
   if (loading) {
     return (
       <TableContainer component={Paper} elevation={0} sx={{ border: '1px solid', borderColor: 'divider', borderRadius: 3 }}>
-        <MuiTable sx={{ minWidth: 650 }}>
+        <MuiTable sx={{ minWidth: { xs: 0, md: 650 }, width: '100%' }}>
           <TableHead sx={{ bgcolor: 'action.hover' }}>
             <TableRow>
               {columns.map((_, idx) => (
@@ -117,7 +117,7 @@ export function DataTable<T extends Record<string, unknown>>({
   return (
     <>
       {/* 모바일 카드 뷰 */}
-      <Box sx={{ display: { xs: 'flex', md: 'none' }, flexDirection: 'column', gap: 2 }} className={className}>
+      <Box sx={{ display: { xs: 'flex', md: 'none' }, flexDirection: 'column', gap: 2, width: '100%', maxWidth: '100%', overflowX: 'hidden' }} className={className}>
         {sortedData.map((item, rowIdx) => (
           <Card
             key={rowIdx}
@@ -128,7 +128,11 @@ export function DataTable<T extends Record<string, unknown>>({
               borderRadius: 3,
               cursor: onRowClick ? 'pointer' : 'default',
               transition: 'all 200ms ease',
-              '&:hover': onRowClick ? { boxShadow: (theme) => theme.shadows[2], transform: 'translateY(-2px)' } : {},
+              width: '100%',
+              maxWidth: '100%',
+              overflowX: 'hidden',
+              minHeight: { xs: '44px', sm: 'auto' },
+              '&:hover': onRowClick ? { boxShadow: { xs: 'none', md: (theme: any) => theme.shadows[2] }, transform: { xs: 'none', md: 'translateY(-2px)' } } : {},
               '&:active': onRowClick ? { transform: 'scale(0.98)' } : {},
             }}
           >
@@ -176,11 +180,14 @@ export function DataTable<T extends Record<string, unknown>>({
           borderColor: 'divider',
           borderRadius: 3,
           overflow: 'hidden',
+          overflowX: 'auto',
+          width: '100%',
+          maxWidth: '100%',
           boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -1px rgba(0, 0, 0, 0.03)'
         }}
         className={className}
       >
-        <MuiTable stickyHeader>
+        <MuiTable stickyHeader sx={{ minWidth: { xs: 0, md: 650 }, width: '100%' }}>
           <TableHead>
             <TableRow>
               {columns.map((col, idx) => (

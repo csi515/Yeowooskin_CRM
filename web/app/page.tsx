@@ -63,8 +63,8 @@ export default function LandingPage() {
           color: 'white',
           py: { xs: 8, md: 12 }
         }}>
-          <Container maxWidth="lg">
-            <Grid container spacing={4} alignItems="center">
+          <Container maxWidth={false} sx={{ maxWidth: { xs: '100%', md: '1200px' }, px: { xs: 1.5, sm: 2, md: 3 }, width: '100%' }}>
+            <Grid container spacing={{ xs: 0.75, sm: 1.5, md: 2.5, lg: 4 }} alignItems="center">
               <Grid item xs={12} md={6}>
                 <Stack spacing={3}>
                   <Typography variant="h2" component="h1" fontWeight={800} sx={{ fontSize: { xs: '2rem', md: '3rem' } }}>
@@ -128,7 +128,7 @@ export default function LandingPage() {
         </Box>
 
         {/* Features Section */}
-        <Container maxWidth="lg" sx={{ py: { xs: 6, md: 10 } }}>
+        <Container maxWidth={false} sx={{ py: { xs: 6, md: 10 }, px: { xs: 1.5, sm: 2, md: 3 }, maxWidth: { xs: '100%', md: '1200px' }, width: '100%' }}>
           <Box sx={{ textAlign: 'center', mb: 6 }}>
             <Typography variant="h3" component="h2" fontWeight={700} gutterBottom>
               샵 운영에 필요한 모든 것
@@ -138,12 +138,12 @@ export default function LandingPage() {
             </Typography>
           </Box>
 
-          <Grid container spacing={4}>
+          <Grid container spacing={{ xs: 0.75, sm: 1.5, md: 2.5, lg: 4 }}>
             {features.map((feature, index) => {
               const Icon = feature.icon
               return (
                 <Grid item xs={12} md={4} key={index}>
-                  <Card sx={{ height: '100%', transition: 'transform 0.2s', '&:hover': { transform: 'translateY(-8px)' } }}>
+                  <Card sx={{ height: '100%', transition: 'transform 0.2s', '&:hover': { transform: { xs: 'none', md: 'translateY(-8px)' } } }}>
                     <CardContent sx={{ p: 3 }}>
                       <Box sx={{
                         width: 56,
@@ -173,7 +173,7 @@ export default function LandingPage() {
 
         {/* Why Section */}
         <Box sx={{ bgcolor: 'grey.50', py: { xs: 6, md: 10 } }}>
-          <Container maxWidth="lg">
+          <Container maxWidth={false} sx={{ maxWidth: { xs: '100%', md: '1200px' }, px: { xs: 1.5, sm: 2, md: 3 }, width: '100%' }}>
             <Typography variant="h3" component="h2" fontWeight={700} textAlign="center" gutterBottom>
               BeautyHub와 함께 성장에 집중하세요
             </Typography>
@@ -181,7 +181,7 @@ export default function LandingPage() {
               전국 수많은 원장님들이 BeautyHub와 함께 비즈니스를 키워가고 있습니다
             </Typography>
 
-            <Grid container spacing={4}>
+            <Grid container spacing={{ xs: 0.75, sm: 1.5, md: 2.5, lg: 4 }}>
               <Grid item xs={12} md={6}>
                 <Stack spacing={3}>
                   <Box>
@@ -232,7 +232,7 @@ export default function LandingPage() {
 
         {/* CTA Section */}
         <Box sx={{ py: { xs: 6, md: 10 }, textAlign: 'center' }}>
-          <Container maxWidth="md">
+          <Container maxWidth={false} sx={{ maxWidth: { xs: '100%', md: '768px' }, px: { xs: 1.5, sm: 2, md: 3 }, width: '100%' }}>
             <Typography variant="h3" fontWeight={700} gutterBottom>
               지금 바로 시작하세요
             </Typography>

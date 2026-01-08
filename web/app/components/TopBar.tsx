@@ -68,7 +68,12 @@ export default function TopBar({ onMenu }: { onMenu?: () => void }) {
             component={Link}
             href="/settings"
             size="small"
-            sx={{ display: { xs: 'flex', md: 'none' }, color: 'text.secondary' }}
+            sx={{ 
+              display: { xs: 'flex', md: 'none' }, 
+              color: 'text.secondary',
+              minWidth: { xs: '44px', sm: '40px' },
+              minHeight: { xs: '44px', sm: '40px' }
+            }}
             aria-label="설정"
           >
             <Settings size={20} />

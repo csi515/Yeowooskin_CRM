@@ -236,6 +236,23 @@ export const theme = createTheme(
                     },
                 },
             },
+            MuiIconButton: {
+                styleOverrides: {
+                    root: {
+                        // 모바일에서 최소 터치 타겟 크기 보장
+                        '@media (max-width: 640px)': {
+                            minWidth: '44px',
+                            minHeight: '44px',
+                        },
+                    },
+                    sizeSmall: {
+                        '@media (max-width: 640px)': {
+                            minWidth: '44px',
+                            minHeight: '44px',
+                        },
+                    },
+                },
+            },
         },
     },
     koKR // 한국어 로케일

@@ -180,14 +180,14 @@ export default function SettingsPage() {
 
   if (loading) {
     return (
-      <Container maxWidth="lg" sx={{ py: 4, pb: 12, px: { xs: 2, sm: 3 } }}>
+      <Container maxWidth={false} sx={{ py: 4, pb: 12, px: { xs: 1.5, sm: 2, md: 3 }, maxWidth: { xs: '100%', md: '1200px' }, width: '100%' }}>
         <SettingsSkeleton />
       </Container>
     )
   }
 
   return (
-    <Container maxWidth="lg" sx={{ py: 4, pb: 12 }}>
+    <Container maxWidth={false} sx={{ py: 4, pb: 12, px: { xs: 1.5, sm: 2, md: 3 }, maxWidth: { xs: '100%', md: '1200px' }, width: '100%' }}>
       <Stack spacing={4}>
         {/* 헤더 */}
         <Box>

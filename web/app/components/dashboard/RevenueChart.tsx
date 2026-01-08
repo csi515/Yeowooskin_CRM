@@ -46,12 +46,12 @@ export default function RevenueChart({ transactions }: RevenueChartProps) {
     const data = processData()
 
     return (
-        <Card sx={{ height: '100%', borderRadius: 2 }}>
+        <Card sx={{ height: '100%', borderRadius: 2, width: '100%', maxWidth: '100%', overflow: 'hidden' }}>
             <CardHeader
                 title={<Typography variant="h6" fontWeight="bold">매출 추이</Typography>}
                 subheader="최근 일별 매출 현황"
             />
-            <CardContent sx={{ height: 300 }}>
+            <CardContent sx={{ height: { xs: 220, sm: 260, md: 300 }, width: '100%', maxWidth: '100%', overflow: 'hidden', p: { xs: 1, sm: 2, md: 3 } }}>
                 <ResponsiveContainer width="100%" height="100%">
                     <BarChart data={data}>
                         <CartesianGrid strokeDasharray="3 3" vertical={false} />
@@ -75,7 +75,7 @@ export default function RevenueChart({ transactions }: RevenueChartProps) {
                             dataKey="amount"
                             fill="#6366f1"
                             radius={[4, 4, 0, 0]}
-                            barSize={20}
+                            barSize="auto"
                         />
                     </BarChart>
                 </ResponsiveContainer>

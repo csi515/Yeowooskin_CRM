@@ -94,7 +94,7 @@ export default function CustomersPage() {
 
 
   return (
-    <Box sx={{ px: { xs: 2, sm: 3 }, py: 4, maxWidth: 'lg', mx: 'auto' }}>
+    <Box sx={{ px: { xs: 1.5, sm: 2, md: 3 }, py: 4, maxWidth: { xs: '100%', md: '1200px' }, mx: 'auto', width: '100%' }}>
       <Stack spacing={3}>
       {/* 필터 및 검색 */}
       <CustomerFilters

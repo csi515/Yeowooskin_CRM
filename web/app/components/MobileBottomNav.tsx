@@ -56,12 +56,16 @@ export default function MobileBottomNav() {
                 sx={{
                     borderTop: 1,
                     borderColor: 'divider',
+                    minHeight: { xs: '64px', sm: '56px' }, // 모바일에서 더 큰 터치 타겟
                     '& .MuiBottomNavigationAction-root': {
                         minWidth: 60,
                         px: 0,
+                        minHeight: { xs: '44px', sm: '40px' },
+                        paddingTop: { xs: '6px', sm: '4px' },
+                        paddingBottom: { xs: '6px', sm: '4px' },
                     },
                     '& .MuiBottomNavigationAction-label': {
-                        fontSize: '0.65rem',
+                        fontSize: { xs: '0.75rem', sm: '0.65rem' },
                         mt: 0.5,
                     },
                 }}
