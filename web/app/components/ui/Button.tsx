@@ -6,7 +6,7 @@ import CircularProgress from '@mui/material/CircularProgress'
 import type { ButtonProps as MuiButtonProps } from '@mui/material/Button'
 import type { ReactNode } from 'react'
 
-type Props = Omit<MuiButtonProps, 'variant' | 'color' | 'size'> & {
+export type ButtonProps = Omit<MuiButtonProps, 'variant' | 'color' | 'size' | 'href' | 'component'> & {
   variant?: 'primary' | 'secondary' | 'danger' | 'ghost' | 'outline' | 'contrast'
   size?: 'sm' | 'md' | 'lg'
   leftIcon?: ReactNode
@@ -15,7 +15,7 @@ type Props = Omit<MuiButtonProps, 'variant' | 'color' | 'size'> & {
   sx?: MuiButtonProps['sx']
 }
 
-const Button = forwardRef<HTMLButtonElement, Props>(function Button(
+const Button = forwardRef<HTMLButtonElement, ButtonProps>(function Button(
   {
     variant = 'primary',
     size = 'md',
@@ -32,7 +32,10 @@ const Button = forwardRef<HTMLButtonElement, Props>(function Button(
   const isDisabled = disabled || loading
 
   // variant를 MUI props로 매핑
-  const getMuiProps = (): { variant: MuiButtonProps['variant']; color: MuiButtonProps['color'] } => {
+  const getMuiProps = (): {
+    variant: NonNullable<MuiButtonProps['variant']>
+    color: NonNullable<MuiButtonProps['color']>
+  } => {
     switch (variant) {
       case 'primary':
         return { variant: 'contained', color: 'primary' }
@@ -52,7 +55,7 @@ const Button = forwardRef<HTMLButtonElement, Props>(function Button(
   }
 
   // size를 MUI size로 매핑
-  const getMuiSize = (): MuiButtonProps['size'] => {
+  const getMuiSize = (): NonNullable<MuiButtonProps['size']> => {
     switch (size) {
       case 'sm':
         return 'small'
@@ -70,10 +73,10 @@ const Button = forwardRef<HTMLButtonElement, Props>(function Button(
 
   return (
     <MuiButton
-      ref={ref as any}
-      variant={muiProps.variant as any}
-      color={muiProps.color as any}
-      size={muiSize as any}
+      ref={ref}
+      variant={muiProps.variant}
+      color={muiProps.color}
+      size={muiSize}
       disabled={isDisabled}
       sx={sx || {}}
       {...rest}

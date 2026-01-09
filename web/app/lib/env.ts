@@ -68,18 +68,29 @@ function validateEnv(): Env {
  * 검증된 환경 변수
  * 빌드 타임에 검증되므로 런타임 에러 방지
  */
-export const env = validateEnv()
+let cachedEnv: Env | null = null
+
+/**
+ * 환경 변수는 "import 시점"이 아니라 "접근 시점"에 검증합니다.
+ * - Next.js build 과정에서 모듈이 로드되더라도 빌드가 즉시 실패하지 않도록 함
+ * - 실제 런타임(요청 처리/서버 실행)에서 필요한 순간에 명확히 에러를 발생
+ */
+export function getValidatedEnv(): Env {
+  if (cachedEnv) return cachedEnv
+  cachedEnv = validateEnv()
+  return cachedEnv
+}
 
 /**
  * 환경 변수 접근 헬퍼 함수
  * 서버/클라이언트 모두에서 안전하게 사용 가능
  */
 export const getEnv = {
-  supabaseUrl: () => env.NEXT_PUBLIC_SUPABASE_URL,
-  supabaseAnonKey: () => env.NEXT_PUBLIC_SUPABASE_ANON_KEY,
-  baseUrl: () => env.NEXT_PUBLIC_BASE_URL,
-  siteUrl: () => env.NEXT_PUBLIC_SITE_URL,
-  supabaseServiceRoleKey: () => env.SUPABASE_SERVICE_ROLE_KEY,
+  supabaseUrl: () => getValidatedEnv().NEXT_PUBLIC_SUPABASE_URL,
+  supabaseAnonKey: () => getValidatedEnv().NEXT_PUBLIC_SUPABASE_ANON_KEY,
+  baseUrl: () => getValidatedEnv().NEXT_PUBLIC_BASE_URL,
+  siteUrl: () => getValidatedEnv().NEXT_PUBLIC_SITE_URL,
+  supabaseServiceRoleKey: () => getValidatedEnv().SUPABASE_SERVICE_ROLE_KEY,
 }
 
 /**
@@ -92,7 +103,7 @@ export const getServerEnv = {
       console.warn('getServerEnv.supabaseServiceRoleKey()는 서버에서만 사용 가능합니다.')
       return undefined
     }
-    return env.SUPABASE_SERVICE_ROLE_KEY
+    return getValidatedEnv().SUPABASE_SERVICE_ROLE_KEY
   },
 }
 

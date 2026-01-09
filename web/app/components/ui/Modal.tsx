@@ -16,7 +16,7 @@ import { lockScroll, unlockScroll } from '@/app/lib/utils/scrollLock'
 
 type ModalSize = 'sm' | 'md' | 'lg' | 'xl' | 'full'
 
-type ModalProps = {
+export type ModalProps = {
   open: boolean
   onClose: () => void
   size?: ModalSize
@@ -80,7 +80,7 @@ function Modal({
   )
 }
 
-type ModalHeaderProps = {
+export type ModalHeaderProps = {
   title: string
   description?: string
   icon?: React.ReactNode
@@ -141,7 +141,7 @@ function ModalHeader({ title, description, icon, onClose, children }: ModalHeade
   )
 }
 
-type ModalBodyProps = {
+export type ModalBodyProps = {
   children: React.ReactNode
 }
 
@@ -158,7 +158,7 @@ function ModalBody({ children }: ModalBodyProps) {
   )
 }
 
-type ModalFooterProps = {
+export type ModalFooterProps = {
   children: React.ReactNode
 }
 

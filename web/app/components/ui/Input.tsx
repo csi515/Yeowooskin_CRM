@@ -5,7 +5,7 @@ import TextField from '@mui/material/TextField'
 import InputAdornment from '@mui/material/InputAdornment'
 import type { TextFieldProps } from '@mui/material/TextField'
 
-type Props = Omit<TextFieldProps, 'variant' | 'error' | 'helperText'> & {
+export type InputProps = Omit<TextFieldProps, 'variant' | 'error' | 'helperText'> & {
   error?: boolean | string  // string 허용으로 확장
   helperText?: string
   helpText?: string  // 하위 호환성을 위한 별칭
@@ -13,14 +13,14 @@ type Props = Omit<TextFieldProps, 'variant' | 'error' | 'helperText'> & {
   rightIcon?: ReactNode
 }
 
-const Input = forwardRef<HTMLInputElement, Props>(function Input(
+const Input = forwardRef<HTMLInputElement, InputProps>(function Input(
   {
     error = false,
     helperText,
     helpText, // 하위 호환성
     leftIcon,
     rightIcon,
-    InputProps,
+    InputProps: textFieldInputProps,
     ...rest
   },
   ref
@@ -36,9 +36,9 @@ const Input = forwardRef<HTMLInputElement, Props>(function Input(
       helperText={errorMessage}
       variant="outlined"
       InputProps={{
-        ...InputProps,
-        startAdornment: leftIcon ? <InputAdornment position="start">{leftIcon}</InputAdornment> : InputProps?.startAdornment,
-        endAdornment: rightIcon ? <InputAdornment position="end">{rightIcon}</InputAdornment> : InputProps?.endAdornment,
+        ...textFieldInputProps,
+        startAdornment: leftIcon ? <InputAdornment position="start">{leftIcon}</InputAdornment> : textFieldInputProps?.startAdornment,
+        endAdornment: rightIcon ? <InputAdornment position="end">{rightIcon}</InputAdornment> : textFieldInputProps?.endAdornment,
       }}
       {...rest}
     />
