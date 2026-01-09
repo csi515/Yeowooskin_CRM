@@ -64,6 +64,21 @@ export default function DashboardContent({ initialData, error }: DashboardConten
         }
     }, [])
 
+    const data = initialData ?? {}
+    const activeProducts = data.activeProducts ?? []
+    const recentAppointments = data.recentAppointments ?? []
+    const recentTransactions = data.recentTransactions ?? []
+    const monthlyProfit = data.monthlyProfit ?? 0
+
+    // 성능 최적화: 계산된 값 메모이제이션 (hooks는 항상 동일 순서로 호출)
+    const slicedProducts = useMemo(() => activeProducts.slice(0, 12), [activeProducts])
+    const slicedAppointments = useMemo(() => recentAppointments.slice(0, 8), [recentAppointments])
+    const slicedTransactions = useMemo(() => recentTransactions.slice(0, 10), [recentTransactions])
+    const formattedMonthlyProfit = useMemo(
+        () => `₩${Number(monthlyProfit || 0).toLocaleString()}`,
+        [monthlyProfit]
+    )
+
     if (error) {
         const errorMessage = error instanceof Error ? error.message : (typeof error === 'string' ? error : '데이터를 불러오는 중 오류가 발생했습니다.')
         return (
@@ -92,36 +107,13 @@ export default function DashboardContent({ initialData, error }: DashboardConten
 
     const {
         todayAppointments,
-        monthlyProfit,
+        // monthlyProfit은 위에서 기본값 처리 및 memo에 사용
         monthlyNewCustomers,
         monthlyAppointments,
-        recentAppointments,
         chartAppointments, // New
-        recentTransactions,
         monthlyRevenueData, // New
-        activeProducts
+        // activeProducts/recentAppointments/recentTransactions는 위에서 기본값 처리 및 memo에 사용
     } = initialData
-
-    // 성능 최적화: 계산된 값 메모이제이션
-    const slicedProducts = useMemo(
-        () => activeProducts?.slice(0, 12) || [],
-        [activeProducts]
-    )
-
-    const slicedAppointments = useMemo(
-        () => recentAppointments?.slice(0, 8) || [],
-        [recentAppointments]
-    )
-
-    const slicedTransactions = useMemo(
-        () => recentTransactions?.slice(0, 10) || [],
-        [recentTransactions]
-    )
-
-    const formattedMonthlyProfit = useMemo(
-        () => `₩${Number(monthlyProfit || 0).toLocaleString()}`,
-        [monthlyProfit]
-    )
 
     return (
         <>

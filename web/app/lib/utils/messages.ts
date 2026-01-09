@@ -40,13 +40,13 @@ const SUPABASE_ERROR_MESSAGES: Record<string, string> = {
  */
 const HTTP_STATUS_MESSAGES: Record<number, string> = {
     400: '잘못된 요청입니다.',
-    401: '인증이 필요합니다. 로그인해주세요.',
+    401: '로그인이 필요합니다.',
     403: '접근 권한이 없습니다.',
     404: '요청한 리소스를 찾을 수 없습니다.',
     408: '요청 시간이 초과되었습니다.',
     409: '데이터 충돌이 발생했습니다.',
     429: '너무 많은 요청을 보냈습니다. 잠시 후 다시 시도해주세요.',
-    500: '서버 오류가 발생했습니다.',
+    500: '서버 오류가 발생했습니다. 잠시 후 다시 시도해주세요.',
     502: '서버에 연결할 수 없습니다.',
     503: '서비스를 일시적으로 사용할 수 없습니다.',
     504: '서버 응답 시간이 초과되었습니다.',
@@ -57,14 +57,14 @@ const HTTP_STATUS_MESSAGES: Record<number, string> = {
  */
 const ERROR_PATTERN_MESSAGES: Array<{ pattern: RegExp; message: string }> = [
     { pattern: /network/i, message: '네트워크 연결을 확인해주세요.' },
-    { pattern: /timeout/i, message: '요청 시간이 초과되었습니다.' },
-    { pattern: /fetch.*failed/i, message: '서버에 연결할 수 없습니다.' },
+    { pattern: /timeout/i, message: '요청 시간이 초과되었습니다. 다시 시도해주세요.' },
+    { pattern: /fetch.*failed/i, message: '네트워크 연결을 확인해주세요.' },
     { pattern: /duplicate key/i, message: '이미 존재하는 데이터입니다.' },
     { pattern: /foreign key constraint/i, message: '연결된 데이터가 있어 삭제할 수 없습니다.' },
     { pattern: /not null constraint/i, message: '필수 항목을 입력해주세요.' },
     { pattern: /unique constraint/i, message: '중복된 값입니다. 다른 값을 입력해주세요.' },
     { pattern: /permission denied/i, message: '권한이 없습니다.' },
-    { pattern: /unauthorized/i, message: '인증이 필요합니다.' },
+    { pattern: /unauthorized/i, message: '로그인이 필요합니다.' },
 ]
 
 /**
@@ -157,6 +157,9 @@ export function getLocalizedErrorMessage(
             if (/[가-힣]/.test(message)) {
                 return message
             }
+
+            // 매칭되는 패턴/코드가 없으면 원본 메시지를 유지 (테스트 및 디버깅 친화)
+            return message
         }
     }
 

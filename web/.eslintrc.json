@@ -8,7 +8,51 @@
     "@typescript-eslint/no-explicit-any": "warn",
     "react/no-unescaped-entities": "off",
     "prefer-const": "warn",
-    "no-console": ["warn", { "allow": ["warn", "error"] }]
-  }
+    "no-console": ["warn", { "allow": ["warn", "error"] }],
+
+    /**
+     * 디자인 시스템/공용 UI 규칙 (Storybook = Single Source of Truth)
+     * - 페이지/기능 코드에서 UI 라이브러리 직접 import 금지 (shared/ui 내부에서만 사용)
+     * - 공용 UI는 @shared/ui 단일 진입점에서만 사용
+     *
+     * NOTE: 기존 코드베이스 영향 최소화를 위해 warn으로 시작하고,
+     *       점진 이관 후 error로 승격하는 것을 권장합니다.
+     */
+    "no-restricted-imports": [
+      "warn",
+      {
+        "patterns": [
+          {
+            "group": [
+              "@mui/*",
+              "@emotion/*"
+            ],
+            "message": "UI 라이브러리 직접 import 금지: 공용 UI(shared/ui) 내부에서만 사용하세요."
+          },
+          {
+            "group": [
+              "@/app/components/ui/*",
+              "../components/ui/*",
+              "./components/ui/*"
+            ],
+            "message": "공용 UI는 단일 진입점인 @shared/ui에서 import하세요."
+          }
+        ]
+      }
+    ]
+  },
+  "overrides": [
+    {
+      "files": [
+        "app/components/ui/**/*.{ts,tsx}",
+        "app/lib/theme/**/*.{ts,tsx}",
+        "app/providers.tsx",
+        ".storybook/**/*.{ts,tsx}"
+      ],
+      "rules": {
+        "no-restricted-imports": "off"
+      }
+    }
+  ]
 }
 

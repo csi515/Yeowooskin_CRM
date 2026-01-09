@@ -4,6 +4,9 @@ import { createSupabaseServerAdmin } from '@/lib/supabase/server-admin'
 import { getServerEnv } from '@/app/lib/env'
 import AdminUsersList from './AdminUsersList'
 
+// 관리자 화면은 인증/쿠키/서버 환경변수에 의존하므로 정적 프리렌더링을 금지합니다.
+export const dynamic = 'force-dynamic'
+
 type PendingUser = {
   id: string
   email: string
